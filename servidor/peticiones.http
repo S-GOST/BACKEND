@@ -1,0 +1,45 @@
+### 1. Obtener todos los usuarios
+GET http://localhost:3000/api/usuarios
+
+### 2. Obtener un usuario específico por ID (Cambia el 1 por un ID real)
+GET http://localhost:3000/api/usuarios/1
+
+### 3. Crear un nuevo usuario
+POST http://localhost:3000/api/usuarios/insertar
+Content-Type: application/json
+
+{
+    "nombre": "Alex Desarrollador",
+    "email": "alex.dev@mail.com"
+}
+
+### 4. Actualizar un usuario existente (Cambia el 1 por el ID que acabas de crear)
+PUT http://localhost:3000/api/usuarios/actualizar/1
+Content-Type: application/json
+
+{
+    "nombre": "Alex Editado",
+    "email": "alex.nuevo@mail.com"
+}
+
+### 5. Eliminar un usuario (Cambia el 1 por el ID que quieras borrar)
+DELETE http://localhost:3000/api/usuarios/eliminar/1
+
+-----------------------------------------------------------------------------------------------------------
+
+### Listar todos los administradores (Debería mostrar a JuanP y Alejo)
+GET http://localhost:3000/api/admins/listar
+
+### Insertar el tercer administrador (ADM3)
+POST http://localhost:3000/api/admins/insertar
+Content-Type: application/json
+
+{
+    "ID_ADMINISTRADOR": "ADM3",
+    "Nombre": "Admin de Prueba",
+    "usuario": "admin_test",
+    "contrasena": "clave123",
+    "Correo": "test@gmail.com",
+    "TipoDocumento": "Cedula de Ciudadania",
+    "Telefono": "3001234567"
+}
