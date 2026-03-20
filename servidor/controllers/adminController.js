@@ -1,12 +1,12 @@
-import Administrador from "../models/adminModel.js";
-import pool from "../config/db.js";
+import Administrador from "../models/adminModel.js"; // Importamos el modelo 'Administrador' para poder utilizar sus métodos y realizar operaciones relacionadas con los administradores en la base de datos. Este modelo actúa como una capa de abstracción entre el controlador y la base de datos, permitiendo que el controlador se enfoque en la lógica de negocio mientras el modelo maneja las consultas SQL.    
+import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL directamente desde este controlador, especialmente para operaciones que no están cubiertas por los métodos del modelo 'Administrador', como el login que requiere una consulta específica para verificar las credenciales del usuario. 
 import bcrypt from "bcrypt"; // ¡IMPORTANTE! Faltaba esta importación
 import jwt from "jsonwebtoken"; // ¡IMPORTANTE! Faltaba esta importación
 
 export const loginAdmin = async (req, res) => {
     const { usuario, contrasena } = req.body;
     try {
-        // Usamos 'pool' porque así lo importaste arriba
+        // Usamos 'pool' directamente para hacer la consulta de login, ya que es una consulta específica que no encaja exactamente con los métodos CRUD del modelo 'Administrador'.
         const [rows] = await pool.query('SELECT * FROM administradores WHERE usuario = ?', [usuario]);
 
         if (rows.length === 0) {
@@ -19,7 +19,7 @@ export const loginAdmin = async (req, res) => {
         const esValida = await bcrypt.compare(contrasena, admin.contrasena);
 
         if (!esValida) {
-            return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+            return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
         }
 
         // Genera el token. Asegúrate de tener JWT_SECRET en tu .env

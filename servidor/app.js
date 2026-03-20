@@ -1,16 +1,15 @@
-import express from "express";
-import adminRoutes from "./routes/adminRoutes.js";
-import cors from "cors";
+import express from "express"; // Importamos Express para crear la aplicación del servidor. Express es un framework de Node.js que facilita la creación de aplicaciones web y APIs RESTful. Nos permite definir rutas, manejar solicitudes HTTP, gestionar middleware y mucho más de manera sencilla y eficiente. En este archivo, utilizaremos Express para configurar el servidor, definir las rutas base y manejar errores globales.
+import adminRoutes from "./routes/adminRoutes.js"; // Importamos las rutas relacionadas con los administradores desde el archivo 'adminRoutes.js'. Estas rutas contienen los endpoints para realizar operaciones CRUD (Crear, Leer, Actualizar, Eliminar) y login para los administradores. Al importar este módulo, podremos montar estas rutas en la aplicación principal del servidor para que estén disponibles bajo una ruta base específica (por ejemplo, '/api/admins').
+import cors from "cors"; // Importamos CORS para permitir solicitudes desde el frontend. CORS (Cross-Origin Resource Sharing) es un mecanismo que permite controlar qué dominios pueden acceder a los recursos de nuestro servidor. Al usar el middleware CORS, podemos configurar fácilmente las políticas de acceso y permitir que nuestro frontend (que probablemente se ejecuta en un dominio diferente) pueda comunicarse con nuestro backend sin problemas de seguridad relacionados con el mismo origen.
 
-const app = express();
+const app = express(); // Creamos una instancia de la aplicación Express. Esta instancia es el objeto principal que utilizaremos para configurar nuestro servidor, definir rutas, manejar middleware y gestionar solicitudes y respuestas HTTP. A través de esta instancia, podremos montar las rutas importadas, configurar CORS, manejar errores globales y realizar otras configuraciones necesarias para que nuestro servidor funcione correctamente.   
 
-// Middleware para parsear JSON (ya viene incluido en express, no necesitas body-parser)
-app.use(express.json());
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // Middleware para parsear datos URL-encoded (formulario tradicional)
+app.use(cors()); // Middleware para habilitar CORS (Cross-Origin Resource Sharing) y permitir que el frontend pueda hacer solicitudes a este backend sin problemas de seguridad relacionados con el mismo origen. Esto es especialmente importante si el frontend y el backend se ejecutan en dominios diferentes (por ejemplo, frontend en localhost:3000 y backend en localhost:5000). Al usar este middleware, estamos permitiendo que cualquier dominio pueda acceder a los recursos de nuestro servidor, lo cual es útil durante el desarrollo. En producción, podríamos configurar CORS de manera más restrictiva para mejorar la seguridad.
+app.use(express.urlencoded({ extended: true })); // Middleware para parsear datos JSON en el cuerpo de las solicitudes. Esto es necesario para que podamos acceder a los datos enviados desde el frontend (por ejemplo, en las solicitudes POST o PUT) a través de 'req.body' en nuestros controladores. Al usar 'express.json()', estamos indicando que queremos que Express maneje automáticamente la conversión de los datos JSON recibidos en objetos JavaScript que podamos manipular fácilmente en nuestro código.
 
-// Rutas base
-app.use("/api/admins", adminRoutes);                        
+// Rutas base (con ese prefijo se accede a las rutas de adminRoutes)
+app.use("/api/admins", adminRoutes);   // Montamos las rutas de administradores en la ruta base '/api/admins'. Esto significa que todas las rutas definidas en 'adminRoutes' estarán disponibles bajo esta ruta base. Por ejemplo, si 'adminRoutes' define una ruta GET '/obtener', esta ruta estará disponible en el servidor como '/api/admins/obtener'. Al montar las rutas de esta manera, estamos organizando nuestro servidor de manera modular y clara, lo que facilita el mantenimiento y la escalabilidad de la aplicación a medida que crece y se agregan más funcionalidades.                     
 
 // Manejo de errores 404 global
 app.use((req, res) => {
@@ -20,4 +19,4 @@ app.use((req, res) => {
     });
 });
 
-export default app;
+export default app; // Exportamos la aplicación Express para que pueda ser utilizada en el archivo principal del servidor (server.js) donde se iniciará el servidor y se escucharán las solicitudes en un puerto específico. Al exportar esta instancia de la aplicación, estamos permitiendo que otros módulos puedan importarla y utilizarla para configurar y arrancar el servidor de manera centralizada.   

@@ -1,14 +1,14 @@
-import pool from "../config/db.js";
-import bcrypt from 'bcrypt';
+import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL desde este modelo. 
+import bcrypt from 'bcrypt'; // Importamos bcrypt para poder encriptar las contraseñas antes de almacenarlas en la base de datos, lo cual es una buena práctica de seguridad. 
 
-const Administrador = {
+const Administrador = { // Definimos un objeto 'Administrador' que contendrá métodos para interactuar con la tabla 'administradores' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
   // 1. Obtener todos los administradores
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM administradores");
     return rows;
   },
 
-  // 2. Buscar por ID_ADMINISTRADOR
+  // 2. Buscamos por ID_ADMINISTRADORES
   findById: async (id) => {
     const [rows] = await pool.query(
       "SELECT * FROM administradores WHERE ID_ADMINISTRADOR = ?",
