@@ -1,6 +1,5 @@
-import Servicio from "../models/servicioModel.js"; // Importamos el modelo 'Servicio'
-import pool from "../config/db.js"; // Importamos el pool de conexiones por si se requieren consultas personalizadas
-
+import Servicio from "../models/serviciosModel.js"; // Importamos el modelo 'Servicio'
+import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para realizar consultas SQL directamente desde este controlador, especialmente para operaciones que no están cubiertas por los métodos del modelo 'Servicio', como obtener un servicio por su ID.
 /**
  * Obtener todos los servicios
  */
@@ -27,23 +26,16 @@ export const obtenerServicios = async (req, res) => {
 export const obtenerServicioPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        const servicio = await Servicio.findByPk(id);
-        if (!servicio) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Servicio no encontrado' 
-            });
+        // En mysql2 se usa .query() y pasamos el ID en un arreglo para evitar inyección SQL
+        const [rows] = await pool.query('SELECT * FROM servicios WHERE ID_SERVICIOS = ?', [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Servicio no encontrado' });
         }
-        res.json({ 
-            success: true, 
-            data: servicio 
-        });
+
+        res.json({ success: true, data: rows[0] });
     } catch (error) {
-        console.error("Error al obtener el servicio:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 

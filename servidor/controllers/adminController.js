@@ -51,15 +51,17 @@ export const obtenerAdmins = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
-
 export const obtenerAdminPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        const admin = await Administrador.findByPk(id);
-        if (!admin) {
+        // En mysql2 se usa .query() y pasamos el ID en un arreglo para evitar inyección SQL
+        const [rows] = await pool.query('SELECT * FROM administradores WHERE ID_ADMINISTRADOR = ?', [id]);
+
+        if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado' });
         }
-        res.json({ success: true, data: admin });
+
+        res.json({ success: true, data: rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -75,7 +77,12 @@ export const crearAdmin = async (req, res) => {
 };
 
 export const actualizarAdmin = async (req, res) => {
-    const { id } = req.params;
+    const id = typeof req.params.id === 'string' ? req.params.id : req.body.ID_ADMINISTRADOR_ORIGINAL;
+
+    if (typeof id !== 'string') {
+        return res.status(400).json({ success: false, message: 'ID original no proporcionado' });
+    }
+
     try {
         const adminActualizado = await Administrador.update(id, req.body);  
         res.json({ success: true, data: adminActualizado });
