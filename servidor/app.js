@@ -14,7 +14,6 @@ app.use(express.urlencoded({ extended: true }));
 // Rutas base
 app.use("/api/admins", Admins);
 app.use("/api/servicios", Servicio);
-// 2. MONTA LAS RUTAS DE PRODUCTOS
 app.use("/api/productos", Productos); 
 
 // ... el resto de tu código (Manejo de errores 404)
