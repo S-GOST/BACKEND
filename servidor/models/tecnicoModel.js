@@ -1,14 +1,14 @@
 import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL desde este modelo. 
 import bcrypt from 'bcrypt'; // Importamos bcrypt para poder encriptar las contraseñas antes de almacenarlas en la base de datos, lo cual es una buena práctica de seguridad. 
 
-const tecnicos = { // Definimos un objeto 'Administrador' que contendrá métodos para interactuar con la tabla 'administradores' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
-  // 1. Obtener todos los administradores
+const tecnicos = { // Definimos un objeto 'Tecnicos' que contendrá métodos para interactuar con la tabla 'administradores' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
+  // 1. Obtener todos los tecnicos
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM tecnicos");
     return rows;
   },
 
-  // 2. Buscamos por ID_ADMINISTRADORES
+  // 2. Buscamos por ID_TECNICOS
   findById: async (id) => {
     const [rows] = await pool.query(
       "SELECT * FROM tecnicos WHERE ID_TECNICOS = ?",
@@ -36,7 +36,7 @@ create: async (data) => {
   return result;
 },
 
-  // 4. Actualizar administrador (EL QUE FALTABA)
+  // 4. Actualizar tecnicos (EL QUE FALTABA)
   update: async (id, data) => {
     const {ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono } = data;
 
@@ -51,7 +51,7 @@ create: async (data) => {
     return result;
   },
 
-  // 5. Eliminar administrador
+  // 5. Eliminar tecnicos
   delete: async (id) => {
     await pool.query(
       "DELETE FROM tecnicos WHERE ID_TECNICOS = ?",
