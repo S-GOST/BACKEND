@@ -21,7 +21,7 @@ export const obtenerProductoPorId = async (req, res) => {
     const { id } = req.params;
     try {
         // Uso de pool directo para búsqueda específica por ID (evitando inyección SQL)
-        const [rows] = await pool.query('SELECT * FROM productos WHERE ID_PRODUCTO = ?', [id]);
+        const [rows] = await pool.query('SELECT * FROM productos WHERE ID_PRODUCTOS = ?', [id]);
 
         if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Producto no encontrado' });
