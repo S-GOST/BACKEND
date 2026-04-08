@@ -1,7 +1,7 @@
 import Administrador from "../models/adminModel.js"; // Importamos el modelo 'Administrador' para poder utilizar sus métodos y realizar operaciones relacionadas con los administradores en la base de datos. Este modelo actúa como una capa de abstracción entre el controlador y la base de datos, permitiendo que el controlador se enfoque en la lógica de negocio mientras el modelo maneja las consultas SQL.    
 import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL directamente desde este controlador, especialmente para operaciones que no están cubiertas por los métodos del modelo 'Administrador', como el login que requiere una consulta específica para verificar las credenciales del usuario. 
-import bcrypt from "bcrypt"; // ¡IMPORTANTE! Faltaba esta importación
-import jwt from "jsonwebtoken"; // ¡IMPORTANTE! Faltaba esta importación
+import bcrypt from "bcrypt"; // Importamos bcrypt para poder comparar la contraseña proporcionada por el usuario con el hash almacenado en la base de datos durante el proceso de login. Esto es una buena práctica de seguridad, ya que permite verificar las contraseñas sin necesidad de almacenarlas en texto plano. Al usar bcrypt, podemos asegurarnos de que las contraseñas de los administradores estén protegidas incluso si la base de datos es comprometida. En este controlador, utilizaremos bcrypt para comparar la contraseña ingresada por el usuario con el hash almacenado en la base de datos y determinar si las credenciales son válidas para permitir el acceso al sistema.
+import jwt from "jsonwebtoken"; // Importamos jsonwebtoken para poder generar tokens JWT (JSON Web Tokens) durante el proceso de login de los administradores. Los tokens JWT son una forma segura y eficiente de manejar la autenticación y autorización en aplicaciones web. Al generar un token JWT después de verificar las credenciales del usuario, podemos incluir información relevante (como el ID del administrador) en el token, lo que permitirá al frontend autenticar las solicitudes posteriores sin necesidad de enviar las credenciales en cada solicitud. En este controlador, utilizaremos jsonwebtoken para crear un token JWT que se devolverá al cliente después de un login exitoso, permitiendo así una experiencia de usuario fluida y segura.
 
 export const loginAdmin = async (req, res) => {
     const { usuario, contrasena } = req.body;
@@ -26,14 +26,15 @@ export const loginAdmin = async (req, res) => {
         const token = jwt.sign(
             { id: admin.ID_ADMINISTRADOR }, 
             process.env.JWT_SECRET || 'clave_secreta_temporal', 
-            { expiresIn: '2h' }
+            { expiresIn: '1h' }
         );
 
         // Devolvemos la estructura exacta que espera tu Frontend
         res.json({ 
             success: true, 
             token, 
-            nombre: admin.Nombre 
+            nombre: admin.Nombre,
+            rol: 'admin'
         });
 
     } catch (error) {

@@ -36,19 +36,36 @@ create: async (data) => {
   return result;
 },
 
-  // 4. Actualizar administrador (EL QUE FALTABA)
+ // 4. Actualizar administrador
   update: async (id, data) => {
     const {ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
 
-    const [result] = await pool.query(
-      `UPDATE administradores 
-       SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, contrasena = ?, 
-           Correo = ?, TipoDocumento = ?, Telefono = ?
-       WHERE ID_ADMINISTRADOR = ?`,
-      [ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono, id]
-    );
+    // Si enviaron una contraseña nueva (el frontend mandó la propiedad)
+    if (contrasena) {
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(contrasena, saltRounds);
 
-    return result;
+      const [result] = await pool.query(
+        `UPDATE administradores 
+         SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, contrasena = ?, 
+             Correo = ?, TipoDocumento = ?, Telefono = ?
+         WHERE ID_ADMINISTRADOR = ?`,
+        [ID_ADMINISTRADOR, Nombre, usuario, passwordHash, Correo, TipoDocumento, Telefono, id]
+      );
+      return result;
+      
+    } else {
+      // Si NO enviaron contraseña (el input estaba vacío), actualizamos el resto de campos
+      // y dejamos la contraseña intacta en la base de datos.
+      const [result] = await pool.query(
+        `UPDATE administradores 
+         SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, 
+             Correo = ?, TipoDocumento = ?, Telefono = ?
+         WHERE ID_ADMINISTRADOR = ?`,
+        [ID_ADMINISTRADOR, Nombre, usuario, Correo, TipoDocumento, Telefono, id]
+      );
+      return result;
+    }
   },
 
   // 5. Eliminar administrador

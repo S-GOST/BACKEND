@@ -1,7 +1,7 @@
 import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL desde este modelo. 
 import bcrypt from 'bcrypt'; // Importamos bcrypt para poder encriptar las contraseñas antes de almacenarlas en la base de datos, lo cual es una buena práctica de seguridad. 
 
-const tecnicos = { // Definimos un objeto 'Tecnicos' que contendrá métodos para interactuar con la tabla 'administradores' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
+const tecnicos = { // Definimos un objeto 'tecnicos' que contendrá métodos para interactuar con la tabla 'tecnicos' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
   // 1. Obtener todos los tecnicos
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM tecnicos");
@@ -30,7 +30,7 @@ create: async (data) => {
     `INSERT INTO tecnicos
     (ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono)
     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono]
+    [ID_TECNICOS, Nombre, usuario, passwordHash, TipoDocumento, Correo, Telefono]
   );
 
   return result;
@@ -40,12 +40,18 @@ create: async (data) => {
   update: async (id, data) => {
     const {ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono } = data;
 
+    let passwordHash = contrasena;
+    if (contrasena) {
+      const saltRounds = 10;
+      passwordHash = await bcrypt.hash(contrasena, saltRounds);
+    }
+
     const [result] = await pool.query(
       `UPDATE tecnicos 
        SET ID_TECNICOS = ?, Nombre = ?, usuario = ?, contrasena = ?, 
            TipoDocumento = ?, Correo = ?, Telefono = ?
        WHERE ID_TECNICOS = ?`,
-      [ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono, id]
+      [ID_TECNICOS, Nombre, usuario, passwordHash, TipoDocumento, Correo, Telefono, id]
     );
 
     return result;
@@ -61,4 +67,4 @@ create: async (data) => {
   }
 };
 
-export default Tecnicos;
+export default tecnicos;

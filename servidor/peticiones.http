@@ -1,45 +1,94 @@
-### 1. Obtener todos los usuarios
-GET http://localhost:3000/api/usuarios
+### Variables
+@baseUrl = http://localhost:3000/api
 
-### 2. Obtener un usuario específico por ID (Cambia el 1 por un ID real)
-GET http://localhost:3000/api/usuarios/1
+### ⚠️ INSTRUCCIONES PARA THUNDER CLIENT:
+### 1. Instala la extensión "Thunder Client" en VS Code
+### 2. Abre este archivo con Thunder Client (botón "Thunder Client" arriba)
+### 3. Para rutas protegidas, agrega el header:
+###    Key: Authorization
+###    Value: Bearer TU_TOKEN_AQUI
+### 4. IMPORTANTE: El header debe ser exactamente "Authorization" (no "authorization")
 
-### 3. Crear un nuevo usuario
-POST http://localhost:3000/api/usuarios/insertar
+### 1. Login para obtener token (EL TOKEN EXPIRA EN 1 MINUTO)
+### El tiempo de expiración está configurado en: controllers/adminController.js línea 27 (expiresIn: '1m')
+POST {{baseUrl}}/admins/login
 Content-Type: application/json
 
 {
-    "nombre": "Alex Desarrollador",
-    "email": "alex.dev@mail.com"
+  "usuario": "Admi1",
+  "contrasena": "123456"
 }
 
-### 4. Actualizar un usuario existente (Cambia el 1 por el ID que acabas de crear)
-PUT http://localhost:3000/api/usuarios/actualizar/1
+### 2. Obtener admins SIN token (debe fallar con error 401)
+GET {{baseUrl}}/admins/Servicios/obtener
+
+### 3. Obtener admins CON token (reemplaza TOKEN_HERE con el token del login)
+GET {{baseUrl}}/admins/Servicios/obtener
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRF9BRE1JTklTVFJBRE9SIjoiQURNMDEiLCJub21icmUiOiJBZG1pbiIsInVzdWFyaW8iOiJhZG1pbiIsIilhdCI6MTcxMjUxMjAwMH0.XXXXX
+
+### 4. Buscar admin por ID SIN token (debe fallar con error 401)
+GET {{baseUrl}}/admins/buscar/ADM01
+
+### 5. Buscar admin por ID CON token válido
+GET {{baseUrl}}/admins/buscar/ADM01
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRF9BRE1JTklTVFJBRE9SIjoiQURNMDEiLCJub21icmUiOiJBZG1pbiIsInVzdWFyaW8iOiJhZG1pbiIsImlhdCI6MTcxMjUxMjAwMH0.XXXXX
+
+### 6. Probar con token inválido (debe fallar con error 403)
+GET {{baseUrl}}/admins/obtener
+Authorization: Bearer invalidtoken123xyz
+
+
+### TECNICOS - 7b. Login del técnico creado 
+POST {{baseUrl}}/tecnicos/login
 Content-Type: application/json
 
 {
-    "nombre": "Alex Editado",
-    "email": "alex.nuevo@mail.com"
+  "usuario": "tec",
+  "contrasena": "tecnico123"
 }
 
-### 5. Eliminar un usuario (Cambia el 1 por el ID que quieras borrar)
-DELETE http://localhost:3000/api/usuarios/eliminar/1
+### TECNICOS - 8. Obtener tecnicos SIN token (debe fallar con error 401)
+GET {{baseUrl}}/tecnicos/obtener
 
------------------------------------------------------------------------------------------------------------
+### TECNICOS - 9. Obtener tecnicos CON token válido
+GET {{baseUrl}}/tecnicos/obtener
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlRFQzEwMDAiLCJpYXQiOjE3NzU2MTI4NDEsImV4cCI6MTc3NTYyMDA0MX0.xEUHw5IpsUFKkLrHx2XGRxcg7gEwarOxOZUVEqo7iAg
+Content-Type: application/json
 
-### Listar todos los administradores (Debería mostrar a JuanP y Alejo)
-GET http://localhost:3000/api/admins/listar
+### TECNICOS - 10. Buscar tecnico por ID
+GET {{baseUrl}}/tecnicos/buscar/TEC001
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlRFQzEwMDAiLCJpYXQiOjE3NzU2MTI4NDEsImV4cCI6MTc3NTYyMDA0MX0.xEUHw5IpsUFKkLrHx2XGRxcg7gEwarOxOZUVEqo7iAg
 
-### Insertar el tercer administrador (ADM3)
-POST http://localhost:3000/api/admins/insertar
+### TECNICOS - 11. Crear nuevo tecnico
+POST {{baseUrl}}/tecnicos/insertar
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlRFQzEwMDAiLCJpYXQiOjE3NzU2MTI4NDEsImV4cCI6MTc3NTYyMDA0MX0.xEUHw5IpsUFKkLrHx2XGRxcg7gEwarOxOZUVEqo7iAg
 Content-Type: application/json
 
 {
-    "ID_ADMINISTRADOR": "ADM3",
-    "Nombre": "Admin de Prueba",
-    "usuario": "admin_test",
-    "contrasena": "clave123",
-    "Correo": "test@gmail.com",
-    "TipoDocumento": "Cedula de Ciudadania",
-    "Telefono": "3001234567"
+  "ID_TECNICOS": "TEC1",
+  "Nombre": "Camilo",
+  "usuario": "tec1",
+  "contrasena": "1123",
+  "TipoDocumento": "CC",
+  "Correo": "tecnico2@email.com",
+  "Telefono": "3001234567"
 }
+
+### TECNICOS - 12. Actualizar tecnico
+PUT {{baseUrl}}/tecnicos/actualizar/TEC1001
+Authorization: Bearer TU_TOKEN_AQUI_REEMPLAZAR
+Content-Type: application/json
+
+{
+  "ID_TECNICOS": "TEC1001",
+  "Nombre": "Tecnico Actualizado",
+  "usuario": "tecnico1001",
+  "contrasena": "nueva123",
+  "TipoDocumento": "CC",
+  "Correo": "tecnico1001@email.com",
+  "Telefono": "3001234567"
+}
+
+### TECNICOS - 13. Eliminar tecnico
+DELETE {{baseUrl}}/tecnicos/eliminar/TEC1001
+Authorization: Bearer TU_TOKEN_DE_TECNICO_AQUI
