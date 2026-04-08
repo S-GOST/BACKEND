@@ -7,6 +7,8 @@ import cors from "cors";// Importamos el middleware CORS para permitir solicitud
 
 const app = express();
 
+
+
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));//
