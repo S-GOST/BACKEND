@@ -1,5 +1,4 @@
 import pool from "../config/db.js";
-
 const Moto = {
     // Obtener todas las motos
     findAll: async () => {
@@ -55,4 +54,52 @@ const Moto = {
     }
 };
 
-export default Moto;
+const motos = {
+  findAll: async () => {
+    const [rows] = await pool.query("SELECT * FROM motos");
+    return rows.map((row) => ({
+      ...row,
+      Recorrido: Number(row.Recorrido),
+    }));
+  },
+
+  findById: async (id) => {
+    const [rows] = await pool.query(
+      "SELECT * FROM motos WHERE ID_MOTOS = ?",
+      [id]
+    );
+    if (!rows.length) return null;
+    return {
+      ...rows[0],
+      Recorrido: Number(rows[0].Recorrido),
+    };
+  },
+
+  create: async (data) => {
+    const { ID_MOTOS, ID_CLIENTES, Placa, Modelo, Marca, Recorrido } = data;
+    const [result] = await pool.query(
+      `INSERT INTO motos (ID_MOTOS, ID_CLIENTES, Placa, Modelo, Marca, Recorrido)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [ID_MOTOS, ID_CLIENTES, Placa, Modelo, Marca, Recorrido]
+    );
+    return result;
+  },
+
+  update: async (id, data) => {
+    const { ID_MOTOS, ID_CLIENTES, Placa, Modelo, Marca, Recorrido } = data;
+    const [result] = await pool.query(
+      `UPDATE motos
+       SET ID_MOTOS = ?, ID_CLIENTES = ?, Placa = ?, Modelo = ?, Marca = ?, Recorrido = ?
+       WHERE ID_MOTOS = ?`,
+      [ID_MOTOS, ID_CLIENTES, Placa, Modelo, Marca, Recorrido, id]
+    );
+    return result;
+  },
+
+  delete: async (id) => {
+    await pool.query("DELETE FROM motos WHERE ID_MOTOS = ?", [id]);
+    return true;
+  },
+};
+
+export default motos;

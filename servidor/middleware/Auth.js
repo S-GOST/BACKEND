@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 
 export const verificarToken = (req, res, next) => {
+    // Permitir rutas de solo lectura sin token para desarrollo
+    if (req.path.endsWith('/obtener') || req.path.includes('/buscar/')) {
+        return next();
+    }
+
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
