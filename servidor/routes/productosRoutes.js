@@ -1,32 +1,158 @@
-import express from 'express'; // Importamos Express para crear el router que manejará las rutas relacionadas con los productos. Este router define las rutas y las asocia con los controladores correspondientes para las operaciones CRUD (obtener, buscar por ID, insertar, actualizar y eliminar).
-import { 
-    obtenerProductos, 
-    obtenerProductoPorId, 
-    crearProducto, 
-    actualizarProducto, 
+import express from 'express';
+import {
+    obtenerProductos,
+    obtenerProductoPorId,
+    crearProducto,
+    actualizarProducto,
     eliminarProducto,
-    obtenerStockBajo 
+    obtenerStockBajo
 } from '../controllers/productosController.js';
 
-const router = express.Router(); // Creamos un router de Express para definir las rutas relacionadas con los productos. Este router se exportará para ser montado en el archivo principal (server.js), usualmente bajo una ruta como '/api/productos'.
+const router = express.Router();
 
-// 1. Obtener todos los productos
-router.get('/obtener', obtenerProductos); // Definimos la ruta GET '/obtener' asociada al controlador 'obtenerProductos'. Se utiliza para listar todos los productos del inventario. El controlador pedirá los datos al modelo y los devolverá al cliente en formato JSON.
+// ==============================================
+// Rutas (montadas sobre /api/productos)
+// ==============================================
 
-// 2. Buscar producto por ID
-router.get('/buscar/:id', obtenerProductoPorId); // Definimos la ruta GET '/buscar/:id'. El parámetro ':id' permite al cliente especificar qué producto desea consultar. El controlador 'obtenerProductoPorId' procesará la solicitud buscando la coincidencia exacta en la base de datos.
+router.get('/obtener', obtenerProductos);
+router.get('/buscar/:id', obtenerProductoPorId);
+router.post('/insertar', crearProducto);
+router.put('/actualizar/:id', actualizarProducto);
+router.delete('/eliminar/:id', eliminarProducto);
+router.get('/stock-bajo', obtenerStockBajo);
 
-// 3. Insertar un nuevo producto
-router.post('/insertar', crearProducto); // Definimos la ruta POST '/insertar' asociada al controlador 'crearProducto'. Se utiliza para registrar un nuevo producto enviando sus datos (nombre, precio, stock, etc.) en el cuerpo de la solicitud (req.body).
+// ==============================================
+// Documentación Swagger (summaries cortos, IDs string)
+// ==============================================
 
-// 4. Actualizar producto existente
-router.put('/actualizar', actualizarProducto); // Ruta alternativa para actualizar enviando el ID directamente en el cuerpo de la solicitud.
-router.put('/actualizar/:id', actualizarProducto); // Definimos la ruta PUT '/actualizar/:id'. Se utiliza para modificar los datos de un producto existente. El controlador 'actualizarProducto' tomará el ID de la URL y los nuevos datos del cuerpo para aplicar los cambios en la base de datos.
+/**
+ * @swagger
+ * tags:
+ *   name: Productos
+ *   description: Gestión de productos (IDs tipo texto)
+ */
 
-// 5. Eliminar un producto
-router.delete('/eliminar/:id', eliminarProducto); // Definimos la ruta DELETE '/eliminar/:id'. Esta ruta permite dar de baja un producto del sistema utilizando su ID único. El controlador 'eliminarProducto' ejecutará la instrucción de borrado en el modelo.
+/**
+ * @swagger
+ * /api/productos/obtener:
+ *   get:
+ *     summary: Listar productos
+ *     tags: [Productos]
+ *     responses:
+ *       200:
+ *         description: Lista de productos obtenida
+ */
 
-// 6. Ruta adicional (Opcional: Stock Bajo)
-router.get('/stock-bajo', obtenerStockBajo); // Definimos una ruta específica para obtener productos que requieren reabastecimiento, demostrando cómo extender las funcionalidades del controlador.
+/**
+ * @swagger
+ * /api/productos/buscar/{id}:
+ *   get:
+ *     summary: Buscar producto
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del producto (varchar)
+ *     responses:
+ *       200:
+ *         description: Producto encontrado
+ *       404:
+ *         description: No encontrado
+ */
 
-export default router; // Exportamos el router para que pueda ser importado en 'server.js' y utilizado por la aplicación principal.
+/**
+ * @swagger
+ * /api/productos/insertar:
+ *   post:
+ *     summary: Crear producto
+ *     tags: [Productos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - nombre
+ *               - precio
+ *               - stock
+ *             properties:
+ *               id:
+ *                 type: string
+ *               nombre:
+ *                 type: string
+ *               descripcion:
+ *                 type: string
+ *               precio:
+ *                 type: number
+ *               stock:
+ *                 type: integer
+ *               categoria:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Producto creado
+ *       400:
+ *         description: Datos inválidos
+ */
+
+/**
+ * @swagger
+ * /api/productos/actualizar/{id}:
+ *   put:
+ *     summary: Actualizar producto
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               descripcion:
+ *                 type: string
+ *               precio:
+ *                 type: number
+ *               stock:
+ *                 type: integer
+ *               categoria:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Producto actualizado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/productos/eliminar/{id}:
+ *   delete:
+ *     summary: Eliminar producto
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Producto eliminado
+ *       404:
+ *         description: No encontrado
+ */
+
+export default router;

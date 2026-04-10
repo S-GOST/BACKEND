@@ -1,14 +1,194 @@
-import express from 'express'; // Importamos Express para crear el router que manejará las rutas relacionadas con los administradores. Este router se encargará de definir las rutas y asociarlas con los controladores correspondientes para cada operación (obtener, buscar por ID, crear, eliminar, actualizar, login).  
-import { obtenerAdmins,obtenerAdminPorId, crearAdmin, eliminarAdmin, actualizarAdmin,loginAdmin } from '../controllers/adminController.js';
-import { verificarToken } from "../middleware/Auth.js"; // Importa el middleware
-const router = express.Router(); // Creamos un router de Express para definir las rutas relacionadas con los administradores. Este router se exportará al final del archivo para ser utilizado en el archivo principal del servidor (server.js) donde se montará en una ruta específica (por ejemplo, '/api/admins').   
+import express from 'express';
+import {
+    obtenerAdmins,
+    obtenerAdminPorId,
+    crearAdmin,
+    eliminarAdmin,
+    actualizarAdmin,
+    loginAdmin
+} from '../controllers/adminController.js';
+import { verificarToken } from "../middleware/Auth.js";
 
-router.get('/obtener',verificarToken, obtenerAdmins); // Definimos la ruta GET '/obtener' que se asociará con el controlador 'obtenerAdmins'. Esta ruta se utilizará para obtener la lista de todos los administradores registrados en la base de datos. Cuando un cliente haga una solicitud GET a esta ruta, el controlador 'obtenerAdmins' se encargará de procesar la solicitud, interactuar con el modelo para obtener los datos y devolver la respuesta al cliente.  
-router.get('/buscar/:id', verificarToken, obtenerAdminPorId); // Definimos la ruta GET '/buscar/:id' que se asociará con el controlador 'obtenerAdminPorId'. Esta ruta se utilizará para obtener los detalles de un administrador específico utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del administrador que desea buscar. Cuando un cliente haga una solicitud GET a esta ruta con un ID específico, el controlador 'obtenerAdminPorId' se encargará de procesar la solicitud, interactuar con el modelo para obtener los datos del administrador correspondiente y devolver la respuesta al cliente.  
-router.post('/login', loginAdmin); // Definimos la ruta POST '/login' que se asociará con el controlador 'loginAdmin'. Esta ruta se utilizará para manejar el proceso de inicio de sesión de los administradores. Cuando un cliente haga una solicitud POST a esta ruta con las credenciales (usuario y contraseña) en el cuerpo de la solicitud, el controlador 'loginAdmin' se encargará de procesar la solicitud, verificar las credenciales contra la base de datos, generar un token JWT si las credenciales son válidas y devolver la respuesta al cliente con el resultado del login.    
-router.post('/insertar', verificarToken, crearAdmin); // Definimos la ruta POST '/insertar' que se asociará con el controlador 'crearAdmin'. Esta ruta se utilizará para crear un nuevo administrador en la base de datos. Cuando un cliente haga una solicitud POST a esta ruta con los datos del nuevo administrador en el cuerpo de la solicitud, el controlador 'crearAdmin' se encargará de procesar la solicitud, interactuar con el modelo para insertar el nuevo administrador en la base de datos y devolver la respuesta al cliente con el resultado de la operación. 
-router.put('/actualizar', verificarToken, actualizarAdmin);
-router.put('/actualizar/:id', verificarToken, actualizarAdmin); // Definimos la ruta PUT '/actualizar/:id' que se asociará con el controlador 'actualizarAdmin'. Esta ruta se utilizará para actualizar los datos de un administrador existente en la base de datos utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del administrador que desea actualizar. Cuando un cliente haga una solicitud PUT a esta ruta con un ID específico y los nuevos datos en el cuerpo de la solicitud, el controlador 'actualizarAdmin' se encargará de procesar la solicitud, interactuar con el modelo para actualizar los datos del administrador correspondiente en la base de datos y devolver la respuesta al cliente con el resultado de la operación.
-router.delete('/eliminar/:id', verificarToken, eliminarAdmin); // Definimos la ruta DELETE '/eliminar/:id' que se asociará con el controlador 'eliminarAdmin'. Esta ruta se utilizará para eliminar un administrador existente en la base de datos utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del administrador que desea eliminar. Cuando un cliente haga una solicitud DELETE a esta ruta con un ID específico, el controlador 'eliminarAdmin' se encargará de procesar la solicitud, interactuar con el modelo para eliminar el administrador correspondiente de la base de datos y devolver la respuesta al cliente con el resultado de la operación.
+const router = express.Router();
 
-export default router; // Exportamos el router para que pueda ser utilizado en otras partes de la aplicación, como en el archivo principal del servidor (server.js) donde se montará en una ruta específica (por ejemplo, '/api/admins').
+// ==============================================
+// Rutas (montadas sobre /api/admins)
+// ==============================================
+
+router.get('/obtener', verificarToken, obtenerAdmins);
+router.get('/buscar/:id', verificarToken, obtenerAdminPorId);
+router.post('/login', loginAdmin);
+router.post('/insertar', verificarToken, crearAdmin);
+router.put('/actualizar/:id', verificarToken, actualizarAdmin);
+router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
+
+// ==============================================
+// Documentación Swagger (summaries cortos)
+// ==============================================
+
+/**
+ * @swagger
+ * tags:
+ *   name: Admins
+ *   description: Gestión de administradores (IDs tipo texto)
+ */
+
+/**
+ * @swagger
+ * /api/admins/obtener:
+ *   get:
+ *     summary: Listar administradores
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de administradores
+ *       401:
+ *         description: No autorizado
+ */
+
+/**
+ * @swagger
+ * /api/admins/buscar/{id}:
+ *   get:
+ *     summary: Buscar administrador
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Administrador encontrado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/admins/insertar:
+ *   post:
+ *     summary: Crear administrador
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - nombre
+ *               - email
+ *               - password
+ *             properties:
+ *               id:
+ *                 type: string
+ *               nombre:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               rol:
+ *                 type: string
+ *                 default: "admin"
+ *     responses:
+ *       201:
+ *         description: Administrador creado
+ *       400:
+ *         description: Datos inválidos
+ */
+
+/**
+ * @swagger
+ * /api/admins/actualizar/{id}:
+ *   put:
+ *     summary: Actualizar administrador
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               rol:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Administrador actualizado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/admins/eliminar/{id}:
+ *   delete:
+ *     summary: Eliminar administrador
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Administrador eliminado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/admins/login:
+ *   post:
+ *     summary: Iniciar sesión
+ *     tags: [Admins]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login exitoso (devuelve token)
+ *       401:
+ *         description: Credenciales inválidas
+ */
+
+export default router;

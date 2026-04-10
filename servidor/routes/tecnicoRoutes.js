@@ -1,14 +1,198 @@
-import express from 'express'; // Importamos Express para crear el router que manejará las rutas relacionadas con los tecnicos. Este router se encargará de definir las rutas y asociarlas con los controladores correspondientes para cada operación (obtener, buscar por ID, crear, eliminar, actualizar, login).  
-import { obtenerTec, obtenerTecPorId, crearTec, eliminarTec, actualizarTec, loginTecnico } from '../controllers/tecnicoController.js';
-import { verificarToken } from "../middleware/Auth.js"; // Importa el middleware
-const router = express.Router(); // Creamos un router de Express para definir las rutas relacionadas con los tecnicos. Este router se exportará al final del archivo para ser utilizado en el archivo principal del servidor (server.js) donde se montará en una ruta específica (por ejemplo, '/api/tecnicos').   
+import express from 'express';
+import {
+    obtenerTec,
+    obtenerTecPorId,
+    crearTec,
+    eliminarTec,
+    actualizarTec,
+    loginTecnico
+} from '../controllers/tecnicoController.js';
+import { verificarToken } from "../middleware/Auth.js";
 
-router.get('/obtener', verificarToken, obtenerTec); // Definimos la ruta GET '/obtener' que se asociará con el controlador 'obtenerTec'. Esta ruta se utilizará para obtener la lista de todos los tecnicos registrados en la base de datos. Cuando un cliente haga una solicitud GET a esta ruta, el controlador 'obtenerTec' se encargará de procesar la solicitud, interactuar con el modelo para obtener los datos y devolver la respuesta al cliente.  
-router.get('/buscar/:id', verificarToken, obtenerTecPorId); // Definimos la ruta GET '/buscar/:id' que se asociará con el controlador 'obtenerTecPorId'. Esta ruta se utilizará para obtener los detalles de un tecnico específico utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del tecnico que desea buscar. Cuando un cliente haga una solicitud GET a esta ruta con un ID específico, el controlador 'obtenerTecPorId' se encargará de procesar la solicitud, interactuar con el modelo para obtener los datos del tecnico correspondiente y devolver la respuesta al cliente.  
-router.post('/login', loginTecnico); // Definimos la ruta POST '/login' que se asociará con el controlador 'loginTecnico'. Esta ruta se utilizará para manejar el proceso de inicio de sesión de los tecnicos. Cuando un cliente haga una solicitud POST a esta ruta con las credenciales (usuario y contraseña) en el cuerpo de la solicitud, el controlador 'loginTecnico' se encargará de procesar la solicitud, verificar las credenciales contra la base de datos, generar un token JWT si las credenciales son válidas y devolver la respuesta al cliente con el resultado del login.    
-router.post('/insertar', verificarToken, crearTec); // Definimos la ruta POST '/insertar' que se asociará con el controlador 'crearTec'. Esta ruta se utilizará para crear un nuevo tecnico en la base de datos. Cuando un cliente haga una solicitud POST a esta ruta con los datos del nuevo tecnico en el cuerpo de la solicitud, el controlador 'crearTec' se encargará de procesar la solicitud, interactuar con el modelo para insertar el nuevo tecnico en la base de datos y devolver la respuesta al cliente con el resultado de la operación. 
-router.put('/actualizar', verificarToken, actualizarTec);
-router.put('/actualizar/:id', verificarToken, actualizarTec); // Definimos la ruta PUT '/actualizar/:id' que se asociará con el controlador 'actualizarTec'. Esta ruta se utilizará para actualizar los datos de un tecnico existente en la base de datos utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del tecnico que desea actualizar. Cuando un cliente haga una solicitud PUT a esta ruta con un ID específico y los nuevos datos en el cuerpo de la solicitud, el controlador 'actualizarTec' se encargará de procesar la solicitud, interactuar con el modelo para actualizar los datos del tecnico correspondiente en la base de datos y devolver la respuesta al cliente con el resultado de la operación.
-router.delete('/eliminar/:id', verificarToken, eliminarTec); // Definimos la ruta DELETE '/eliminar/:id' que se asociará con el controlador 'eliminarTec'. Esta ruta se utilizará para eliminar un tecnico existente en la base de datos utilizando su ID. El ':id' es un parámetro de ruta que permitirá al cliente especificar el ID del tecnico que desea eliminar. Cuando un cliente haga una solicitud DELETE a esta ruta con un ID específico, el controlador 'eliminarTec' se encargará de procesar la solicitud, interactuar con el modelo para eliminar el tecnico correspondiente de la base de datos y devolver la respuesta al cliente con el resultado de la operación.
+const router = express.Router();
 
-export default router; // Exportamos el router para que pueda ser utilizado en otras partes de la aplicación, como en el archivo principal del servidor (server.js) donde se montará en una ruta específica (por ejemplo, '/api/tecni').
+// ==============================================
+// Rutas (montadas sobre /api/tecnicos)
+// ==============================================
+
+router.get('/obtener', verificarToken, obtenerTec);
+router.get('/buscar/:id', verificarToken, obtenerTecPorId);
+router.post('/login', loginTecnico);
+router.post('/insertar', verificarToken, crearTec);
+router.put('/actualizar/:id', verificarToken, actualizarTec); // Solo una vez, con :id
+router.delete('/eliminar/:id', verificarToken, eliminarTec);
+
+// ==============================================
+// Documentación Swagger (summaries cortos, IDs string)
+// ==============================================
+
+/**
+ * @swagger
+ * tags:
+ *   name: Tecnicos
+ *   description: Gestión de técnicos (IDs tipo texto)
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/obtener:
+ *   get:
+ *     summary: Listar técnicos
+ *     tags: [Tecnicos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de técnicos
+ *       401:
+ *         description: No autorizado
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/buscar/{id}:
+ *   get:
+ *     summary: Buscar técnico
+ *     tags: [Tecnicos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del técnico (varchar)
+ *     responses:
+ *       200:
+ *         description: Técnico encontrado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/insertar:
+ *   post:
+ *     summary: Crear técnico
+ *     tags: [Tecnicos]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - nombre
+ *               - email
+ *               - password
+ *             properties:
+ *               id:
+ *                 type: string
+ *               nombre:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               especialidad:
+ *                 type: string
+ *               telefono:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Técnico creado
+ *       400:
+ *         description: Datos inválidos
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/actualizar/{id}:
+ *   put:
+ *     summary: Actualizar técnico
+ *     tags: [Tecnicos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               especialidad:
+ *                 type: string
+ *               telefono:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Técnico actualizado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/eliminar/{id}:
+ *   delete:
+ *     summary: Eliminar técnico
+ *     tags: [Tecnicos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Técnico eliminado
+ *       404:
+ *         description: No encontrado
+ */
+
+/**
+ * @swagger
+ * /api/tecnicos/login:
+ *   post:
+ *     summary: Iniciar sesión
+ *     tags: [Tecnicos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login exitoso (devuelve token)
+ *       401:
+ *         description: Credenciales inválidas
+ */
+
+export default router;

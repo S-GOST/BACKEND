@@ -8,7 +8,8 @@ import OrdenServicio from "./routes/ordenServicioRoutes.js";
 import DetalleOrdenServicio from "./routes/detalleOrdenServicioRoutes.js";
 import Motos from "./routes/motosRoutes.js";
 import cors from "cors";// Importamos el middleware CORS para permitir solicitudes desde diferentes orígenes, lo cual es especialmente útil cuando el frontend y el backend están alojados en dominios diferentes. Al usar CORS, podemos configurar qué orígenes tienen permiso para acceder a los recursos de nuestro servidor, lo que mejora la seguridad y la flexibilidad de nuestra aplicación. En este caso, al importar y usar CORS en nuestra aplicación Express, estamos permitiendo que cualquier origen pueda realizar solicitudes a nuestro servidor, lo que es útil durante el desarrollo y pruebas. Sin embargo, en un entorno de producción, es recomendable configurar CORS de manera más restrictiva para limitar el acceso solo a los orígenes confiables.    
-
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger.js";
 const app = express();
 
 
@@ -16,6 +17,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));//
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Rutas base
 app.use("/api/admins", Admins);
