@@ -26,7 +26,7 @@ export const loginTecnico = async (req, res) => {
         const token = jwt.sign(
             { id: tec.ID_TECNICOS },
             process.env.JWT_SECRET || 'clave_secreta_temporal',
-            { expiresIn: '5s' }
+            { expiresIn: '1h' }
         );
 
         // Devolvemos la estructura exacta que espera tu Frontend
