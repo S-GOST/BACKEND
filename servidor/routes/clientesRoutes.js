@@ -54,6 +54,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *   get:
  *     summary: Buscar cliente
  *     tags: [Clientes]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -64,6 +66,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *     responses:
  *       200:
  *         description: Cliente encontrado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -107,6 +111,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *         description: Cliente creado
  *       400:
  *         description: Datos inválidos
+ *       401:
+ *         description: No autorizado
  */
 
 /**
@@ -143,6 +149,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *     responses:
  *       200:
  *         description: Cliente actualizado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -164,12 +172,14 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *     responses:
  *       200:
  *         description: Cliente eliminado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
 
 /**
- * @swagger
+ * @swagger 
  * /api/clientes/login:
  *   post:
  *     summary: Iniciar sesión

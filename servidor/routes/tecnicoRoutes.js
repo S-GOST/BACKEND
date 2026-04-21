@@ -181,12 +181,12 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - usuario
+ *               - contrasena
  *             properties:
- *               email:
+ *               usuario:
  *                 type: string
- *               password:
+ *               contrasena:
  *                 type: string
  *     responses:
  *       200:
