@@ -23,14 +23,14 @@ router.put('/actualizar/:id', verificarToken, actualizarAdmin);
 router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
 
 // ==============================================
-// Documentación Swagger (summaries cortos)
+// Documentación Swagger
 // ==============================================
 
 /**
  * @swagger
  * tags:
- *   name: Admins
- *   description: Gestión de administradores (IDs tipo texto)
+ *   - name: Admins
+ *     description: Gestión de administradores (IDs tipo texto)
  */
 
 /**
@@ -52,7 +52,7 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  * @swagger
  * /api/admins/buscar/{id}:
  *   get:
- *     summary: Buscar administrador
+ *     summary: Buscar administrador por ID
  *     tags: [Admins]
  *     parameters:
  *       - in: path

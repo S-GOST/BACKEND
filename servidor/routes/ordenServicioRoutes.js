@@ -53,7 +53,7 @@ router.delete('/eliminar/:id', eliminarOrden);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID de la orden (ej: "ORD-001")
+ *         description: 'ID de la orden (ej: "ORD-001")'
  *     responses:
  *       200:
  *         description: Orden encontrada
