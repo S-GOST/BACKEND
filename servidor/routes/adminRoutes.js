@@ -54,6 +54,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *   get:
  *     summary: Buscar administrador por ID
  *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -63,6 +65,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *     responses:
  *       200:
  *         description: Administrador encontrado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -82,10 +86,10 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *           schema:
  *             type: object
  *             required:
- *               - id
- *               - nombre
- *               - email
- *               - password
+ *               - ID_ADMINISTRADOR
+ *               - Nombre
+ *               - usuario
+ *               - contrasena
  *             properties:
  *               id:
  *                 type: string
@@ -105,6 +109,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *         description: Administrador creado
  *       400:
  *         description: Datos inválidos
+ *       401:
+ *         description: No autorizado
  */
 
 /**
@@ -139,6 +145,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *     responses:
  *       200:
  *         description: Administrador actualizado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -160,6 +168,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *     responses:
  *       200:
  *         description: Administrador eliminado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -180,10 +190,12 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *               - email
  *               - password
  *             properties:
- *               email:
+ *               usuario:
  *                 type: string
- *               password:
+ *                 format: email
+ *               contrasena:
  *                 type: string
+ *                 format: password
  *     responses:
  *       200:
  *         description: Login exitoso (devuelve token)
