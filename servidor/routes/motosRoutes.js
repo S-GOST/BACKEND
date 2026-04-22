@@ -36,6 +36,8 @@ router.delete('/eliminar/:id', eliminarMoto);
  *   get:
  *     summary: Listar motos
  *     tags: [Motos]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de motos obtenida
@@ -47,6 +49,8 @@ router.delete('/eliminar/:id', eliminarMoto);
  *   get:
  *     summary: Buscar moto
  *     tags: [Motos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -67,6 +71,8 @@ router.delete('/eliminar/:id', eliminarMoto);
  *   post:
  *     summary: Crear moto
  *     tags: [Motos]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -105,6 +111,8 @@ router.delete('/eliminar/:id', eliminarMoto);
  *   put:
  *     summary: Actualizar moto
  *     tags: [Motos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -143,6 +151,8 @@ router.delete('/eliminar/:id', eliminarMoto);
  *   delete:
  *     summary: Eliminar moto
  *     tags: [Motos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

@@ -1,34 +1,28 @@
-// Cambiamos 'productos' por 'Producto' para que coincida con el resto del archivo
-import Producto from "../models/productosModel.js"; 
-import pool from "../config/db.js"; 
+// Importamos el modelo Producto (asegúrate que la ruta y el export sean correctos)
+import Producto from "../models/productosModel.js";
 
 // Obtener todos los productos
 export const obtenerProductos = async (req, res) => {
     try {
-        // Ahora sí, 'Producto' ya está definido arriba
-        const filas = await Producto.findAll(); 
-        res.json({ success: true, data: filas });
+        const productos = await Producto.findAll();
+        res.json({ success: true, data: productos });
     } catch (error) {
         console.error("Error al obtener productos:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// ... el resto de tu código está bien porque usa 'Producto'
-
 // Obtener un producto por su ID
 export const obtenerProductoPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Uso de pool directo para búsqueda específica por ID (evitando inyección SQL)
-        const [rows] = await pool.query('SELECT * FROM productos WHERE ID_PRODUCTOS = ?', [id]);
-
-        if (rows.length === 0) {
+        const producto = await Producto.findById(id);
+        if (!producto) {
             return res.status(404).json({ success: false, message: 'Producto no encontrado' });
         }
-
-        res.json({ success: true, data: rows[0] });
+        res.json({ success: true, data: producto });
     } catch (error) {
+        console.error("Error al obtener producto por ID:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -36,9 +30,9 @@ export const obtenerProductoPorId = async (req, res) => {
 // Crear un nuevo producto
 export const crearProducto = async (req, res) => {
     try {
-        // Se asume que req.body contiene los campos necesarios (Nombre, Precio, Stock, etc.)
-        const nuevoProducto = await Producto.create(req.body);    
-        res.json({ success: true, data: nuevoProducto });
+        // req.body debe incluir: ID, PRODUCTOS, CATEGORIA, MARCA, NOMBRE, GARANTÍA, PRECIO, CANTIDAD, ESTADO
+        const resultado = await Producto.create(req.body);
+        res.status(201).json({ success: true, data: resultado });
     } catch (error) {
         console.error("Error al crear producto:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -47,20 +41,21 @@ export const crearProducto = async (req, res) => {
 
 // Actualizar un producto existente
 export const actualizarProducto = async (req, res) => {
-    // Intentamos obtener el ID de los parámetros o del body (fallback)
-    const id = req.params.id || req.body.ID_PRODUCTO_ORIGINAL;
-
+    const { id } = req.params; // El ID se toma de la URL
     if (!id) {
         return res.status(400).json({ success: false, message: 'ID del producto no proporcionado' });
     }
 
     try {
-        const productoActualizado = await Producto.update(id, req.body);  
+        const productoActualizado = await Producto.update(id, req.body);
+        if (productoActualizado.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+        }
         res.json({ success: true, data: productoActualizado });
     } catch (error) {
         console.error("Error al actualizar producto:", error);
         res.status(500).json({ success: false, error: error.message });
-    }   
+    }
 };
 
 // Eliminar un producto
@@ -75,12 +70,16 @@ export const eliminarProducto = async (req, res) => {
     }
 };
 
-// Ejemplo de consulta específica: Obtener productos con poco stock
+// Obtener productos con bajo stock (usando la columna CANTIDAD)
 export const obtenerStockBajo = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM productos WHERE stock < 5');
-        res.json({ success: true, data: rows });
+        // Usamos el modelo para hacer una consulta personalizada o podemos crear un método específico en el modelo
+        // Por simplicidad, aquí hacemos la consulta directa con pool (opcional, pero mejor crear un método en el modelo)
+        // Para mantener la coherencia, crearemos un nuevo método en el modelo llamado `findLowStock`
+        const productosBajoStock = await Producto.findLowStock(5); // umbral 5
+        res.json({ success: true, data: productosBajoStock });
     } catch (error) {
+        console.error("Error al obtener productos con stock bajo:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

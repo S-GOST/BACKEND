@@ -1,6 +1,6 @@
-import pool from "../config/db.js"; // Importamos el pool de conexiones para interactuar con la base de datos.
+import pool from "../config/db.js";
 
-const Producto = { 
+const Producto = {
   // 1. Obtener todos los productos
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM productos");
@@ -10,29 +10,37 @@ const Producto = {
   // 2. Buscar un producto por su ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      "SELECT * FROM productos WHERE ID_PRODUCTO = ?",
+      "SELECT * FROM productos WHERE ID_PRODUCTOS = ?",
       [id]
     );
     return rows[0];
   },
-
+    // Dentro del objeto Producto, añade:
+    findLowStock: async (umbral) => {
+        const [rows] = await pool.query(
+            "SELECT * FROM productos WHERE CANTIDAD < ?",
+            [umbral]
+        );
+        return rows;
+    },
   // 3. Crear un nuevo producto
   create: async (data) => {
-    const { 
-      ID_PRODUCTO, 
-      Nombre, 
-      Descripcion, 
-      Precio, 
-      Stock, 
-      Categoria, 
-      ImagenURL 
+    const {
+      ID_PRODUCTOS,
+      Categoria,
+      Marca,
+      Nombre,
+      Garantia,
+      Precio,
+      Cantidad,
+      Estado,
     } = data;
 
     const [result] = await pool.query(
-      `INSERT INTO productos
-      (ID_PRODUCTO, Nombre, Descripcion, Precio, Stock, Categoria, ImagenURL)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [ID_PRODUCTO, Nombre, Descripcion, Precio, Stock, Categoria, ImagenURL]
+      `INSERT INTO productos 
+       (ID_PRODUCTOS, Categoria, Marca, Nombre, Garantia, Precio, Cantidad,Estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [ID_PRODUCTOS, Categoria, Marca, Nombre, Garantia, Precio, Cantidad, Estado]
     );
 
     return result;
@@ -40,21 +48,23 @@ const Producto = {
 
   // 4. Actualizar un producto existente
   update: async (id, data) => {
-    const { 
-      ID_PRODUCTO, 
-      Nombre, 
-      Descripcion, 
-      Precio, 
-      Stock, 
-      Categoria, 
+    const {
+      ID_PRODUCTOS,
+      Categoria,
+      Marca,
+      Nombre,
+      Garantia,
+      Precio,
+      Cantidad,
+      Estado,
     } = data;
 
     const [result] = await pool.query(
       `UPDATE productos 
-       SET ID_PRODUCTO = ?, Nombre = ?, Descripcion = ?, Precio = ?, 
-           Stock = ?, Categoria = ?, ImagenURL = ?
-       WHERE ID_PRODUCTO = ?`,
-      [ID_PRODUCTO, Nombre, Descripcion, Precio, Stock, Categoria, ImagenURL, id]
+       SET ID_PRODUCTOS = ?, Categoria = ?, Marca = ?, Nombre = ?,
+           Garantia = ?, Precio = ?, Cantidad = ?, Estado = ?
+       WHERE ID_PRODUCTOS = ?`,
+      [ID_PRODUCTOS, Categoria, Marca, Nombre, Garantia, Precio, Cantidad, Estado, id]
     );
 
     return result;
@@ -62,12 +72,9 @@ const Producto = {
 
   // 5. Eliminar un producto
   delete: async (id) => {
-    await pool.query(
-      "DELETE FROM productos WHERE ID_PRODUCTO = ?",
-      [id]
-    );
+    await pool.query("DELETE FROM productos WHERE ID_PRODUCTOS = ?", [id]);
     return true;
-  }
+  },
 };
 
 export default Producto;

@@ -36,6 +36,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *   get:
  *     summary: Listar detalles
  *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de detalles obtenida
@@ -47,6 +49,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *   get:
  *     summary: Buscar detalle
  *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -67,6 +71,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *   post:
  *     summary: Crear detalle
  *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -102,6 +108,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *   put:
  *     summary: Actualizar detalle
  *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -138,6 +146,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *   delete:
  *     summary: Eliminar detalle
  *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

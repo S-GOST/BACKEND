@@ -36,6 +36,8 @@ router.delete('/eliminar/:id', eliminarOrden);
  *   get:
  *     summary: Listar órdenes
  *     tags: [OrdenesServicio]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de órdenes obtenida exitosamente
@@ -47,6 +49,8 @@ router.delete('/eliminar/:id', eliminarOrden);
  *   get:
  *     summary: Buscar orden
  *     tags: [OrdenesServicio]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -67,6 +71,8 @@ router.delete('/eliminar/:id', eliminarOrden);
  *   post:
  *     summary: Crear orden
  *     tags: [OrdenesServicio]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -102,6 +108,8 @@ router.delete('/eliminar/:id', eliminarOrden);
  *   put:
  *     summary: Actualizar orden
  *     tags: [OrdenesServicio]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -140,6 +148,8 @@ router.delete('/eliminar/:id', eliminarOrden);
  *   delete:
  *     summary: Eliminar orden
  *     tags: [OrdenesServicio]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

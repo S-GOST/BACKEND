@@ -54,6 +54,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *   get:
  *     summary: Buscar técnico
  *     tags: [Tecnicos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

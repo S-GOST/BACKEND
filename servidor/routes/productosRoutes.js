@@ -38,6 +38,8 @@ router.get('/stock-bajo', obtenerStockBajo);
  *   get:
  *     summary: Listar productos
  *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de productos obtenida
@@ -49,6 +51,8 @@ router.get('/stock-bajo', obtenerStockBajo);
  *   get:
  *     summary: Buscar producto
  *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -69,6 +73,8 @@ router.get('/stock-bajo', obtenerStockBajo);
  *   post:
  *     summary: Crear producto
  *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -106,6 +112,8 @@ router.get('/stock-bajo', obtenerStockBajo);
  *   put:
  *     summary: Actualizar producto
  *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -142,6 +150,8 @@ router.get('/stock-bajo', obtenerStockBajo);
  *   delete:
  *     summary: Eliminar producto
  *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

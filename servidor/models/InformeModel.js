@@ -3,14 +3,14 @@ import pool from "../config/db.js";
 const Informe = {
     // Obtener todos los informes
     findAll: async () => {
-        const [rows] = await pool.query("SELECT * FROM informes");
+        const [rows] = await pool.query("SELECT * FROM informe");
         return rows;
     },
 
     // Buscar un informe por su ID (PK)
     findById: async (id) => {
         const [rows] = await pool.query(
-            "SELECT * FROM informes WHERE ID_INFORMES = ?",
+            "SELECT * FROM informe WHERE ID_INFORMES = ?",
             [id]
         );
         if (!rows.length) return null;
@@ -22,7 +22,7 @@ const Informe = {
         const { ID_INFORMES, ID_MOTOS, Fecha, Descripcion, Diagnostico, Costo_Total } = data;
         
         const [result] = await pool.query(
-            `INSERT INTO informes (ID_INFORMES, ID_MOTOS, Fecha, Descripcion, Diagnostico, Costo_Total)
+            `INSERT INTO informe (ID_INFORMES, ID_MOTOS, Fecha, Descripcion, Diagnostico, Costo_Total)
              VALUES (?, ?, ?, ?, ?, ?)`,
             [ID_INFORMES, ID_MOTOS, Fecha, Descripcion, Diagnostico, Costo_Total]
         );
