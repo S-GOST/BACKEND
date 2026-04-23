@@ -1,5 +1,5 @@
-import Informe from "../models/informeModel.js"; // Importamos el modelo 'Informe'
-import pool from "../config/db.js"; // Importamos el pool para consultas directas específicas
+import Informe from "../models/informeModel.js"; 
+import pool from "../config/db.js"; 
 
 /**
  * Obtener todos los informes
@@ -22,12 +22,13 @@ export const obtenerInformes = async (req, res) => {
 
 /**
  * Obtener un informe específico por su ID
+ * Se cambió ID_INFORMES por ID_INFORME según la imagen
  */
 export const obtenerInformePorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Consulta directa para buscar por ID_INFORMES
-        const [rows] = await pool.query('SELECT * FROM informes WHERE ID_INFORMES = ?', [id]);
+        // Ajustado al nombre exacto de la columna en tu base de datos
+        const [rows] = await pool.query('SELECT * FROM informes WHERE ID_INFORME = ?', [id]);
 
         if (rows.length === 0) {
             return res.status(404).json({ 
@@ -51,11 +52,29 @@ export const obtenerInformePorId = async (req, res) => {
 
 /**
  * Crear un nuevo informe
+ * Asegúrate de enviar estos campos en el JSON:
+ * ID_DETALLES_ORDEN_SERVICIO, ID_ADMINISTRADOR, ID_TECNICOS, Descripcion, Fecha, Estado
  */
 export const crearInforme = async (req, res) => {
     try {
-        // Se recibe el cuerpo de la petición sin validaciones de sesión/token
-        const nuevoInforme = await Informe.create(req.body);    
+        const { 
+            ID_DETALLES_ORDEN_SERVICIO, 
+            ID_ADMINISTRADOR, 
+            ID_TECNICOS, 
+            Descripcion, 
+            Fecha, 
+            Estado 
+        } = req.body;
+
+        const nuevoInforme = await Informe.create({
+            ID_DETALLES_ORDEN_SERVICIO,
+            ID_ADMINISTRADOR,
+            ID_TECNICOS,
+            Descripcion,
+            Fecha,
+            Estado
+        });    
+
         res.json({ 
             success: true, 
             data: nuevoInforme 
@@ -75,6 +94,7 @@ export const crearInforme = async (req, res) => {
 export const actualizarInforme = async (req, res) => {
     const { id } = req.params;
     try {
+        // Pasamos el ID y el cuerpo con los nombres de columnas correctos
         const informeActualizado = await Informe.update(id, req.body);  
         res.json({ 
             success: true, 
