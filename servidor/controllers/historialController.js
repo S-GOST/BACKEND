@@ -1,5 +1,4 @@
-import Historial from "../models/historialModel.js"; // Importamos el modelo 'Historial'
-import pool from "../config/db.js"; // Importamos el pool para consultas directas específicas
+import Historial from "../models/historialModel.js";
 
 /**
  * Obtener todo el historial
@@ -26,19 +25,16 @@ export const obtenerHistorial = async (req, res) => {
 export const obtenerHistorialPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Consulta directa para buscar por el ID específico de la tabla historial
-        const [rows] = await pool.query('SELECT * FROM historial WHERE ID_HISTORIAL = ?', [id]);
-
-        if (rows.length === 0) {
+        const registro = await Historial.findById(id);
+        if (!registro) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Registro de historial no encontrado' 
             });
         }
-
         res.json({ 
             success: true, 
-            data: rows[0] 
+            data: registro 
         });
     } catch (error) {
         console.error("Error al obtener historial por ID:", error);
@@ -54,7 +50,6 @@ export const obtenerHistorialPorId = async (req, res) => {
  */
 export const crearHistorial = async (req, res) => {
     try {
-        // El modelo 'Historial' gestiona la inserción (ID_MOTO, descripción, fecha, etc.)
         const nuevoRegistro = await Historial.create(req.body);    
         res.json({ 
             success: true, 

@@ -1,13 +1,13 @@
-import pool from "../config/db.js"; // Importamos el pool de conexiones para interactuar con la base de datos.
+import pool from "../config/db.js"; // Importamos el pool de conexiones
 
-const DetalleOrdenServicio = { 
+const DetalleOrdenServicio = {
   // 1. Obtener todos los detalles de orden de servicio
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM detalles_orden_servicio");
     return rows;
   },
 
-  // 2. Buscar un detalle de orden por su ID
+  // 2. Buscar un detalle de orden por su ID (clave primaria)
   findById: async (id) => {
     const [rows] = await pool.query(
       "SELECT * FROM detalles_orden_servicio WHERE ID_DETALLES_ORDEN_SERVICIO = ?",
@@ -25,28 +25,28 @@ const DetalleOrdenServicio = {
       ID_PRODUCTOS,
       Garantia,
       Estado,
-      Precio
+      Precio,
     } = data;
 
     const [result] = await pool.query(
       `INSERT INTO detalles_orden_servicio
-      (ID_DETALLES_ORDEN_SERVICIO, ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (ID_DETALLES_ORDEN_SERVICIO, ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         ID_DETALLES_ORDEN_SERVICIO,
         ID_ORDEN_SERVICIO,
-        ID_SERVICIOS,
-        ID_PRODUCTOS,
+        ID_SERVICIOS || null,   // Si no viene, se guarda NULL
+        ID_PRODUCTOS || null,   // Si no viene, se guarda NULL
         Garantia,
         Estado,
-        Precio
+        Precio,
       ]
     );
 
     return result;
   },
 
-  // 4. Actualizar un detalle de orden existente
+  // 4. Actualizar un detalle de orden existente (sin modificar la clave primaria)
   update: async (id, data) => {
     const {
       ID_ORDEN_SERVICIO,
@@ -54,21 +54,26 @@ const DetalleOrdenServicio = {
       ID_PRODUCTOS,
       Garantia,
       Estado,
-      Precio
+      Precio,
     } = data;
 
     const [result] = await pool.query(
       `UPDATE detalles_orden_servicio
-       SET ID_ORDEN_SERVICIO = ?, ID_SERVICIOS = ?, ID_PRODUCTOS = ?, Garantia = ?, Estado = ?, Precio = ?
+       SET ID_ORDEN_SERVICIO = ?,
+           ID_SERVICIOS = ?,
+           ID_PRODUCTOS = ?,
+           Garantia = ?,
+           Estado = ?,
+           Precio = ?
        WHERE ID_DETALLES_ORDEN_SERVICIO = ?`,
       [
         ID_ORDEN_SERVICIO,
-        ID_SERVICIOS,
-        ID_PRODUCTOS,
+        ID_SERVICIOS || null,
+        ID_PRODUCTOS || null,
         Garantia,
         Estado,
         Precio,
-        id
+        id,  // Aquí va el ID del detalle (condición WHERE)
       ]
     );
 
@@ -82,7 +87,7 @@ const DetalleOrdenServicio = {
       [id]
     );
     return result;
-  }
+  },
 };
 
 export default DetalleOrdenServicio;

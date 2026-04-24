@@ -7,52 +7,104 @@ const Comprobante = {
         return rows;
     },
 
-    // Buscar un comprobante por su Clave Primaria (ID)
+    // Buscar un comprobante por su clave primaria (ID_COMPROBANTE)
     findByPk: async (id) => {
-        const [rows] = await pool.query("SELECT * FROM comprobante WHERE ID_COMPROBANTE = ?", [id]);
+        const [rows] = await pool.query(
+            "SELECT * FROM comprobante WHERE ID_COMPROBANTE = ?",
+            [id]
+        );
         return rows[0];
     },
 
     // Crear un nuevo comprobante
     create: async (datos) => {
-        // Extraer los campos (ajusta los nombres según tu tabla de base de datos)
-        const { ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado } = datos;
-        
+        const {
+            ID_COMPROBANTE,
+            ID_INFORME,
+            ID_CLIENTES,
+            ID_ADMINISTRADOR,
+            Monto,
+            Fecha,
+            Estado_pago,
+        } = datos;
+
         const [result] = await pool.query(
-            "INSERT INTO comprobante (ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado]
+            `INSERT INTO comprobante
+             (ID_COMPROBANTE, ID_INFORME, ID_CLIENTES, ID_ADMINISTRADOR, Monto, Fecha, Estado_pago)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                ID_COMPROBANTE,
+                ID_INFORME || null,
+                ID_CLIENTES,
+                ID_ADMINISTRADOR || null,
+                Monto,
+                Fecha || new Date(),  // si no se envía, usa fecha actual
+                Estado_pago || 'Pendiente',
+            ]
         );
-        
-        // Devolvemos el objeto creado
-        return { 
-            ID_COMPROBANTE: ID_COMPROBANTE || result.insertId, 
-            Fecha, 
-            Valor_Total, 
-            ID_CLIENTE, 
-            ID_MOTOS, 
-            ID_SERVICIOS, 
-            Estado 
+
+        // Retornar el comprobante creado (similar a cómo lo espera el controlador)
+        return {
+            ID_COMPROBANTE: ID_COMPROBANTE || result.insertId,
+            ID_INFORME,
+            ID_CLIENTES,
+            ID_ADMINISTRADOR,
+            Monto,
+            Fecha,
+            Estado_pago,
         };
     },
 
     // Actualizar un comprobante existente
     update: async (id, datos) => {
-        const { Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado } = datos;
-        
-        await pool.query(
-            "UPDATE comprobante SET Fecha = ?, Valor_Total = ?, ID_CLIENTE = ?, ID_MOTOS = ?, ID_SERVICIOS = ?, Estado = ? WHERE ID_COMPROBANTE = ?",
-            [Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado, id]
+        const {
+            ID_INFORME,
+            ID_CLIENTES,
+            ID_ADMINISTRADOR,
+            Monto,
+            Fecha,
+            Estado_pago,
+        } = datos;
+
+        const [result] = await pool.query(
+            `UPDATE comprobante
+             SET ID_INFORME = ?,
+                 ID_CLIENTES = ?,
+                 ID_ADMINISTRADOR = ?,
+                 Monto = ?,
+                 Fecha = ?,
+                 Estado_pago = ?
+             WHERE ID_COMPROBANTE = ?`,
+            [
+                ID_INFORME || null,
+                ID_CLIENTES,
+                ID_ADMINISTRADOR || null,
+                Monto,
+                Fecha,
+                Estado_pago,
+                id,   // el ID del comprobante a actualizar
+            ]
         );
-        
-        // Devolvemos el objeto actualizado
-        return { ID_COMPROBANTE: id, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado };
+
+        return {
+            ID_COMPROBANTE: id,
+            ID_INFORME,
+            ID_CLIENTES,
+            ID_ADMINISTRADOR,
+            Monto,
+            Fecha,
+            Estado_pago,
+        };
     },
 
     // Eliminar un comprobante
     delete: async (id) => {
-        const [result] = await pool.query("DELETE FROM comprobante WHERE ID_COMPROBANTE = ?", [id]);
+        const [result] = await pool.query(
+            "DELETE FROM comprobante WHERE ID_COMPROBANTE = ?",
+            [id]
+        );
         return result;
-    }
+    },
 };
 
 export default Comprobante;
