@@ -3,13 +3,13 @@ import pool from "../config/db.js";
 const Comprobante = {
     // Obtener todos los comprobantes
     findAll: async () => {
-        const [rows] = await pool.query("SELECT * FROM comprobantes");
+        const [rows] = await pool.query("SELECT * FROM comprobante");
         return rows;
     },
 
     // Buscar un comprobante por su Clave Primaria (ID)
     findByPk: async (id) => {
-        const [rows] = await pool.query("SELECT * FROM comprobantes WHERE ID_COMPROBANTE = ?", [id]);
+        const [rows] = await pool.query("SELECT * FROM comprobante WHERE ID_COMPROBANTE = ?", [id]);
         return rows[0];
     },
 
@@ -19,7 +19,7 @@ const Comprobante = {
         const { ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado } = datos;
         
         const [result] = await pool.query(
-            "INSERT INTO comprobantes (ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO comprobante (ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [ID_COMPROBANTE, Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado]
         );
         
@@ -40,7 +40,7 @@ const Comprobante = {
         const { Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado } = datos;
         
         await pool.query(
-            "UPDATE comprobantes SET Fecha = ?, Valor_Total = ?, ID_CLIENTE = ?, ID_MOTOS = ?, ID_SERVICIOS = ?, Estado = ? WHERE ID_COMPROBANTE = ?",
+            "UPDATE comprobante SET Fecha = ?, Valor_Total = ?, ID_CLIENTE = ?, ID_MOTOS = ?, ID_SERVICIOS = ?, Estado = ? WHERE ID_COMPROBANTE = ?",
             [Fecha, Valor_Total, ID_CLIENTE, ID_MOTOS, ID_SERVICIOS, Estado, id]
         );
         
@@ -50,7 +50,7 @@ const Comprobante = {
 
     // Eliminar un comprobante
     delete: async (id) => {
-        const [result] = await pool.query("DELETE FROM comprobantes WHERE ID_COMPROBANTE = ?", [id]);
+        const [result] = await pool.query("DELETE FROM comprobante WHERE ID_COMPROBANTE = ?", [id]);
         return result;
     }
 };

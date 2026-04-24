@@ -6,13 +6,13 @@ import pool from "../config/db.js"; // Importamos el pool para consultas directa
  */
 export const obtenerComprobantes = async (req, res) => {
     try {
-        const comprobantes = await Comprobante.findAll();
+        const comprobante = await Comprobante.findAll();
         res.json({ 
             success: true, 
-            data: comprobantes 
+            data: comprobante
         });
     } catch (error) {
-        console.error("Error al obtener comprobantes:", error);
+        console.error("Error al obtener comprobante:", error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
@@ -27,7 +27,7 @@ export const obtenerComprobantePorId = async (req, res) => {
     const { id } = req.params;
     try {
         // Usamos query directa para buscar por el ID específico de la tabla comprobantes
-        const [rows] = await pool.query('SELECT * FROM comprobantes WHERE ID_COMPROBANTE = ?', [id]);
+        const [rows] = await pool.query('SELECT * FROM comprobante WHERE ID_COMPROBANTE = ?', [id]);
 
         if (rows.length === 0) {
             return res.status(404).json({ 
