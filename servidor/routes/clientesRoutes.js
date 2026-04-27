@@ -194,9 +194,9 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *               - email
  *               - password
  *             properties:
- *               email:
+ *               usuario:
  *                 type: string
- *               password:
+ *               contrasena:
  *                 type: string
  *     responses:
  *       200:

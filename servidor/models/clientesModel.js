@@ -1,4 +1,4 @@
-import pool from "../config/db.js"; // Importamos el pool de conexiones para interactuar con la base de datos.
+import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 
 const clientes = {
@@ -17,7 +17,25 @@ const clientes = {
     return rows[0];
   },
 
-  // 3. Crear un nuevo cliente
+  // Alias para findByPk (compatible con Sequelize)
+  findByPk: async (id) => {
+    return await clientes.findById(id);
+  },
+
+  // 3. Buscar un registro por condición (ej: { where: { usuario: '...' } })
+  findOne: async (conditions) => {
+    const { where } = conditions;
+    if (!where) return null;
+    const campo = Object.keys(where)[0];
+    const valor = where[campo];
+    const [rows] = await pool.query(
+      `SELECT * FROM clientes WHERE ${campo} = ?`,
+      [valor]
+    );
+    return rows[0];
+  },
+
+  // 4. Crear un nuevo cliente
   create: async (data) => {
     const { ID_CLIENTES, Ubicacion, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono } = data;
 
@@ -34,7 +52,7 @@ const clientes = {
     return result;
   },
 
-  // 4. Actualizar cliente existente
+  // 5. Actualizar cliente existente
   update: async (id, data) => {
     const { ID_CLIENTES, Ubicacion, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono } = data;
 
@@ -62,7 +80,7 @@ const clientes = {
     return result;
   },
 
-  // 5. Eliminar cliente
+  // 6. Eliminar cliente
   delete: async (id) => {
     await pool.query(
       "DELETE FROM clientes WHERE ID_CLIENTES = ?",

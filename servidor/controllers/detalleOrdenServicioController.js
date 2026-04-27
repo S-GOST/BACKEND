@@ -1,5 +1,4 @@
 import DetalleOrdenServicio from "../models/detalleOrdenServicioModel.js";
-import pool from "../config/db.js";
 
 export const obtenerDetallesOrden = async (req, res) => {
   try {
@@ -14,16 +13,13 @@ export const obtenerDetallesOrden = async (req, res) => {
 export const obtenerDetalleOrdenPorId = async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query(
-      "SELECT * FROM detalles_orden_servicio WHERE ID_DETALLES_ORDEN_SERVICIO = ?",
-      [id]
-    );
+    const detalle = await DetalleOrdenServicio.findByPk(id);
 
-    if (rows.length === 0) {
+    if (!detalle) {
       return res.status(404).json({ success: false, message: 'Detalle de orden de servicio no encontrado' });
     }
 
-    res.json({ success: true, data: rows[0] });
+    res.json({ success: true, data: detalle });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -1,12 +1,11 @@
-import Servicio from "../models/serviciosModel.js"; // Importamos el modelo 'Servicio'
-import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para realizar consultas SQL directamente desde este controlador, especialmente para operaciones que no están cubiertas por los métodos del modelo 'Servicio', como obtener un servicio por su ID.
+import Servicio from "../models/serviciosModel.js";
+
 /**
  * Obtener todos los servicios
  */
 export const obtenerServicios = async (req, res) => {
     try {
         const servicios = await Servicio.findAll();
-        // Mantenemos la estructura res.json({ success: true, data: [...] })
         res.json({ 
             success: true, 
             data: servicios 
@@ -26,14 +25,14 @@ export const obtenerServicios = async (req, res) => {
 export const obtenerServicioPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // En mysql2 se usa .query() y pasamos el ID en un arreglo para evitar inyección SQL
-        const [rows] = await pool.query('SELECT * FROM servicios WHERE ID_SERVICIOS = ?', [id]);
+        // Usamos el método findByPk del modelo (debe existir en el modelo)
+        const servicio = await Servicio.findByPk(id);
 
-        if (rows.length === 0) {
+        if (!servicio) {
             return res.status(404).json({ success: false, message: 'Servicio no encontrado' });
         }
 
-        res.json({ success: true, data: rows[0] });
+        res.json({ success: true, data: servicio });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -44,7 +43,6 @@ export const obtenerServicioPorId = async (req, res) => {
  */
 export const crearServicio = async (req, res) => {
     try {
-        // El modelo 'Servicio' debe gestionar la inserción de los campos (nombre, precio, etc.)
         const nuevoServicio = await Servicio.create(req.body);    
         res.json({ 
             success: true, 

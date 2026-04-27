@@ -1,5 +1,4 @@
-import Moto from "../models/motosModel.js"; // Importamos el modelo 'Moto'
-import pool from "../config/db.js"; // Importamos el pool para consultas directas específicas
+import Moto from "../models/motosModel.js";
 
 /**
  * Obtener todas las motos
@@ -26,10 +25,10 @@ export const obtenerMotos = async (req, res) => {
 export const obtenerMotoPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Usamos query directa para buscar por el ID específico de la tabla motos
-        const [rows] = await pool.query('SELECT * FROM motos WHERE ID_MOTOS = ?', [id]);
+        // Usamos el método findByPk del modelo (debe existir en el modelo)
+        const moto = await Moto.findByPk(id);
 
-        if (rows.length === 0) {
+        if (!moto) {
             return res.status(404).json({ 
                 success: false, 
                 message: 'Moto no encontrada' 
@@ -38,7 +37,7 @@ export const obtenerMotoPorId = async (req, res) => {
 
         res.json({ 
             success: true, 
-            data: rows[0] 
+            data: moto 
         });
     } catch (error) {
         console.error("Error al obtener moto por ID:", error);
@@ -54,7 +53,6 @@ export const obtenerMotoPorId = async (req, res) => {
  */
 export const crearMoto = async (req, res) => {
     try {
-        // El modelo 'Moto' gestiona la inserción (placa, modelo, marca, etc.)
         const nuevaMoto = await Moto.create(req.body);    
         res.json({ 
             success: true, 

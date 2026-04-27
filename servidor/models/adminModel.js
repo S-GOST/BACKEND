@@ -1,14 +1,14 @@
-import pool from "../config/db.js"; // Importamos el pool de conexiones a la base de datos para poder realizar consultas SQL desde este modelo. 
-import bcrypt from 'bcrypt'; // Importamos bcrypt para poder encriptar las contraseñas antes de almacenarlas en la base de datos, lo cual es una buena práctica de seguridad. 
+import pool from "../config/db.js";
+import bcrypt from 'bcrypt';
 
-const Administrador = { // Definimos un objeto 'Administrador' que contendrá métodos para interactuar con la tabla 'administradores' en la base de datos. Cada método corresponde a una operación CRUD (Crear, Leer, Actualizar, Eliminar) o a una consulta específica. 
-  // 1. Obtener todos los administradores
+const Administrador = {
+  // Obtener todos
   findAll: async () => {
     const [rows] = await pool.query("SELECT * FROM administradores");
     return rows;
   },
 
-  // 2. Buscamos por ID_ADMINISTRADORES
+  // Buscar por ID (para findByPk)
   findById: async (id) => {
     const [rows] = await pool.query(
       "SELECT * FROM administradores WHERE ID_ADMINISTRADOR = ?",
@@ -17,34 +17,45 @@ const Administrador = { // Definimos un objeto 'Administrador' que contendrá m�
     return rows[0];
   },
 
-  // 3. Crear un nuevo registro
-create: async (data) => {
+  // Alias para findByPk (compatible con Sequelize)
+  findByPk: async (id) => {
+    return await Administrador.findById(id);
+  },
 
-  const { ID_ADMINISTRADOR,Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
+  // Buscar un registro por condición (ej: { where: { usuario: '...' } })
+  findOne: async (conditions) => {
+    // Extraemos el campo y valor del objeto where
+    const { where } = conditions;
+    if (!where) return null;
+    const campo = Object.keys(where)[0];
+    const valor = where[campo];
+    const [rows] = await pool.query(
+      `SELECT * FROM administradores WHERE ${campo} = ?`,
+      [valor]
+    );
+    return rows[0];
+  },
 
-  // encriptar contraseña
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(contrasena, saltRounds);
+  // Crear nuevo administrador
+  create: async (data) => {
+    const { ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(contrasena, saltRounds);
+    const [result] = await pool.query(
+      `INSERT INTO administradores
+       (ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [ID_ADMINISTRADOR, Nombre, usuario, passwordHash, Correo, TipoDocumento, Telefono]
+    );
+    return result;
+  },
 
-  const [result] = await pool.query(
-    `INSERT INTO administradores
-    (ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [ID_ADMINISTRADOR, Nombre, usuario, passwordHash, Correo, TipoDocumento, Telefono]
-  );
-
-  return result;
-},
-
- // 4. Actualizar administrador
+  // Actualizar administrador
   update: async (id, data) => {
-    const {ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
-
-    // Si enviaron una contraseña nueva (el frontend mandó la propiedad)
+    const { ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
     if (contrasena) {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(contrasena, saltRounds);
-
       const [result] = await pool.query(
         `UPDATE administradores 
          SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, contrasena = ?, 
@@ -53,10 +64,7 @@ create: async (data) => {
         [ID_ADMINISTRADOR, Nombre, usuario, passwordHash, Correo, TipoDocumento, Telefono, id]
       );
       return result;
-      
     } else {
-      // Si NO enviaron contraseña (el input estaba vacío), actualizamos el resto de campos
-      // y dejamos la contraseña intacta en la base de datos.
       const [result] = await pool.query(
         `UPDATE administradores 
          SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, 
@@ -68,12 +76,9 @@ create: async (data) => {
     }
   },
 
-  // 5. Eliminar administrador
+  // Eliminar administrador
   delete: async (id) => {
-    await pool.query(
-      "DELETE FROM administradores WHERE ID_ADMINISTRADOR = ?",
-      [id]
-    );
+    await pool.query("DELETE FROM administradores WHERE ID_ADMINISTRADOR = ?", [id]);
     return true;
   }
 };
