@@ -78,23 +78,22 @@ export const crearAdmin = async (req, res) => {
 };
 
 export const actualizarAdmin = async (req, res) => {
-    const id = typeof req.params.id === 'string' ? req.params.id : req.body.ID_ADMINISTRADOR_ORIGINAL;
-
-    if (typeof id !== 'string') {
-        return res.status(400).json({ success: false, message: 'ID original no proporcionado' });
+  const id = req.params.id; // directo, sin validaciones extrañas
+  try {
+    if (req.body.contrasena) {
+      const saltRounds = 10;
+      req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
     }
-
-    try {
-        // Si se actualiza la contraseña, encriptarla nuevamente
-        if (req.body.contrasena) {
-            const saltRounds = 10;
-            req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
-        }
-        const adminActualizado = await Administrador.update(id, req.body);  
-        res.json({ success: true, data: adminActualizado });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }   
+    await Administrador.update(id, req.body);
+    // Obtener el registro actualizado
+    const adminActualizado = await Administrador.findByPk(id);
+    if (!adminActualizado) {
+      return res.status(404).json({ success: false, message: 'Administrador no encontrado después de actualizar' });
+    }
+    res.json({ success: true, data: adminActualizado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 export const eliminarAdmin = async (req, res) => {
