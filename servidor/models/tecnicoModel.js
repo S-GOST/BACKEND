@@ -51,12 +51,34 @@ const tecnicos = {
 
   // 5. Actualizar técnico
   update: async (id, data) => {
-    const { ID_TECNICOS, Nombre, usuario, contrasena, TipoDocumento, Correo, Telefono } = data;
+    const existing = await tecnicos.findByPk(id);
+    if (!existing) {
+      throw new Error('Tecnico no encontrado');
+    }
+
+    const ID_TECNICOS = Object.prototype.hasOwnProperty.call(data, 'ID_TECNICOS')
+      ? data.ID_TECNICOS
+      : existing.ID_TECNICOS;
+    const Nombre = Object.prototype.hasOwnProperty.call(data, 'Nombre')
+      ? data.Nombre
+      : existing.Nombre;
+    const usuario = Object.prototype.hasOwnProperty.call(data, 'usuario')
+      ? data.usuario
+      : existing.usuario;
+    const TipoDocumento = Object.prototype.hasOwnProperty.call(data, 'TipoDocumento')
+      ? data.TipoDocumento
+      : existing.TipoDocumento;
+    const Correo = Object.prototype.hasOwnProperty.call(data, 'Correo')
+      ? data.Correo
+      : existing.Correo;
+    const Telefono = Object.prototype.hasOwnProperty.call(data, 'Telefono')
+      ? data.Telefono
+      : existing.Telefono;
 
     // Si se proporciona una nueva contraseña, la encriptamos
-    if (contrasena) {
+    if (data.contrasena) {
       const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(contrasena, saltRounds);
+      const passwordHash = await bcrypt.hash(data.contrasena, saltRounds);
       const [result] = await pool.query(
         `UPDATE tecnicos 
          SET ID_TECNICOS = ?, Nombre = ?, usuario = ?, contrasena = ?, 
@@ -65,17 +87,16 @@ const tecnicos = {
         [ID_TECNICOS, Nombre, usuario, passwordHash, TipoDocumento, Correo, Telefono, id]
       );
       return result;
-    } else {
-      // Si no hay contraseña nueva, actualizamos el resto dejando la contraseña actual intacta
-      const [result] = await pool.query(
-        `UPDATE tecnicos 
-         SET ID_TECNICOS = ?, Nombre = ?, usuario = ?, 
-             TipoDocumento = ?, Correo = ?, Telefono = ?
-         WHERE ID_TECNICOS = ?`,
-        [ID_TECNICOS, Nombre, usuario, TipoDocumento, Correo, Telefono, id]
-      );
-      return result;
     }
+
+    const [result] = await pool.query(
+      `UPDATE tecnicos 
+       SET ID_TECNICOS = ?, Nombre = ?, usuario = ?, 
+           TipoDocumento = ?, Correo = ?, Telefono = ?
+       WHERE ID_TECNICOS = ?`,
+      [ID_TECNICOS, Nombre, usuario, TipoDocumento, Correo, Telefono, id]
+    );
+    return result;
   },
 
   // 6. Eliminar técnico

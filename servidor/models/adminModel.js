@@ -52,10 +52,33 @@ const Administrador = {
 
   // Actualizar administrador
   update: async (id, data) => {
-    const { ID_ADMINISTRADOR, Nombre, usuario, contrasena, Correo, TipoDocumento, Telefono } = data;
-    if (contrasena) {
+    const existing = await Administrador.findByPk(id);
+    if (!existing) {
+      throw new Error('Administrador no encontrado');
+    }
+
+    const ID_ADMINISTRADOR = Object.prototype.hasOwnProperty.call(data, 'ID_ADMINISTRADOR')
+      ? data.ID_ADMINISTRADOR
+      : existing.ID_ADMINISTRADOR;
+    const Nombre = Object.prototype.hasOwnProperty.call(data, 'Nombre')
+      ? data.Nombre
+      : existing.Nombre;
+    const usuario = Object.prototype.hasOwnProperty.call(data, 'usuario')
+      ? data.usuario
+      : existing.usuario;
+    const Correo = Object.prototype.hasOwnProperty.call(data, 'Correo')
+      ? data.Correo
+      : existing.Correo;
+    const TipoDocumento = Object.prototype.hasOwnProperty.call(data, 'TipoDocumento')
+      ? data.TipoDocumento
+      : existing.TipoDocumento;
+    const Telefono = Object.prototype.hasOwnProperty.call(data, 'Telefono')
+      ? data.Telefono
+      : existing.Telefono;
+
+    if (data.contrasena) {
       const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(contrasena, saltRounds);
+      const passwordHash = await bcrypt.hash(data.contrasena, saltRounds);
       const [result] = await pool.query(
         `UPDATE administradores 
          SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, contrasena = ?, 
@@ -64,16 +87,16 @@ const Administrador = {
         [ID_ADMINISTRADOR, Nombre, usuario, passwordHash, Correo, TipoDocumento, Telefono, id]
       );
       return result;
-    } else {
-      const [result] = await pool.query(
-        `UPDATE administradores 
-         SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, 
-             Correo = ?, TipoDocumento = ?, Telefono = ?
-         WHERE ID_ADMINISTRADOR = ?`,
-        [ID_ADMINISTRADOR, Nombre, usuario, Correo, TipoDocumento, Telefono, id]
-      );
-      return result;
     }
+
+    const [result] = await pool.query(
+      `UPDATE administradores 
+       SET ID_ADMINISTRADOR = ?, Nombre = ?, usuario = ?, 
+           Correo = ?, TipoDocumento = ?, Telefono = ?
+       WHERE ID_ADMINISTRADOR = ?`,
+      [ID_ADMINISTRADOR, Nombre, usuario, Correo, TipoDocumento, Telefono, id]
+    );
+    return result;
   },
 
   // Eliminar administrador
