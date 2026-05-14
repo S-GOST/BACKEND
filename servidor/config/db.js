@@ -1,19 +1,30 @@
-import mysql from 'mysql2/promise'; // Libreria para manejar conexiones a MySQL con soporte para promesas//
-import dotenv from 'dotenv'; // Cargar variables de entorno desde el archivo .env
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config({
-    path: fileURLToPath(new URL('./.env', import.meta.url))
-}); // Cargamos el archivo .env de esta carpeta para que funcione sin depender del directorio de ejecución
+// ---------------------------------------------------------
+// CORRECCIÓN 1: Cargar .env desde la RAÍZ del proyecto
+// ---------------------------------------------------------
+// Obtenemos la ruta absoluta de la carpeta raíz (subimos un nivel desde 'config')
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..'); 
 
+// Cargamos dotenv apuntando a la raíz. 
+dotenv.config({ path: path.join(projectRoot, '.env') });
+
+// ---------------------------------------------------------
+// CORRECCIÓN 2: Configuración del Pool
+// ---------------------------------------------------------
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD || '', 
     database: process.env.DB_NAME || 'sgost',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-export default pool; // Exportamos el pool de conexiones para que pueda ser utilizado en otras partes de la aplicación
+export default pool;
