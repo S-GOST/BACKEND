@@ -61,11 +61,6 @@ export const obtenerClientePorId = async (req, res) => {
 
 export const crearCliente = async (req, res) => {
   try {
-    // Si la contraseña viene en texto plano, se recomienda encriptarla antes de guardar
-    if (req.body.contrasena) {
-      const saltRounds = 10;
-      req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
-    }
     const nuevoCliente = await clientes.create(req.body);
     res.json({ success: true, data: nuevoCliente });
   } catch (error) {
@@ -81,11 +76,6 @@ export const actualizarCliente = async (req, res) => {
   }
 
   try {
-    // Si se actualiza la contraseña, encriptarla nuevamente
-    if (req.body.contrasena) {
-      const saltRounds = 10;
-      req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
-    }
     const resultado = await clientes.update(id, req.body);
     res.json({ success: true, data: resultado });
   } catch (error) {

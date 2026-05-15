@@ -63,11 +63,6 @@ export const obtenerTecPorId = async (req, res) => {
 
 export const crearTec = async (req, res) => {
     try {
-        // Opcional: encriptar la contraseña antes de guardar si viene en texto plano
-        if (req.body.contrasena) {
-            const saltRounds = 10;
-            req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
-        }
         const nuevoTec = await tecnicos.create(req.body);    
         res.json({ success: true, data: nuevoTec });
     } catch (error) {
@@ -83,11 +78,6 @@ export const actualizarTec = async (req, res) => {
     }
 
     try {
-        // Si se actualiza la contraseña, encriptarla nuevamente
-        if (req.body.contrasena) {
-            const saltRounds = 10;
-            req.body.contrasena = await bcrypt.hash(req.body.contrasena, saltRounds);
-        }
         const tecActualizado = await tecnicos.update(id, req.body);  
         res.json({ success: true, data: tecActualizado });
     } catch (error) {
