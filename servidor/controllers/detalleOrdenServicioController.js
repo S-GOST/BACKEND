@@ -25,6 +25,26 @@ export const obtenerDetalleOrdenPorId = async (req, res) => {
   }
 };
 
+export const obtenerDetallesPorId = async (req, res) => {
+    try {
+        const { idOrden } = req.params;
+
+        // Consulta SQL para obtener los detalles de una orden específica
+        const query = "SELECT * FROM detalles_orden_servicio WHERE ID_ORDEN_SERVICIO = ?";
+        const [rows] = await pool.execute(query, [idOrden]);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
 export const crearDetalleOrden = async (req, res) => {
   try {
     const nuevoDetalle = await DetalleOrdenServicio.create(req.body);

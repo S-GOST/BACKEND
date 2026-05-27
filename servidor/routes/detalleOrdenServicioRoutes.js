@@ -4,7 +4,8 @@ import {
     obtenerDetalleOrdenPorId,
     crearDetalleOrden,
     actualizarDetalleOrden,
-    eliminarDetalleOrden
+    eliminarDetalleOrden,
+    obtenerDetallesPorId
 } from '../controllers/detalleOrdenServicioController.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 // ==============================================
 
 router.get('/obtener', obtenerDetallesOrden);
+router.get('/por_orden/:idOrden', obtenerDetallesPorId); 
 router.get('/buscar/:id', obtenerDetalleOrdenPorId);
 router.post('/insertar', crearDetalleOrden);
 router.put('/actualizar/:id', actualizarDetalleOrden);
@@ -41,6 +43,26 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *     responses:
  *       200:
  *         description: Lista de detalles obtenida
+ */
+
+/**
+ * @swagger
+ * /api/detalles_orden_servicio/por_orden/{idOrden}:
+ *   get:
+ *     summary: Obtener detalles por ID de orden
+ *     tags: [DetalleOrden]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: idOrden
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la orden de servicio
+ *     responses:
+ *       200:
+ *         description: Lista de detalles de la orden
  */
 
 /**
