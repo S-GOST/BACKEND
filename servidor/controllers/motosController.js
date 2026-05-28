@@ -25,26 +25,14 @@ export const obtenerMotos = async (req, res) => {
 export const obtenerMotoPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Usamos el método findByPk del modelo (debe existir en el modelo)
-        const moto = await Moto.findByPk(id);
-
-        if (!moto) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Moto no encontrada' 
-            });
+        const motos = await Moto.findById(id);
+        if (!motos) {
+            return res.status(404).json({ success: false, message: "Moto no encontrada" });
         }
-
-        res.json({ 
-            success: true, 
-            data: moto 
-        });
+        res.json({ success: true, data: motos });
     } catch (error) {
         console.error("Error al obtener moto por ID:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 

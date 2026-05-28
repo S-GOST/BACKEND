@@ -16,7 +16,8 @@ const DetalleOrdenServicio = {
     return rows[0] || null;
   },
 
-  // 🔥 3. NUEVO: Buscar detalles por ID de Orden de Servicio (Esencial para tu app)
+  // 🔥 CORREGIDO: Buscar detalles por ID de Orden de Servicio
+  // Antes consultaba 'orden_servicio', ahora consulta 'detalles_orden_servicio'
   findByOrderId: async (idOrden) => {
     const [rows] = await pool.query(
       "SELECT * FROM detalles_orden_servicio WHERE ID_ORDEN_SERVICIO = ?",
@@ -43,33 +44,11 @@ const DetalleOrdenServicio = {
       ]
     );
 
-    // Retorna el ID generado por MySQL (asumiendo AUTO_INCREMENT)
+    // Retorna el ID generado y los datos
     return { idDetalle: result.insertId, ...data };
   },
 
-  // 🔥 5. NUEVO: Crear múltiples detalles (Ideal para guardar el carrito en 1 sola query)
-  createMany: async (detailsArray) => {
-    if (!detailsArray || detailsArray.length === 0) return [];
-
-    const values = detailsArray.map(d => [
-      d.ID_ORDEN_SERVICIO,
-      d.ID_SERVICIOS || null,
-      d.ID_PRODUCTOS || null,
-      d.Garantia,
-      d.Estado,
-      d.Precio
-    ]);
-
-    const placeholders = values.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
-    const query = `INSERT INTO detalles_orden_servicio
-                   (ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio)
-                   VALUES ${placeholders}`;
-
-    const [result] = await pool.query(query, values.flat());
-    return result;
-  },
-
-  // 6. Actualizar un detalle
+  // 5. Actualizar un detalle
   update: async (id, data) => {
     const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio } = data;
 
@@ -96,7 +75,7 @@ const DetalleOrdenServicio = {
     return result;
   },
 
-  // 7. Eliminar un detalle
+  // 6. Eliminar un detalle
   delete: async (id) => {
     const [result] = await pool.query(
       "DELETE FROM detalles_orden_servicio WHERE ID_DETALLES_ORDEN_SERVICIO = ?",

@@ -1,11 +1,11 @@
 import express from 'express';
 import {
     obtenerDetallesOrden,
-    obtenerDetalleOrdenPorId,
+    obtenerDetalleOrdenPorId, 
+    obtenerDetallesPorId,
     crearDetalleOrden,
     actualizarDetalleOrden,
-    eliminarDetalleOrden,
-    obtenerDetallesPorId
+    eliminarDetalleOrden
 } from '../controllers/detalleOrdenServicioController.js';
 
 const router = express.Router();
@@ -14,42 +14,52 @@ const router = express.Router();
 // Rutas (montadas sobre /api/detalles_orden_servicio)
 // ==============================================
 
+// 1. Obtener todos los detalles
 router.get('/obtener', obtenerDetallesOrden);
+
+// 2. Obtener detalles filtrados por la ID de la Orden (Usa findAll)
+// En Swagger aparecerá como: /api/detalles_orden_servicio/por_orden/1
 router.get('/por_orden/:idOrden', obtenerDetallesPorId); 
+
+// 3. Buscar un solo detalle por su ID propio (Usa findById)
+// En Swagger aparecerá como: /api/detalles_orden_servicio/buscar/1
 router.get('/buscar/:id', obtenerDetalleOrdenPorId);
+
+// 4. Crear, Actualizar, Eliminar
 router.post('/insertar', crearDetalleOrden);
 router.put('/actualizar/:id', actualizarDetalleOrden);
 router.delete('/eliminar/:id', eliminarDetalleOrden);
 
 // ==============================================
-// Documentación Swagger (summaries cortos, IDs string)
+// Documentación Swagger
 // ==============================================
 
 /**
  * @swagger
  * tags:
  *   name: DetalleOrden
- *   description: Detalle de órdenes de servicio (IDs tipo texto)
+ *   description: Gestión de Detalles de Órdenes de Servicio
  */
 
 /**
  * @swagger
  * /api/detalles_orden_servicio/obtener:
  *   get:
- *     summary: Listar detalles
+ *     summary: Listar todos los detalles
  *     tags: [DetalleOrden]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de detalles obtenida
+ *         description: Lista de todos los detalles obtenida exitosamente
  */
 
 /**
  * @swagger
  * /api/detalles_orden_servicio/por_orden/{idOrden}:
  *   get:
- *     summary: Obtener detalles por ID de orden
+ *     summary: Obtener detalles por ID de la Orden de Servicio
+ *     description: Devuelve la lista de detalles asociados a una orden específica.
  *     tags: [DetalleOrden]
  *     security:
  *       - bearerAuth: []
@@ -59,7 +69,7 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID de la orden de servicio
+ *         description: ID de la Orden de Servicio (FK)
  *     responses:
  *       200:
  *         description: Lista de detalles de la orden
@@ -69,7 +79,8 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  * @swagger
  * /api/detalles_orden_servicio/buscar/{id}:
  *   get:
- *     summary: Buscar detalle
+ *     summary: Buscar un solo detalle por ID
+ *     description: Busca un registro específico en la tabla detalle_orden_servicio por su PK.
  *     tags: [DetalleOrden]
  *     security:
  *       - bearerAuth: []
@@ -79,7 +90,7 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID del detalle (varchar)
+ *         description: ID del detalle (PK)
  *     responses:
  *       200:
  *         description: Detalle encontrado
@@ -91,7 +102,7 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  * @swagger
  * /api/detalles_orden_servicio/insertar:
  *   post:
- *     summary: Crear detalle
+ *     summary: Crear nuevo detalle
  *     tags: [DetalleOrden]
  *     security:
  *       - bearerAuth: []
@@ -102,24 +113,25 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *           schema:
  *             type: object
  *             required:
- *               - id_orden
- *               - descripcion
- *               - cantidad
- *               - precio
+ *               - ID_ORDEN_SERVICIO
+ *               - ID_SERVICIOS
+ *               - ID_PRODUCTOS
  *             properties:
- *               id_orden:
+ *               ID_ORDEN_SERVICIO:
  *                 type: string
- *               descripcion:
+ *               ID_SERVICIOS:
  *                 type: string
- *               cantidad:
+ *               ID_PRODUCTOS:
+ *                 type: string
+ *               Garantia:
  *                 type: integer
- *               precio:
- *                 type: number
- *               subtotal:
+ *               Estado:
+ *                 type: string
+ *               Precio:
  *                 type: number
  *     responses:
  *       201:
- *         description: Detalle creado
+ *         description: Detalle creado exitosamente
  *       400:
  *         description: Datos inválidos
  */
@@ -145,21 +157,23 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *           schema:
  *             type: object
  *             properties:
- *               id_orden:
+ *               ID_ORDEN_SERVICIO:
  *                 type: string
- *               descripcion:
+ *               ID_SERVICIOS:
  *                 type: string
- *               cantidad:
+ *               ID_PRODUCTOS:
+ *                 type: string
+ *               Garantia:
  *                 type: integer
- *               precio:
- *                 type: number
- *               subtotal:
+ *               Estado:
+ *                 type: string
+ *               Precio:
  *                 type: number
  *     responses:
  *       200:
- *         description: Detalle actualizado
+ *         description: Detalle actualizado correctamente
  *       404:
- *         description: No encontrado
+ *         description: Detalle no encontrado
  */
 
 /**
@@ -178,7 +192,7 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *           type: string
  *     responses:
  *       200:
- *         description: Detalle eliminado
+ *         description: Detalle eliminado correctamente
  *       404:
  *         description: No encontrado
  */
