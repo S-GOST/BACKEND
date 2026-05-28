@@ -18,13 +18,24 @@ const DetalleOrdenServicio = {
 
   // 🔥 CORREGIDO: Buscar detalles por ID de Orden de Servicio
   // Antes consultaba 'orden_servicio', ahora consulta 'detalles_orden_servicio'
-  findByOrderId: async (idOrden) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM detalles_orden_servicio WHERE ID_ORDEN_SERVICIO = ?",
-      [idOrden]
-    );
-    return rows;
-  },
+findByOrderId: async (idOrden) => {
+  const query = `
+    SELECT 
+      dos.ID_DETALLES_ORDEN_SERVICIO,
+      dos.ID_ORDEN_SERVICIO,
+      s.Nombre AS NombreServicio,
+      p.Nombre AS NombreProducto,
+      dos.Garantia,
+      dos.Estado,
+      dos.Precio
+    FROM detalles_orden_servicio dos
+    LEFT JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
+    LEFT JOIN productos p ON dos.ID_PRODUCTOS = p.ID_PRODUCTOS
+    WHERE dos.ID_ORDEN_SERVICIO = ?
+  `;
+  const [rows] = await pool.query(query, [idOrden]);
+  return rows;
+},
 
   // 4. Crear un solo detalle
   create: async (data) => {
