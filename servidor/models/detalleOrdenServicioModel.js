@@ -16,8 +16,6 @@ const DetalleOrdenServicio = {
     return rows[0] || null;
   },
 
-  // 🔥 CORREGIDO: Buscar detalles por ID de Orden de Servicio
-  // Antes consultaba 'orden_servicio', ahora consulta 'detalles_orden_servicio'
 findByOrderId: async (idOrden) => {
   const query = `
     SELECT 
@@ -26,7 +24,6 @@ findByOrderId: async (idOrden) => {
       s.Nombre AS NombreServicio,
       p.Nombre AS NombreProducto,
       dos.Garantia,
-      dos.Estado,
       dos.Precio
     FROM detalles_orden_servicio dos
     LEFT JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
@@ -39,18 +36,17 @@ findByOrderId: async (idOrden) => {
 
   // 4. Crear un solo detalle
   create: async (data) => {
-    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio } = data;
-    
+    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio } = data;
+  
     const [result] = await pool.query(
       `INSERT INTO detalles_orden_servicio
-       (ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio)
+       VALUES (?, ?, ?, ?, ?)`,
       [
         ID_ORDEN_SERVICIO,
         ID_SERVICIOS || null,
         ID_PRODUCTOS || null,
         Garantia,
-        Estado,
         Precio
       ]
     );
@@ -61,7 +57,7 @@ findByOrderId: async (idOrden) => {
 
   // 5. Actualizar un detalle
   update: async (id, data) => {
-    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Estado, Precio } = data;
+    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio } = data;
 
     const [result] = await pool.query(
       `UPDATE detalles_orden_servicio
@@ -69,7 +65,6 @@ findByOrderId: async (idOrden) => {
            ID_SERVICIOS = ?,
            ID_PRODUCTOS = ?,
            Garantia = ?,
-           Estado = ?,
            Precio = ?
        WHERE ID_DETALLES_ORDEN_SERVICIO = ?`,
       [
@@ -77,7 +72,6 @@ findByOrderId: async (idOrden) => {
         ID_SERVICIOS || null,
         ID_PRODUCTOS || null,
         Garantia,
-        Estado,
         Precio,
         id
       ]

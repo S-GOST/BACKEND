@@ -125,8 +125,6 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *                 type: string
  *               Garantia:
  *                 type: integer
- *               Estado:
- *                 type: string
  *               Precio:
  *                 type: number
  *     responses:
@@ -165,8 +163,6 @@ router.delete('/eliminar/:id', eliminarDetalleOrden);
  *                 type: string
  *               Garantia:
  *                 type: integer
- *               Estado:
- *                 type: string
  *               Precio:
  *                 type: number
  *     responses:
