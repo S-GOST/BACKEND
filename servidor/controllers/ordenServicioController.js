@@ -30,9 +30,12 @@ export const obtenerOrdenPorId = async (req, res) => {
 export const crearOrden = async (req, res) => {
     try {
         const resultado = await OrdenServicio.create(req.body);
-        // Recuperamos la orden recién insertada para devolverla completa
-        const ordenCreada = await OrdenServicio.findById(req.body.ID_ORDEN_SERVICIO);
-        res.status(201).json({ success: true, data: ordenCreada, insertResult: resultado });
+        res.status(201).json({
+            success: true,
+            data: {
+                idOrden_servicio: resultado.insertId
+            }
+        });
     } catch (error) {
         console.error("Error al crear orden de servicio:", error);
         res.status(500).json({ success: false, error: error.message });
