@@ -21,6 +21,8 @@ findByOrderId: async (idOrden) => {
     SELECT 
       dos.ID_DETALLES_ORDEN_SERVICIO,
       dos.ID_ORDEN_SERVICIO,
+      dos.ID_SERVICIOS,
+      dos.ID_PRODUCTOS,
       s.Nombre AS NombreServicio,
       p.Nombre AS NombreProducto,
       dos.Garantia,
@@ -44,8 +46,8 @@ findByOrderId: async (idOrden) => {
        VALUES (?, ?, ?, ?, ?)`,
       [
         ID_ORDEN_SERVICIO,
-        ID_SERVICIOS || null,
-        ID_PRODUCTOS || null,
+        ID_SERVICIOS !== undefined && ID_SERVICIOS !== null ? ID_SERVICIOS : null,
+        ID_PRODUCTOS !== undefined && ID_PRODUCTOS !== null ? ID_PRODUCTOS : null,
         Garantia,
         Precio
       ]
@@ -69,8 +71,8 @@ findByOrderId: async (idOrden) => {
        WHERE ID_DETALLES_ORDEN_SERVICIO = ?`,
       [
         ID_ORDEN_SERVICIO,
-        ID_SERVICIOS || null,
-        ID_PRODUCTOS || null,
+        ID_SERVICIOS !== undefined && ID_SERVICIOS !== null ? ID_SERVICIOS : null,
+        ID_PRODUCTOS !== undefined && ID_PRODUCTOS !== null ? ID_PRODUCTOS : null,
         Garantia,
         Precio,
         id

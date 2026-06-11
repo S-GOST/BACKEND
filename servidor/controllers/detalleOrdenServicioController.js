@@ -50,8 +50,8 @@ export const crearDetalleOrden = async (req, res) => {
   try {
     // ✅ SANEAMIENTO: Asegurar que los campos relacionales sean null si no existen
     const body = { ...req.body };
-    if (!body.ID_SERVICIOS || body.ID_SERVICIOS === "") body.ID_SERVICIOS = null;
-    if (!body.ID_PRODUCTOS || body.ID_PRODUCTOS === "") body.ID_PRODUCTOS = null;
+    if (body.ID_SERVICIOS === undefined || body.ID_SERVICIOS === null || body.ID_SERVICIOS === "") body.ID_SERVICIOS = null;
+    if (body.ID_PRODUCTOS === undefined || body.ID_PRODUCTOS === null || body.ID_PRODUCTOS === "") body.ID_PRODUCTOS = null;
     if (!body.NombreServicio) body.NombreServicio = null;
     if (!body.NombreProducto) body.NombreProducto = null;
     if (body.Precio === undefined || body.Precio === null) body.Precio = 0;
