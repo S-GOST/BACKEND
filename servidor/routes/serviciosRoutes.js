@@ -6,7 +6,6 @@ import {
     actualizarServicio,
     eliminarServicio
 } from '../controllers/serviciosController.js';
-import { verificarToken } from "../middleware/Auth.js";
 
 const router = express.Router();
 
@@ -14,11 +13,11 @@ const router = express.Router();
 // Rutas (montadas sobre /api/servicios)
 // ==============================================
 
-router.get('/obtener', verificarToken, obtenerServicios);
-router.get('/buscar/:id', verificarToken,  obtenerServicioPorId);
-router.post('/insertar', verificarToken, crearServicio);
-router.put('/actualizar/:id', verificarToken, actualizarServicio);
-router.delete('/eliminar/:id', verificarToken, eliminarServicio);
+router.get('/obtener',obtenerServicios);
+router.get('/buscar/:id',obtenerServicioPorId);
+router.post('/insertar',crearServicio);
+router.put('/actualizar/:id',actualizarServicio);
+router.delete('/eliminar/:id',eliminarServicio);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

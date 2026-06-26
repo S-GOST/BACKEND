@@ -4,8 +4,10 @@ import {
     obtenerOrdenPorId,
     crearOrden,
     actualizarOrden,
-    eliminarOrden
+    eliminarOrden,
+    obtenerMisOrdenes
 } from '../controllers/ordenServicioController.js';
+import { verificarToken } from '../middleware/Auth.js';
 
 const router = express.Router();
 
@@ -14,8 +16,9 @@ const router = express.Router();
 // ==============================================
 
 router.get('/obtener', obtenerOrdenes);
+router.get('/mis-ordenes', verificarToken, obtenerMisOrdenes);
 router.get('/buscar/:id', obtenerOrdenPorId);
-router.post('/insertar', crearOrden);
+router.post('/insertar', verificarToken, crearOrden);
 router.put('/actualizar/:id', actualizarOrden);
 router.delete('/eliminar/:id', eliminarOrden);
 
