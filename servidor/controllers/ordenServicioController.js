@@ -28,6 +28,7 @@ export const obtenerOrdenPorId = async (req, res) => {
 };
 
 // Obtener órdenes del cliente autenticado (desde el token)
+// Obtener órdenes del cliente autenticado (desde el token)
 export const obtenerMisOrdenes = async (req, res) => {
     try {
         const clienteId = req.admin.id; // porque tu middleware guarda en req.admin
@@ -35,11 +36,29 @@ export const obtenerMisOrdenes = async (req, res) => {
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        // Consulta filtrando por el ID del cliente
-        const [filas] = await pool.query(
-            'SELECT * FROM ordenes_servicio WHERE ID_CLIENTES = ? ORDER BY ID_ORDEN_SERVICIO DESC',
-            [clienteId]
-        );
+        // 🔥 CORRECCIÓN: Cambiar 'ordene_servicio' por 'orden_servicio' (singular y sin falta de ortografía)
+        // Dentro de obtenerMisOrdenes
+const [filas] = await pool.query(`
+    SELECT 
+        os.ID_ORDEN_SERVICIO, 
+        os.ID_CLIENTES, 
+        os.ID_ADMINISTRADOR, 
+        os.ID_TECNICOS, 
+        os.ID_MOTOS, 
+        os.Fecha_inicio, 
+        os.Fecha_estimada, 
+        os.Fecha_fin, 
+        os.Estado,
+        c.Nombre AS NombreCliente,  
+        m.Placa AS PlacaMoto,
+        m.Marca AS MarcaMoto,
+        m.Modelo AS ModeloMoto
+    FROM orden_servicio os
+    LEFT JOIN motos m ON os.ID_MOTOS = m.ID_MOTOS
+    LEFT JOIN clientes c ON os.ID_CLIENTES = c.ID_CLIENTES  
+    WHERE os.ID_CLIENTES = ? 
+    ORDER BY os.ID_ORDEN_SERVICIO DESC
+`, [clienteId]);
 
         res.json({ success: true, data: filas });
     } catch (error) {
