@@ -25,6 +25,7 @@ export const loginCliente = async (req, res) => {
 
     res.json({ 
       success: true,
+      id: cliente.ID_CLIENTES,
       token,
       nombre: cliente.Nombre,
       rol: 'cliente'
