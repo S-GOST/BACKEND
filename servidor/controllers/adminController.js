@@ -1,27 +1,36 @@
-import Administrador from "../models/adminModel.js";
+import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+
+const mapToUsuario = (a) => {
+    const obj = {};
+    if (a.numero_documento !== undefined) obj.numero_documento = a.numero_documento;
+    if (a.id_tipo_documento !== undefined) obj.id_tipo_documento = a.id_tipo_documento;
+    if (a.nombre !== undefined) obj.nombre = a.nombre;
+    if (a.usuario !== undefined) obj.usuario = a.usuario;
+    if (a.password !== undefined) obj.password = a.password;
+    if (a.correo !== undefined) obj.correo = a.correo;
+    if (a.telefono !== undefined) obj.telefono = a.telefono;
+
+    obj.id_rol = 1; // Rol de Administrador
+    return obj;
+};
 
 export const loginAdmin = async (req, res) => {
     const { usuario, contrasena } = req.body;
     try {
-        // Usamos el método findOne del modelo para buscar por nombre de usuario
-        const admin = await Administrador.findOne({ where: { usuario } });
-
-        if (!admin) {
+        const user = await Usuario.findOne({ where: { usuario, id_rol: 1 } });
+        if (!user) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
         
-        // Comparamos la contraseña plana con el hash de la base de datos
-        const esValida = await bcrypt.compare(contrasena, admin.contrasena);
-
+        const esValida = await bcrypt.compare(contrasena, user.password);
         if (!esValida) {
             return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
         }
 
-        // Genera el token
         const token = jwt.sign(
-            { id: admin.ID_ADMINISTRADOR }, 
+            { id: user.numero_documento }, 
             process.env.JWT_SECRET || 'clave_secreta_temporal', 
             { expiresIn: '1h' }
         );
@@ -29,10 +38,9 @@ export const loginAdmin = async (req, res) => {
         res.json({ 
             success: true, 
             token, 
-            nombre: admin.Nombre,
+            nombre: user.nombre,
             rol: 'admin'
         });
-
     } catch (error) {
         console.error("Error en el login:", error);
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
@@ -41,8 +49,8 @@ export const loginAdmin = async (req, res) => {
 
 export const obtenerAdmins = async (req, res) => {
     try {
-        const admins = await Administrador.findAll();
-        res.json({ success: true, data: admins });
+        const users = await Usuario.findAll({ where: { id_rol: 1 } });
+        res.json({ success: true, data: users });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -51,13 +59,11 @@ export const obtenerAdmins = async (req, res) => {
 export const obtenerAdminPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        const admin = await Administrador.findByPk(id);
-
-        if (!admin) {
+        const user = await Usuario.findByPk(id);
+        if (!user || user.id_rol !== 1) {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado' });
         }
-
-        res.json({ success: true, data: admin });
+        res.json({ success: true, data: user });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -65,20 +71,22 @@ export const obtenerAdminPorId = async (req, res) => {
 
 export const crearAdmin = async (req, res) => {
     try {
-        const nuevoAdmin = await Administrador.create(req.body);    
-        res.json({ success: true, data: nuevoAdmin });
+        const userPayload = mapToUsuario(req.body);
+        await Usuario.create(userPayload);    
+        const newUser = await Usuario.findByPk(userPayload.numero_documento);
+        res.json({ success: true, data: newUser });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
 export const actualizarAdmin = async (req, res) => {
-  const id = req.params.id; // directo, sin validaciones extrañas
+    const id = req.params.id;
     try {
-        await Administrador.update(id, req.body);
-        // Obtener el registro actualizado
-        const adminActualizado = await Administrador.findByPk(id);
-        if (!adminActualizado) {
+        const userPayload = mapToUsuario(req.body);
+        await Usuario.update(id, userPayload);
+        const adminActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
+        if (!adminActualizado || adminActualizado.id_rol !== 1) {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado después de actualizar' });
         }
         res.json({ success: true, data: adminActualizado });
@@ -90,7 +98,11 @@ export const actualizarAdmin = async (req, res) => {
 export const eliminarAdmin = async (req, res) => {
     const { id } = req.params;
     try {
-        await Administrador.delete(id);
+        const user = await Usuario.findByPk(id);
+        if (!user || user.id_rol !== 1) {
+            return res.status(404).json({ success: false, message: 'Administrador no encontrado' });
+        }
+        await Usuario.delete(id);
         res.json({ success: true, message: 'Administrador eliminado' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

@@ -1,33 +1,46 @@
-import clientes from "../models/clientesModel.js";
+import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+
+const mapToUsuario = (c) => {
+    const obj = {};
+    if (c.numero_documento !== undefined) obj.numero_documento = c.numero_documento;
+    if (c.id_tipo_documento !== undefined) obj.id_tipo_documento = c.id_tipo_documento;
+    if (c.nombre !== undefined) obj.nombre = c.nombre;
+    if (c.usuario !== undefined) obj.usuario = c.usuario;
+    if (c.password !== undefined) obj.password = c.password;
+    if (c.correo !== undefined) obj.correo = c.correo;
+    if (c.telefono !== undefined) obj.telefono = c.telefono;
+    if (c.ciudad !== undefined) obj.ciudad = c.ciudad;
+
+    obj.id_rol = 3; // Rol de Cliente
+    return obj;
+};
 
 export const loginCliente = async (req, res) => {
   const { usuario, contrasena } = req.body;
   try {
-    const cliente = await clientes.findOne({ where: { usuario } });
-
-    if (!cliente) {
+    const user = await Usuario.findOne({ where: { usuario, id_rol: 3 } });
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
 
-    const esValida = await bcrypt.compare(contrasena, cliente.contrasena);
-
+    const esValida = await bcrypt.compare(contrasena, user.password);
     if (!esValida) {
       return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
     }
 
     const token = jwt.sign(
-      { id: cliente.ID_CLIENTES },
+      { id: user.numero_documento },
       process.env.JWT_SECRET || 'clave_secreta_temporal',
       { expiresIn: '1h' }
     );
 
     res.json({ 
       success: true,
-      id: cliente.ID_CLIENTES,
+      id: user.numero_documento,
       token,
-      nombre: cliente.Nombre,
+      nombre: user.nombre,
       rol: 'cliente'
     });
   } catch (error) {
@@ -38,8 +51,8 @@ export const loginCliente = async (req, res) => {
 
 export const obtenerClientes = async (req, res) => {
   try {
-    const data = await clientes.findAll();
-    res.json({ success: true, data });
+    const users = await Usuario.findAll({ where: { id_rol: 3 } });
+    res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -48,13 +61,11 @@ export const obtenerClientes = async (req, res) => {
 export const obtenerClientePorId = async (req, res) => {
   const { id } = req.params;
   try {
-    const cliente = await clientes.findByPk(id);
-
-    if (!cliente) {
+    const user = await Usuario.findByPk(id);
+    if (!user || user.id_rol !== 3) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
-
-    res.json({ success: true, data: cliente });
+    res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -62,23 +73,28 @@ export const obtenerClientePorId = async (req, res) => {
 
 export const crearCliente = async (req, res) => {
   try {
-    const nuevoCliente = await clientes.create(req.body);
-    res.json({ success: true, data: nuevoCliente });
+    const userPayload = mapToUsuario(req.body);
+    await Usuario.create(userPayload);
+    const newUser = await Usuario.findByPk(userPayload.numero_documento);
+    res.json({ success: true, data: newUser });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
 export const actualizarCliente = async (req, res) => {
-  const id = req.params.id || req.body.ID_CLIENTES;
-
+  const id = req.params.id || req.body.numero_documento;
   if (!id) {
-    return res.status(400).json({ success: false, message: 'ID_CLIENTES es requerido' });
+    return res.status(400).json({ success: false, message: 'ID (numero_documento) es requerido' });
   }
-
   try {
-    const resultado = await clientes.update(id, req.body);
-    res.json({ success: true, data: resultado });
+    const userPayload = mapToUsuario(req.body);
+    await Usuario.update(id, userPayload);
+    const userActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
+    if (!userActualizado || userActualizado.id_rol !== 3) {
+        return res.status(404).json({ success: false, message: 'Cliente no encontrado después de actualizar' });
+    }
+    res.json({ success: true, data: userActualizado });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -86,13 +102,15 @@ export const actualizarCliente = async (req, res) => {
 
 export const eliminarCliente = async (req, res) => {
   const { id } = req.params;
-
   if (!id) {
-    return res.status(400).json({ success: false, message: 'ID_CLIENTES es requerido' });
+    return res.status(400).json({ success: false, message: 'ID (numero_documento) es requerido' });
   }
-
   try {
-    await clientes.delete(id);
+    const user = await Usuario.findByPk(id);
+    if (!user || user.id_rol !== 3) {
+        return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
+    }
+    await Usuario.delete(id);
     res.json({ success: true, message: 'Cliente eliminado' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

@@ -27,10 +27,21 @@ export const obtenerProductoPorId = async (req, res) => {
     }
 };
 
+// Obtener productos por categoría
+export const obtenerProductosPorCategoria = async (req, res) => {
+    const { idCategoria } = req.params;
+    try {
+        const productos = await Producto.findByCategoria(idCategoria);
+        res.json({ success: true, data: productos });
+    } catch (error) {
+        console.error("Error al obtener productos por categoría:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 // Crear un nuevo producto
 export const crearProducto = async (req, res) => {
     try {
-        // req.body debe incluir: ID, PRODUCTOS, CATEGORIA, MARCA, NOMBRE, GARANTÍA, PRECIO, CANTIDAD, ESTADO
         const resultado = await Producto.create(req.body);
         res.status(201).json({ success: true, data: resultado });
     } catch (error) {
@@ -66,20 +77,6 @@ export const eliminarProducto = async (req, res) => {
         res.json({ success: true, message: 'Producto eliminado correctamente' });
     } catch (error) {
         console.error("Error al eliminar producto:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// Obtener productos con bajo stock (usando la columna CANTIDAD)
-export const obtenerStockBajo = async (req, res) => {
-    try {
-        // Usamos el modelo para hacer una consulta personalizada o podemos crear un método específico en el modelo
-        // Por simplicidad, aquí hacemos la consulta directa con pool (opcional, pero mejor crear un método en el modelo)
-        // Para mantener la coherencia, crearemos un nuevo método en el modelo llamado `findLowStock`
-        const productosBajoStock = await Producto.findLowStock(5); // umbral 5
-        res.json({ success: true, data: productosBajoStock });
-    } catch (error) {
-        console.error("Error al obtener productos con stock bajo:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

@@ -2,10 +2,10 @@ import express from 'express';
 import {
     obtenerProductos,
     obtenerProductoPorId,
+    obtenerProductosPorCategoria,
     crearProducto,
     actualizarProducto,
-    eliminarProducto,
-    obtenerStockBajo
+    eliminarProducto
 } from '../controllers/productosController.js';
 
 const router = express.Router();
@@ -16,10 +16,10 @@ const router = express.Router();
 
 router.get('/obtener', obtenerProductos);
 router.get('/buscar/:id', obtenerProductoPorId);
+router.get('/categoria/:idCategoria', obtenerProductosPorCategoria);
 router.post('/insertar', crearProducto);
 router.put('/actualizar/:id', actualizarProducto);
 router.delete('/eliminar/:id', eliminarProducto);
-router.get('/stock-bajo', obtenerStockBajo);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

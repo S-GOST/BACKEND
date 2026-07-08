@@ -100,8 +100,6 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *               password:
  *                 type: string
  *                 format: password
- *               especialidad:
- *                 type: string
  *               telefono:
  *                 type: string
  *     responses:
@@ -137,8 +135,6 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *               email:
  *                 type: string
  *               password:
- *                 type: string
- *               especialidad:
  *                 type: string
  *               telefono:
  *                 type: string

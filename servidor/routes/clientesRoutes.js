@@ -18,7 +18,7 @@ const router = express.Router();
 router.get('/obtener', verificarToken, obtenerClientes);
 router.get('/buscar/:id', verificarToken, obtenerClientePorId);
 router.post('/login', loginCliente);               // ← Ruta pública de login
-router.post('/insertar',crearCliente);
+router.post('/insertar', verificarToken, crearCliente);
 router.put('/actualizar/:id', verificarToken, actualizarCliente);
 router.delete('/eliminar/:id', verificarToken, eliminarCliente);
 
