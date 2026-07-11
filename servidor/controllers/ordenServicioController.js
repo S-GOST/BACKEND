@@ -5,6 +5,27 @@ import pool from "../config/db.js";
 export const obtenerOrdenes = async (req, res) => {
     try {
         const filas = await OrdenServicio.findAll();
+        
+        // Cargar detalles para cada orden
+        for (const orden of filas) {
+            const [detalles] = await pool.query(`
+                SELECT 
+                    d.id_detalle,
+                    d.ID_SERVICIOS,
+                    d.ID_PRODUCTOS,
+                    d.cantidad,
+                    d.precio_unitario,
+                    d.subtotal,
+                    s.nombre AS NombreServicio,
+                    p.Nombre AS NombreProducto
+                FROM detalles_orden_servicio d
+                LEFT JOIN servicios s ON d.ID_SERVICIOS = s.ID_SERVICIOS
+                LEFT JOIN productos p ON d.ID_PRODUCTOS = p.ID_PRODUCTOS
+                WHERE d.id_orden = ?
+            `, [orden.ID_ORDEN_SERVICIO]);
+            orden.detalles = detalles;
+        }
+
         res.json({ success: true, data: filas });
     } catch (error) {
         console.error("Error al obtener órdenes de servicio:", error);
@@ -28,39 +49,67 @@ export const obtenerOrdenPorId = async (req, res) => {
 };
 
 // Obtener órdenes del cliente autenticado (desde el token)
-// Obtener órdenes del cliente autenticado (desde el token)
 export const obtenerMisOrdenes = async (req, res) => {
     try {
-        const clienteId = req.admin.id; // porque tu middleware guarda en req.admin
-        if (!clienteId) {
+        const numeroDocumento = req.admin.id_usuario || req.admin.id;
+        if (!numeroDocumento) {
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        // 🔥 CORRECCIÓN: Cambiar 'ordene_servicio' por 'orden_servicio' (singular y sin falta de ortografía)
-        // Dentro de obtenerMisOrdenes
-const [filas] = await pool.query(`
-    SELECT 
-        os.ID_ORDEN_SERVICIO, 
-        os.ID_CLIENTES, 
-        os.ID_ADMINISTRADOR, 
-        os.ID_TECNICOS, 
-        os.ID_MOTOS, 
-        os.Fecha_inicio, 
-        os.Fecha_estimada, 
-        os.Fecha_fin, 
-        os.Estado,
-        c.Nombre AS NombreCliente,  
-        m.Placa AS PlacaMoto,
-        m.Marca AS MarcaMoto,
-        m.Modelo AS ModeloMoto
-    FROM orden_servicio os
-    LEFT JOIN motos m ON os.ID_MOTOS = m.ID_MOTOS
-    LEFT JOIN clientes c ON os.ID_CLIENTES = c.ID_CLIENTES  
-    WHERE os.ID_CLIENTES = ? 
-    ORDER BY os.ID_ORDEN_SERVICIO DESC
-`, [clienteId]);
+        // Buscar el id_usuario real a partir del numero_documento del token
+        const [usuarioRows] = await pool.query(
+            'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+            [numeroDocumento]
+        );
 
-        res.json({ success: true, data: filas });
+        if (!usuarioRows || usuarioRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+        }
+
+        const clienteId = usuarioRows[0].id_usuario;
+
+        // Traer órdenes con detalles incluidos
+        const [ordenes] = await pool.query(`
+            SELECT 
+                os.id_orden AS ID_ORDEN_SERVICIO, 
+                os.id_cliente AS ID_CLIENTES, 
+                os.id_tecnico AS ID_TECNICOS, 
+                os.id_moto AS ID_MOTOS, 
+                os.fecha_ingreso AS Fecha_inicio, 
+                os.fecha_estimada AS Fecha_estimada, 
+                os.fecha_salida AS Fecha_fin, 
+                os.estado AS Estado,
+                os.total,
+                m.placa AS PlacaMoto,
+                m.marca AS MarcaMoto,
+                m.modelo AS ModeloMoto
+            FROM orden_servicio os
+            LEFT JOIN motos m ON os.id_moto = m.id_moto
+            WHERE os.id_cliente = ? 
+            ORDER BY os.id_orden DESC
+        `, [clienteId]);
+
+        // Traer detalles para cada orden
+        for (const orden of ordenes) {
+            const [detalles] = await pool.query(`
+                SELECT 
+                    d.id_detalle,
+                    d.ID_SERVICIOS,
+                    d.ID_PRODUCTOS,
+                    d.cantidad,
+                    d.precio_unitario,
+                    d.subtotal,
+                    s.nombre AS NombreServicio,
+                    p.Nombre AS NombreProducto
+                FROM detalles_orden_servicio d
+                LEFT JOIN servicios s ON d.ID_SERVICIOS = s.ID_SERVICIOS
+                LEFT JOIN productos p ON d.ID_PRODUCTOS = p.ID_PRODUCTOS
+                WHERE d.id_orden = ?
+            `, [orden.ID_ORDEN_SERVICIO]);
+            orden.detalles = detalles;
+        }
+
+        res.json({ success: true, data: ordenes });
     } catch (error) {
         console.error("Error al obtener órdenes del cliente:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -74,67 +123,103 @@ export const crearOrden = async (req, res) => {
         await connection.beginTransaction();
 
         // 🔥 Obtener el ID del cliente desde el token (NO del body)
-        const clienteId = req.admin.id; // asumiendo que el token tiene el campo 'id'
-        if (!clienteId) {
+        const numeroDocumento = req.admin.id_usuario || req.admin.id; // asumiendo que el token tiene el campo 'id' o 'id_usuario'
+        if (!numeroDocumento) {
             await connection.rollback();
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        // Buscar la moto del cliente
-        const [motos] = await connection.query(
-            'SELECT ID_MOTOS FROM motos WHERE ID_CLIENTES = ? ORDER BY ID_MOTOS DESC LIMIT 1',
-            [clienteId]
+        // El token guarda el numero_documento en id_usuario, pero la BD exige el ID real (PK)
+        const [usuarioRows] = await connection.query(
+            'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+            [numeroDocumento]
         );
-        if (!motos || motos.length === 0) {
+        
+        if (!usuarioRows || usuarioRows.length === 0) {
             await connection.rollback();
-            return res.status(400).json({
-                success: false,
-                error: 'No se encontró ninguna moto asociada a este cliente'
-            });
+            return res.status(401).json({ success: false, error: 'Usuario no encontrado en la base de datos' });
         }
-        const idMoto = motos[0].ID_MOTOS;
+        
+        const clienteId = usuarioRows[0].id_usuario;
+
+        let idMoto;
+
+        // Si viene el ID de la moto, usarlo directamente
+        if (req.body.id_moto || (req.body.moto && req.body.moto.id_moto)) {
+            idMoto = req.body.id_moto || req.body.moto.id_moto;
+        } 
+        // Si viene un objeto moto con placa (moto nueva), la insertamos
+        else if (req.body.moto && req.body.moto.placa) {
+            const { placa, marca, modelo, cilindraje, kilometraje } = req.body.moto;
+            const [motoRes] = await connection.query(
+                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
+                [clienteId, placa, marca, modelo, cilindraje, kilometraje]
+            );
+            idMoto = motoRes.insertId;
+        } else {
+            // Buscar la moto del cliente (fallback)
+            const [motos] = await connection.query(
+                'SELECT id_moto FROM motos WHERE id_cliente = ? ORDER BY id_moto DESC LIMIT 1',
+                [clienteId]
+            );
+            if (!motos || motos.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'No se encontró ninguna moto asociada a este cliente'
+                });
+            }
+            idMoto = motos[0].id_moto;
+        }
 
         const ahora = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        // Los demás campos pueden venir del body (opcional)
-        const ordenData = {
-            ID_CLIENTES: clienteId,   // <- toma del token
-            ID_MOTOS: idMoto,
-            ID_ADMINISTRADOR: req.body.ID_ADMINISTRADOR || 1,
-            ID_TECNICOS: req.body.ID_TECNICOS || 1,
-            Fecha_inicio: req.body.Fecha_inicio || ahora,
-            Fecha_estimada: req.body.Fecha_estimada || null,
-            Fecha_fin: req.body.Fecha_fin || null,   // debe permitir NULL
-            Estado: req.body.Estado || 'PENDIENTE'
-        };
+        const total = req.body.total || 0;
 
-        // Insertar orden
+        // Insertar orden usando las columnas de la captura
         const [resultado] = await connection.query(
             `INSERT INTO orden_servicio 
-             (ID_CLIENTES, ID_MOTOS, ID_ADMINISTRADOR, ID_TECNICOS, Fecha_inicio, Fecha_estimada, Fecha_fin, Estado)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, total)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                ordenData.ID_CLIENTES,
-                ordenData.ID_MOTOS,
-                ordenData.ID_ADMINISTRADOR,
-                ordenData.ID_TECNICOS,
-                ordenData.Fecha_inicio,
-                ordenData.Fecha_estimada,
-                ordenData.Fecha_fin,
-                ordenData.Estado
+                clienteId,
+                req.body.id_tecnico || 1, // Por defecto tecnico 1 si no se envía
+                idMoto,
+                ahora, // fecha_ingreso
+                null, // fecha_estimada
+                null, // fecha_salida
+                req.body.observaciones || '', // observaciones
+                'Pendiente', // estado
+                total
             ]
         );
 
         const idOrden = resultado.insertId;
 
-        // Insertar detalles (si vienen en req.body.detalles)
+        // Insertar detalles (Agrupando servicios y productos en una sola fila cuando sea posible)
         const detalles = req.body.detalles || [];
-        for (const item of detalles) {
-            const { ID_PRODUCTOS, ID_SERVICIOS, Garantia, Precio } = item;
+        
+        const servicios = detalles.filter(d => d.ID_SERVICIOS);
+        const productos = detalles.filter(d => d.ID_PRODUCTOS);
+        
+        const maxLength = Math.max(servicios.length, productos.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+            const servicio = servicios[i];
+            const producto = productos[i];
+            
+            const idServicio = servicio ? servicio.ID_SERVICIOS : null;
+            const idProducto = producto ? producto.ID_PRODUCTOS : null;
+            
+            // Asumimos 1 cantidad y sumamos el precio para el subtotal si se agrupan
+            const precioServicio = servicio ? parseFloat(servicio.Precio || 0) : 0;
+            const precioProducto = producto ? parseFloat(producto.Precio || 0) : 0;
+            const subtotal = precioServicio + precioProducto;
+            
             await connection.query(
                 `INSERT INTO detalles_orden_servicio 
-                 (ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantía, Precio)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [idOrden, ID_SERVICIOS || null, ID_PRODUCTOS || null, Garantia, Precio]
+                 (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [idOrden, idServicio, idProducto, null, 1, subtotal, subtotal]
             );
         }
 
@@ -142,8 +227,8 @@ export const crearOrden = async (req, res) => {
         res.status(201).json({
             success: true,
             data: {
-                ID_ORDEN_SERVICIO: idOrden,
-                ID_MOTOS: idMoto,
+                id_orden: idOrden,
+                id_moto: idMoto,
                 detalles_insertados: detalles.length
             }
         });
@@ -185,11 +270,21 @@ export const eliminarOrden = async (req, res) => {
         return res.status(400).json({ success: false, message: 'ID_ORDEN_SERVICIO es requerido' });
     }
     try {
-        const existe = await OrdenServicio.findById(id);
-        if (!existe) {
+        // Buscar la orden (intentar ambos nombres de columna)
+        let [rows] = await pool.query('SELECT * FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?', [id]);
+        if (!rows || rows.length === 0) {
+            [rows] = await pool.query('SELECT * FROM orden_servicio WHERE id_orden = ?', [id]);
+        }
+        if (!rows || rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
-        await OrdenServicio.delete(id);
+
+        // Primero eliminar los detalles asociados (FK constraint)
+        await pool.query('DELETE FROM detalles_orden_servicio WHERE id_orden = ?', [id]);
+        
+        // Luego eliminar la orden
+        await pool.query('DELETE FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?', [id]);
+        
         res.json({ success: true, message: 'Orden de servicio eliminada correctamente' });
     } catch (error) {
         console.error("Error al eliminar orden de servicio:", error);
