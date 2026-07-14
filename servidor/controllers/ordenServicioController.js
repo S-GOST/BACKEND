@@ -254,7 +254,20 @@ export const actualizarOrden = async (req, res) => {
         if (!existe) {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
-        await OrdenServicio.update(id, req.body);
+        
+        // Merge existing data with new data
+        const dataToUpdate = {
+            ID_CLIENTES: existe.ID_CLIENTES,
+            ID_TECNICOS: existe.ID_TECNICOS,
+            ID_MOTOS: existe.ID_MOTOS,
+            Fecha_inicio: existe.Fecha_inicio,
+            Fecha_estimada: existe.Fecha_estimada,
+            Fecha_fin: existe.Fecha_fin,
+            Estado: existe.Estado,
+            ...req.body
+        };
+
+        await OrdenServicio.update(id, dataToUpdate);
         const ordenActualizada = await OrdenServicio.findById(id);
         res.json({ success: true, data: ordenActualizada });
     } catch (error) {

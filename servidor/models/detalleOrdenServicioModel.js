@@ -16,25 +16,27 @@ const DetalleOrdenServicio = {
     return rows[0] || null;
   },
 
-findByOrderId: async (idOrden) => {
-  const query = `
-    SELECT 
-      dos.ID_DETALLES_ORDEN_SERVICIO,
-      dos.ID_ORDEN_SERVICIO,
-      dos.ID_SERVICIOS,
-      dos.ID_PRODUCTOS,
-      s.Nombre AS NombreServicio,
-      p.Nombre AS NombreProducto,
-      dos.Garantia,
-      dos.Precio
-    FROM detalles_orden_servicio dos
-    LEFT JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
-    LEFT JOIN productos p ON dos.ID_PRODUCTOS = p.ID_PRODUCTOS
-    WHERE dos.ID_ORDEN_SERVICIO = ?
-  `;
-  const [rows] = await pool.query(query, [idOrden]);
-  return rows;
-},
+  findByOrderId: async (idOrden) => {
+    const query = `
+      SELECT 
+        dos.id_detalle AS ID_DETALLES_ORDEN_SERVICIO,
+        dos.id_orden AS ID_ORDEN_SERVICIO,
+        dos.ID_SERVICIOS,
+        dos.ID_PRODUCTOS,
+        s.Nombre AS NombreServicio,
+        p.Nombre AS NombreProducto,
+        dos.cantidad,
+        dos.garantia AS Garantia,
+        dos.precio_unitario AS Precio,
+        dos.subtotal
+      FROM detalles_orden_servicio dos
+      LEFT JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
+      LEFT JOIN productos p ON dos.ID_PRODUCTOS = p.ID_PRODUCTOS
+      WHERE dos.id_orden = ?
+    `;
+    const [rows] = await pool.query(query, [idOrden]);
+    return rows;
+  },
 
   // 4. Crear un solo detalle
   create: async (data) => {

@@ -30,7 +30,7 @@ export const loginTecnico = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user.numero_documento },
+            { id: user.numero_documento, id_usuario: user.id_usuario },
             process.env.JWT_SECRET || 'clave_secreta_temporal',
             { expiresIn: '1h' }
         );
@@ -39,7 +39,8 @@ export const loginTecnico = async (req, res) => {
             success: true, 
             token, 
             nombre: user.nombre,
-            rol: 'tecnico'
+            rol: 'tecnico',
+            id_usuario: user.id_usuario
         });
     } catch (error) {
         console.error("Error en el login:", error);

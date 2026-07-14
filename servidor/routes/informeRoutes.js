@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     obtenerInformes,
+    obtenerMisInformes,
     obtenerInformePorId,
     crearInforme,
     actualizarInforme,
@@ -15,6 +16,7 @@ const router = express.Router();
 // ==============================================
 
 router.get('/obtener', verificarToken, obtenerInformes);
+router.get('/mis-informes', verificarToken, obtenerMisInformes); // ← Informes del técnico autenticado
 router.get('/buscar/:id', verificarToken, obtenerInformePorId);
 router.post('/insertar', verificarToken, crearInforme);
 router.put('/actualizar/:id', verificarToken, actualizarInforme);

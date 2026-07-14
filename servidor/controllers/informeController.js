@@ -1,7 +1,8 @@
 // controllers/informeController.js
 import Informe from "../models/informeModel.js";
+import pool from "../config/db.js";
 
-// Convierte fecha ISO a formato MySQL (solo transformación de string, no SQL)
+// Convierte fecha ISO a formato MySQL
 const formatearFechaMySQL = (fechaISO) => {
     if (!fechaISO) return null;
     const date = new Date(fechaISO);
@@ -22,6 +23,40 @@ export const obtenerInformes = async (req, res) => {
 };
 
 /**
+ * Obtener informes del técnico autenticado
+ */
+export const obtenerMisInformes = async (req, res) => {
+    try {
+        const tecnicoId = req.admin?.id_usuario || req.admin?.id_usuario;
+        if (!tecnicoId) {
+            return res.status(401).json({ success: false, error: 'No autenticado' });
+        }
+        
+        // Buscar id_usuario real desde el JWT
+        const [usuarioRows] = await pool.query(
+            'SELECT id_usuario FROM usuarios WHERE numero_documento = ? OR id_usuario = ?',
+            [tecnicoId, tecnicoId]
+        );
+        
+        if (!usuarioRows || usuarioRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Técnico no encontrado' });
+        }
+        
+        const idTecnicoReal = usuarioRows[0].id_usuario;
+        const [rows] = await pool.query(
+            'SELECT * FROM informe WHERE id_tecnico = ? ORDER BY fecha DESC',
+            [idTecnicoReal]
+        );
+        
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error al obtener informes del técnico:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+
+/**
  * Obtener un informe por su ID
  */
 export const obtenerInformePorId = async (req, res) => {
@@ -40,46 +75,35 @@ export const obtenerInformePorId = async (req, res) => {
 
 /**
  * Crear un nuevo informe
- * Requiere que el cliente envíe ID_INFORME (ej: "INF1") junto a los demás campos.
  */
 export const crearInforme = async (req, res) => {
     try {
         const {
-            ID_INFORME,
-            ID_DETALLES_ORDEN_SERVICIO,
-            ID_ADMINISTRADOR,
-            ID_TECNICOS,
-            Descripcion,
-            Fecha,
-            Estado,
+            id_orden,
+            id_tecnico,
+            diagnostico,
+            trabajo_realizado,
+            recomendaciones
         } = req.body;
 
-        // Validar campos obligatorios (incluyendo ID_INFORME)
-        if (!ID_INFORME || !ID_DETALLES_ORDEN_SERVICIO || !ID_ADMINISTRADOR || !ID_TECNICOS) {
+        if (!id_orden || !id_tecnico) {
             return res.status(400).json({
                 success: false,
-                message: "Faltan campos obligatorios: ID_INFORME, ID_DETALLES_ORDEN_SERVICIO, ID_ADMINISTRADOR, ID_TECNICOS",
+                message: "Faltan campos obligatorios: id_orden, id_tecnico",
             });
         }
 
-        // Formatear fecha si viene en formato ISO
-        let fechaFormateada = Fecha;
-        if (Fecha) {
-            fechaFormateada = formatearFechaMySQL(Fecha);
-        }
-
         const resultado = await Informe.create({
-            ID_INFORME,
-            ID_DETALLES_ORDEN_SERVICIO,
-            ID_ADMINISTRADOR,
-            ID_TECNICOS,
-            Descripcion,
-            Fecha: fechaFormateada,
-            Estado,
+            id_orden,
+            id_tecnico,
+            diagnostico,
+            trabajo_realizado,
+            recomendaciones
         });
 
-        // Opcional: recuperar el registro recién creado (si el modelo lo permite)
-        const nuevoInforme = await Informe.findById(ID_INFORME);
+        // El ID insertado autoincremental
+        const nuevoId = resultado.insertId;
+        const nuevoInforme = await Informe.findById(nuevoId);
 
         res.status(201).json({
             success: true,
@@ -103,15 +127,16 @@ export const actualizarInforme = async (req, res) => {
             return res.status(404).json({ success: false, message: "Informe no encontrado" });
         }
 
-        // Excluir ID_INFORME por seguridad
-        const { ID_INFORME, ...datosActualizables } = req.body;
+        const { id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones } = req.body;
 
-        // Formatear fecha si viene
-        if (datosActualizables.Fecha) {
-            datosActualizables.Fecha = formatearFechaMySQL(datosActualizables.Fecha);
-        }
-
-        const resultado = await Informe.update(id, datosActualizables);
+        const resultado = await Informe.update(id, {
+            id_orden: id_orden || existe.id_orden,
+            id_tecnico: id_tecnico || existe.id_tecnico,
+            diagnostico: diagnostico || existe.diagnostico,
+            trabajo_realizado: trabajo_realizado || existe.trabajo_realizado,
+            recomendaciones: recomendaciones || existe.recomendaciones
+        });
+        
         const informeActualizado = await Informe.findById(id);
 
         res.json({

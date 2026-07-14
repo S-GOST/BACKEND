@@ -7,10 +7,10 @@ const Informe = {
         return rows;
     },
 
-    // Buscar un informe por su ID (PK: ID_INFORME)
+    // Buscar un informe por su ID (PK: id_informe)
     findById: async (id) => {
         const [rows] = await pool.query(
-            "SELECT * FROM informe WHERE ID_INFORME = ?",
+            "SELECT * FROM informe WHERE id_informe = ?",
             [id]
         );
         if (!rows.length) return null;
@@ -20,46 +20,42 @@ const Informe = {
     // Crear un nuevo informe
     create: async (data) => {
         const { 
-            ID_INFORME,
-            ID_DETALLES_ORDEN_SERVICIO, 
-            ID_ADMINISTRADOR, 
-            ID_TECNICOS, 
-            Descripcion, 
-            Fecha, 
-            Estado 
+            id_orden, 
+            id_tecnico, 
+            diagnostico, 
+            trabajo_realizado, 
+            recomendaciones
         } = data;
         
         const [result] = await pool.query(
             `INSERT INTO informe 
-             (ID_INFORME, ID_DETALLES_ORDEN_SERVICIO, ID_ADMINISTRADOR, ID_TECNICOS, Descripcion, Fecha, Estado)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [ID_INFORME, ID_DETALLES_ORDEN_SERVICIO, ID_ADMINISTRADOR, ID_TECNICOS, Descripcion, Fecha, Estado]
+             (id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones)
+             VALUES (?, ?, ?, ?, ?)`,
+            [id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones]
         );
 
         return result;
     },
 
-    // Actualizar un informe existente (no se modifica la clave primaria)
+    // Actualizar un informe existente
     update: async (id, data) => {
         const { 
-            ID_DETALLES_ORDEN_SERVICIO, 
-            ID_ADMINISTRADOR, 
-            ID_TECNICOS, 
-            Descripcion, 
-            Fecha, 
-            Estado 
+            id_orden, 
+            id_tecnico, 
+            diagnostico, 
+            trabajo_realizado, 
+            recomendaciones
         } = data;
         
         const [result] = await pool.query(
             `UPDATE informe
-             SET ID_DETALLES_ORDEN_SERVICIO = ?,
-                 ID_ADMINISTRADOR = ?,
-                 ID_TECNICOS = ?,
-                 Descripcion = ?,
-                 Fecha = ?,
-                 Estado = ?
-             WHERE ID_INFORME = ?`,
-            [ID_DETALLES_ORDEN_SERVICIO, ID_ADMINISTRADOR, ID_TECNICOS, Descripcion, Fecha, Estado, id]
+             SET id_orden = ?,
+                 id_tecnico = ?,
+                 diagnostico = ?,
+                 trabajo_realizado = ?,
+                 recomendaciones = ?
+             WHERE id_informe = ?`,
+            [id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones, id]
         );
         
         return result;
@@ -67,7 +63,7 @@ const Informe = {
 
     // Eliminar un informe
     delete: async (id) => {
-        await pool.query("DELETE FROM informe WHERE ID_INFORME = ?", [id]);
+        await pool.query("DELETE FROM informe WHERE id_informe = ?", [id]);
         return true;
     },
 };

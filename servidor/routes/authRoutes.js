@@ -21,11 +21,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: true, mensaje: 'Credenciales inválidas' });
     }
     const token = jwt.sign(
-      { id_usuario: user.numero_documento, rol: user.id_rol },
+      { id_usuario: user.id_usuario, numero_documento: user.numero_documento, rol: user.id_rol },
       process.env.JWT_SECRET || 'clave_secreta_temporal',
       { expiresIn: '1h' }
     );
-    return res.json({ token, rol: user.id_rol, nombre: user.nombre });
+    return res.json({ token, rol: user.id_rol, nombre: user.nombre, id_usuario: user.id_usuario });
   } catch (err) {
     console.error('Login error:', err);
     return res.status(500).json({ error: true, mensaje: 'Error interno del servidor' });
