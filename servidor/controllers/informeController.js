@@ -1,6 +1,6 @@
-// controllers/informeController.js
 import Informe from "../models/informeModel.js";
 import pool from "../config/db.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 // Convierte fecha ISO a formato MySQL
 const formatearFechaMySQL = (fechaISO) => {
@@ -106,17 +106,13 @@ export const crearInforme = async (req, res) => {
         const nuevoInforme = await Informe.findById(nuevoId);
 
         // Guardar en el historial
-        try {
-            await Historial.create({
-                id_usuario: id_tecnico,
-                tabla_afectada: 'informes',
-                id_registro: nuevoId,
-                accion: 'INSERT',
-                descripcion: `Redactó un informe para la orden ${id_orden}`
-            });
-        } catch (historialError) {
-            console.error("Error al guardar historial del informe:", historialError);
-        }
+        await logHistory(
+            id_tecnico,
+            'informe',
+            nuevoId,
+            'INSERT',
+            `Redactó un informe para la orden ${id_orden}`
+        );
 
         res.status(201).json({
             success: true,
@@ -157,6 +153,14 @@ export const actualizarInforme = async (req, res) => {
             data: informeActualizado,
             updateResult: resultado,
         });
+
+        await logHistory(
+            req.user?.id_usuario || existe.id_tecnico || 1,
+            'informe',
+            id,
+            'UPDATE',
+            `Actualizó el informe de la orden ${informeActualizado.id_orden}`
+        );
     } catch (error) {
         console.error("Error al actualizar informe:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -175,6 +179,15 @@ export const eliminarInforme = async (req, res) => {
         }
 
         await Informe.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || existe.id_tecnico || 1,
+            'informe',
+            id,
+            'DELETE',
+            `Eliminó el informe de la orden ${existe.id_orden}`
+        );
+
         res.json({ success: true, message: "Informe eliminado correctamente" });
     } catch (error) {
         console.error("Error al eliminar informe:", error);

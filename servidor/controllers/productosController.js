@@ -1,5 +1,6 @@
 // Importamos el modelo Producto (asegúrate que la ruta y el export sean correctos)
 import Producto from "../models/productosModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 // Obtener todos los productos
 export const obtenerProductos = async (req, res) => {
@@ -43,6 +44,15 @@ export const obtenerProductosPorCategoria = async (req, res) => {
 export const crearProducto = async (req, res) => {
     try {
         const resultado = await Producto.create(req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'productos',
+            resultado.insertId || 0,
+            'INSERT',
+            `Se creó el producto ${req.body.nombre || 'N/A'}`
+        );
+
         res.status(201).json({ success: true, data: resultado });
     } catch (error) {
         console.error("Error al crear producto:", error);
@@ -62,6 +72,15 @@ export const actualizarProducto = async (req, res) => {
         if (productoActualizado.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Producto no encontrado' });
         }
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'productos',
+            id,
+            'UPDATE',
+            `Se actualizó el producto ID ${id}`
+        );
+
         res.json({ success: true, data: productoActualizado });
     } catch (error) {
         console.error("Error al actualizar producto:", error);
@@ -74,6 +93,15 @@ export const eliminarProducto = async (req, res) => {
     const { id } = req.params;
     try {
         await Producto.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'productos',
+            id,
+            'DELETE',
+            `Se eliminó el producto ID ${id}`
+        );
+
         res.json({ success: true, message: 'Producto eliminado correctamente' });
     } catch (error) {
         console.error("Error al eliminar producto:", error);

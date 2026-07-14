@@ -1,4 +1,5 @@
 import Servicio from "../models/serviciosModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 /**
  * Obtener todos los servicios
@@ -43,7 +44,16 @@ export const obtenerServicioPorId = async (req, res) => {
  */
 export const crearServicio = async (req, res) => {
     try {
-        const nuevoServicio = await Servicio.create(req.body);    
+        const nuevoServicio = await Servicio.create(req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'servicios',
+            nuevoServicio.insertId || 0,
+            'INSERT',
+            `Se creó el servicio ${req.body.nombre || 'N/A'}`
+        );
+
         res.json({ 
             success: true, 
             data: nuevoServicio 
@@ -63,7 +73,16 @@ export const crearServicio = async (req, res) => {
 export const actualizarServicio = async (req, res) => {
     const { id } = req.params;
     try {
-        const servicioActualizado = await Servicio.update(id, req.body);  
+        const servicioActualizado = await Servicio.update(id, req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'servicios',
+            id,
+            'UPDATE',
+            `Se actualizó el servicio ID ${id}`
+        );
+
         res.json({ 
             success: true, 
             data: servicioActualizado 
@@ -84,6 +103,15 @@ export const eliminarServicio = async (req, res) => {
     const { id } = req.params;
     try {
         await Servicio.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'servicios',
+            id,
+            'DELETE',
+            `Se eliminó el servicio ID ${id}`
+        );
+
         res.json({ 
             success: true, 
             message: 'Servicio eliminado correctamente' 

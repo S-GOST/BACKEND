@@ -1,4 +1,5 @@
 import DetalleOrdenServicio from "../models/detalleOrdenServicioModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 // 1. Obtener TODOS los detalles
 export const obtenerDetallesOrden = async (req, res) => {
@@ -58,6 +59,15 @@ export const crearDetalleOrden = async (req, res) => {
     if (body.Garantia === undefined || body.Garantia === null) body.Garantia = 0;
 
     const nuevoDetalle = await DetalleOrdenServicio.create(body);
+
+    await logHistory(
+        req.user?.id_usuario || 1,
+        'detalles_orden_servicio',
+        nuevoDetalle.insertId || 0,
+        'INSERT',
+        `Se agregó detalle a la orden ${body.ID_ORDEN_SERVICIO || 'N/A'}`
+    );
+
     res.json({ success: true, data: nuevoDetalle });
   } catch (error) {
     console.error("Error al crear detalle:", error);
@@ -82,6 +92,14 @@ export const actualizarDetalleOrden = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
     }
 
+    await logHistory(
+        req.user?.id_usuario || 1,
+        'detalles_orden_servicio',
+        idActual,
+        'UPDATE',
+        `Se actualizó el detalle ID ${idActual}`
+    );
+
     res.json({ success: true, message: 'Detalle actualizado correctamente' });
   } catch (error) {
     console.error("Error al actualizar:", error);
@@ -104,6 +122,14 @@ export const eliminarDetalleOrden = async (req, res) => {
     if (eliminados.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
     }
+
+    await logHistory(
+        req.user?.id_usuario || 1,
+        'detalles_orden_servicio',
+        idEliminar,
+        'DELETE',
+        `Se eliminó el detalle ID ${idEliminar}`
+    );
 
     res.json({ success: true, message: 'Detalle eliminado correctamente' });
   } catch (error) {

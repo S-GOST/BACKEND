@@ -1,6 +1,7 @@
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { logHistory } from "../utils/historyLogger.js";
 
 const mapToUsuario = (a) => {
     const obj = {};
@@ -74,6 +75,15 @@ export const crearAdmin = async (req, res) => {
         const userPayload = mapToUsuario(req.body);
         await Usuario.create(userPayload);    
         const newUser = await Usuario.findByPk(userPayload.numero_documento);
+        
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            newUser.id_usuario, 
+            'INSERT', 
+            `Se creó el administrador ${newUser.nombre}`
+        );
+
         res.json({ success: true, data: newUser });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -89,6 +99,15 @@ export const actualizarAdmin = async (req, res) => {
         if (!adminActualizado || adminActualizado.id_rol !== 1) {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado después de actualizar' });
         }
+
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            adminActualizado.id_usuario, 
+            'UPDATE', 
+            `Se actualizó el administrador ${adminActualizado.nombre}`
+        );
+
         res.json({ success: true, data: adminActualizado });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -103,6 +122,15 @@ export const eliminarAdmin = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado' });
         }
         await Usuario.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            user.id_usuario, 
+            'DELETE', 
+            `Se eliminó el administrador ${user.nombre}`
+        );
+
         res.json({ success: true, message: 'Administrador eliminado' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

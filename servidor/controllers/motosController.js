@@ -1,4 +1,5 @@
 import Moto from "../models/motosModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 /**
  * Obtener todas las motos
@@ -41,7 +42,16 @@ export const obtenerMotoPorId = async (req, res) => {
  */
 export const crearMoto = async (req, res) => {
     try {
-        const nuevaMoto = await Moto.create(req.body);    
+        const nuevaMoto = await Moto.create(req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'motos',
+            nuevaMoto.insertId || nuevaMoto.id_moto || 0,
+            'INSERT',
+            `Se creó una nueva moto (placa: ${req.body.placa || 'N/A'})`
+        );
+
         res.json({ 
             success: true, 
             data: nuevaMoto 
@@ -61,7 +71,16 @@ export const crearMoto = async (req, res) => {
 export const actualizarMoto = async (req, res) => {
     const { id } = req.params;
     try {
-        const motoActualizada = await Moto.update(id, req.body);  
+        const motoActualizada = await Moto.update(id, req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'motos',
+            id,
+            'UPDATE',
+            `Se actualizó la moto ID ${id}`
+        );
+
         res.json({ 
             success: true, 
             data: motoActualizada 
@@ -82,6 +101,15 @@ export const eliminarMoto = async (req, res) => {
     const { id } = req.params;
     try {
         await Moto.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'motos',
+            id,
+            'DELETE',
+            `Se eliminó la moto ID ${id}`
+        );
+
         res.json({ 
             success: true, 
             message: 'Moto eliminada correctamente' 

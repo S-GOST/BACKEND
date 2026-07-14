@@ -1,4 +1,5 @@
 import Categoria from "../models/categoriasModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 /**
  * Obtener todas las categorías
@@ -50,6 +51,15 @@ export const obtenerCategoriasPorTipo = async (req, res) => {
 export const crearCategoria = async (req, res) => {
     try {
         const nuevaCategoria = await Categoria.create(req.body);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'categorias',
+            nuevaCategoria.insertId || 0,
+            'INSERT',
+            `Se creó la categoría ${req.body.nombre || 'N/A'}`
+        );
+
         res.status(201).json({ success: true, data: nuevaCategoria });
     } catch (error) {
         console.error("Error al crear categoría:", error);
@@ -67,6 +77,15 @@ export const actualizarCategoria = async (req, res) => {
         if (resultado.affectedRows === 0) {
             return res.status(404).json({ success: false, message: "Categoría no encontrada" });
         }
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'categorias',
+            id,
+            'UPDATE',
+            `Se actualizó la categoría ID ${id}`
+        );
+
         res.json({ success: true, message: "Categoría actualizada correctamente" });
     } catch (error) {
         console.error("Error al actualizar categoría:", error);
@@ -84,6 +103,15 @@ export const eliminarCategoria = async (req, res) => {
         if (resultado.affectedRows === 0) {
             return res.status(404).json({ success: false, message: "Categoría no encontrada" });
         }
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'categorias',
+            id,
+            'DELETE',
+            `Se eliminó la categoría ID ${id}`
+        );
+
         res.json({ success: true, message: "Categoría eliminada correctamente" });
     } catch (error) {
         console.error("Error al eliminar categoría:", error);

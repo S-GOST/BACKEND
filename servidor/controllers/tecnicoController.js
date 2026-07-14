@@ -1,6 +1,7 @@
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { logHistory } from "../utils/historyLogger.js";
 
 const mapToUsuario = (t) => {
     const obj = {};
@@ -75,6 +76,15 @@ export const crearTec = async (req, res) => {
         const userPayload = mapToUsuario(req.body);
         await Usuario.create(userPayload);    
         const newUser = await Usuario.findByPk(userPayload.numero_documento);
+        
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            newUser.id_usuario, 
+            'INSERT', 
+            `Se creó el técnico ${newUser.nombre}`
+        );
+
         res.json({ success: true, data: newUser });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -90,6 +100,15 @@ export const actualizarTec = async (req, res) => {
         if (!userActualizado || userActualizado.id_rol !== 2) {
             return res.status(404).json({ success: false, message: 'Tecnico no encontrado después de actualizar' });
         }
+
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            userActualizado.id_usuario, 
+            'UPDATE', 
+            `Se actualizó el técnico ${userActualizado.nombre}`
+        );
+
         res.json({ success: true, data: userActualizado });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -104,6 +123,15 @@ export const eliminarTec = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Tecnico no encontrado' });
         }
         await Usuario.delete(id);
+
+        await logHistory(
+            req.user?.id_usuario || 1, 
+            'usuarios', 
+            user.id_usuario, 
+            'DELETE', 
+            `Se eliminó el técnico ${user.nombre}`
+        );
+
         res.json({ success: true, message: 'Tecnico eliminado' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

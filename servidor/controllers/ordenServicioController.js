@@ -1,6 +1,6 @@
 import OrdenServicio from "../models/ordenServicioModel.js";
 import pool from "../config/db.js";
-import Historial from "../models/historialModel.js";
+import { logHistory } from "../utils/historyLogger.js";
 
 // Obtener todas las órdenes de servicio
 export const obtenerOrdenes = async (req, res) => {
@@ -225,6 +225,15 @@ export const crearOrden = async (req, res) => {
         }
 
         await connection.commit();
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'orden_servicio',
+            idOrden,
+            'INSERT',
+            `Se creó la orden de servicio #${idOrden}`
+        );
+
         res.status(201).json({
             success: true,
             data: {
@@ -273,17 +282,13 @@ export const actualizarOrden = async (req, res) => {
 
         // Guardar en el historial si cambió el estado y hay un técnico asignado
         if (dataToUpdate.Estado !== existe.Estado && dataToUpdate.ID_TECNICOS) {
-            try {
-                await Historial.create({
-                    id_usuario: dataToUpdate.ID_TECNICOS,
-                    tabla_afectada: 'orden_servicio',
-                    id_registro: id,
-                    accion: 'UPDATE',
-                    descripcion: `Actualizó el estado de la orden a ${dataToUpdate.Estado}`
-                });
-            } catch (hError) {
-                console.error("Error al guardar historial de orden:", hError);
-            }
+            await logHistory(
+                dataToUpdate.ID_TECNICOS,
+                'orden_servicio',
+                id,
+                'UPDATE',
+                `Actualizó el estado de la orden a ${dataToUpdate.Estado}`
+            );
         }
 
         res.json({ success: true, data: ordenActualizada });
@@ -314,6 +319,14 @@ export const eliminarOrden = async (req, res) => {
         
         // Luego eliminar la orden
         await pool.query('DELETE FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?', [id]);
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'orden_servicio',
+            id,
+            'DELETE',
+            `Se eliminó la orden de servicio #${id}`
+        );
         
         res.json({ success: true, message: 'Orden de servicio eliminada correctamente' });
     } catch (error) {

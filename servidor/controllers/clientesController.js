@@ -1,6 +1,7 @@
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { logHistory } from "../utils/historyLogger.js";
 
 const mapToUsuario = (c) => {
     const obj = {};
@@ -76,6 +77,15 @@ export const crearCliente = async (req, res) => {
     const userPayload = mapToUsuario(req.body);
     await Usuario.create(userPayload);
     const newUser = await Usuario.findByPk(userPayload.numero_documento);
+
+    await logHistory(
+        req.user?.id_usuario || 1, 
+        'usuarios', 
+        newUser.id_usuario, 
+        'INSERT', 
+        `Se creó el cliente ${newUser.nombre}`
+    );
+
     res.json({ success: true, data: newUser });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -94,6 +104,15 @@ export const actualizarCliente = async (req, res) => {
     if (!userActualizado || userActualizado.id_rol !== 3) {
         return res.status(404).json({ success: false, message: 'Cliente no encontrado después de actualizar' });
     }
+
+    await logHistory(
+        req.user?.id_usuario || 1, 
+        'usuarios', 
+        userActualizado.id_usuario, 
+        'UPDATE', 
+        `Se actualizó el cliente ${userActualizado.nombre}`
+    );
+
     res.json({ success: true, data: userActualizado });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -111,6 +130,15 @@ export const eliminarCliente = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
     await Usuario.delete(id);
+
+    await logHistory(
+        req.user?.id_usuario || 1, 
+        'usuarios', 
+        user.id_usuario, 
+        'DELETE', 
+        `Se eliminó el cliente ${user.nombre}`
+    );
+
     res.json({ success: true, message: 'Cliente eliminado' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
