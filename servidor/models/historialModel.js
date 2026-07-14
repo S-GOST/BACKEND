@@ -3,14 +3,14 @@ import pool from "../config/db.js";
 const historial = {
   // Obtener todo el historial
   findAll: async () => {
-    const [rows] = await pool.query("SELECT * FROM historial");
+    const [rows] = await pool.query("SELECT * FROM historial ORDER BY fecha DESC");
     return rows;
   },
 
   // Buscar un registro por su ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      "SELECT * FROM historial WHERE ID_HISTORIAL = ?",
+      "SELECT * FROM historial WHERE id_historial = ?",
       [id]
     );
     return rows[0] || null;
@@ -19,65 +19,53 @@ const historial = {
   // Crear un nuevo registro de historial
   create: async (data) => {
     const {
-      ID_HISTORIAL,
-      ID_ORDEN_SERVICIO,
-      ID_COMPROBANTE,
-      ID_INFORME,
-      ID_TECNICOS,
-      ID_CLIENTES,
-      Descripcion,
-      Fecha_registro,
+      id_usuario,
+      tabla_afectada,
+      id_registro,
+      accion,
+      descripcion
     } = data;
 
     const [result] = await pool.query(
       `INSERT INTO historial
-       (ID_HISTORIAL, ID_ORDEN_SERVICIO, ID_COMPROBANTE, ID_INFORME, ID_TECNICOS, ID_CLIENTES, Descripcion, Fecha_registro)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id_usuario, tabla_afectada, id_registro, accion, descripcion)
+       VALUES (?, ?, ?, ?, ?)`,
       [
-        ID_HISTORIAL,
-        ID_ORDEN_SERVICIO || null,
-        ID_COMPROBANTE || null,
-        ID_INFORME || null,
-        ID_TECNICOS || null,
-        ID_CLIENTES || null,
-        Descripcion,
-        Fecha_registro || new Date(),
+        id_usuario,
+        tabla_afectada,
+        id_registro,
+        accion,
+        descripcion || null
       ]
     );
     return result;
   },
 
-  // Actualizar un registro existente
+  // Actualizar un registro existente (raramente usado en historiales, pero mantenido por compatibilidad)
   update: async (id, data) => {
     const {
-      ID_ORDEN_SERVICIO,
-      ID_COMPROBANTE,
-      ID_INFORME,
-      ID_TECNICOS,
-      ID_CLIENTES,
-      Descripcion,
-      Fecha_registro,
+      id_usuario,
+      tabla_afectada,
+      id_registro,
+      accion,
+      descripcion
     } = data;
 
     const [result] = await pool.query(
       `UPDATE historial
-       SET ID_ORDEN_SERVICIO = ?,
-           ID_COMPROBANTE = ?,
-           ID_INFORME = ?,
-           ID_TECNICOS = ?,
-           ID_CLIENTES = ?,
-           Descripcion = ?,
-           Fecha_registro = ?
-       WHERE ID_HISTORIAL = ?`,
+       SET id_usuario = ?,
+           tabla_afectada = ?,
+           id_registro = ?,
+           accion = ?,
+           descripcion = ?
+       WHERE id_historial = ?`,
       [
-        ID_ORDEN_SERVICIO || null,
-        ID_COMPROBANTE || null,
-        ID_INFORME || null,
-        ID_TECNICOS || null,
-        ID_CLIENTES || null,
-        Descripcion,
-        Fecha_registro,
-        id,
+        id_usuario,
+        tabla_afectada,
+        id_registro,
+        accion,
+        descripcion || null,
+        id
       ]
     );
     return result;
@@ -86,7 +74,7 @@ const historial = {
   // Eliminar un registro
   delete: async (id) => {
     const [result] = await pool.query(
-      "DELETE FROM historial WHERE ID_HISTORIAL = ?",
+      "DELETE FROM historial WHERE id_historial = ?",
       [id]
     );
     return result;

@@ -105,6 +105,19 @@ export const crearInforme = async (req, res) => {
         const nuevoId = resultado.insertId;
         const nuevoInforme = await Informe.findById(nuevoId);
 
+        // Guardar en el historial
+        try {
+            await Historial.create({
+                id_usuario: id_tecnico,
+                tabla_afectada: 'informes',
+                id_registro: nuevoId,
+                accion: 'INSERT',
+                descripcion: `Redactó un informe para la orden ${id_orden}`
+            });
+        } catch (historialError) {
+            console.error("Error al guardar historial del informe:", historialError);
+        }
+
         res.status(201).json({
             success: true,
             data: nuevoInforme,

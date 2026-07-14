@@ -1,5 +1,6 @@
 import OrdenServicio from "../models/ordenServicioModel.js";
 import pool from "../config/db.js";
+import Historial from "../models/historialModel.js";
 
 // Obtener todas las órdenes de servicio
 export const obtenerOrdenes = async (req, res) => {
@@ -269,6 +270,22 @@ export const actualizarOrden = async (req, res) => {
 
         await OrdenServicio.update(id, dataToUpdate);
         const ordenActualizada = await OrdenServicio.findById(id);
+
+        // Guardar en el historial si cambió el estado y hay un técnico asignado
+        if (dataToUpdate.Estado !== existe.Estado && dataToUpdate.ID_TECNICOS) {
+            try {
+                await Historial.create({
+                    id_usuario: dataToUpdate.ID_TECNICOS,
+                    tabla_afectada: 'orden_servicio',
+                    id_registro: id,
+                    accion: 'UPDATE',
+                    descripcion: `Actualizó el estado de la orden a ${dataToUpdate.Estado}`
+                });
+            } catch (hError) {
+                console.error("Error al guardar historial de orden:", hError);
+            }
+        }
+
         res.json({ success: true, data: ordenActualizada });
     } catch (error) {
         console.error("Error al actualizar orden de servicio:", error);
