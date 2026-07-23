@@ -15,6 +15,7 @@ export const obtenerOrdenes = async (req, res) => {
                     d.ID_SERVICIOS,
                     d.ID_PRODUCTOS,
                     d.cantidad,
+                    d.garantia,
                     d.precio_unitario,
                     d.subtotal,
                     s.nombre AS NombreServicio,
@@ -52,22 +53,41 @@ export const obtenerOrdenPorId = async (req, res) => {
 // Obtener órdenes del cliente autenticado (desde el token)
 export const obtenerMisOrdenes = async (req, res) => {
     try {
-        const numeroDocumento = req.admin.id_usuario || req.admin.id;
-        if (!numeroDocumento) {
+        const tokenData = req.admin;
+        if (!tokenData) {
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        // Buscar el id_usuario real a partir del numero_documento del token
-        const [usuarioRows] = await pool.query(
-            'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
-            [numeroDocumento]
-        );
+        let clienteId = null;
 
-        if (!usuarioRows || usuarioRows.length === 0) {
+        if (tokenData.id_usuario) {
+            const [rows] = await pool.query(
+                'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
+                [tokenData.id_usuario]
+            );
+            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
+        }
+
+        if (!clienteId && tokenData.numero_documento) {
+            const [rows] = await pool.query(
+                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                [tokenData.numero_documento]
+            );
+            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
+        }
+
+        if (!clienteId && tokenData.id) {
+            const [rows] = await pool.query(
+                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                [tokenData.id]
+            );
+            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
+        }
+
+        if (!clienteId) {
             return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
         }
 
-        const clienteId = usuarioRows[0].id_usuario;
 
         // Traer órdenes con detalles incluidos
         const [ordenes] = await pool.query(`
@@ -98,6 +118,7 @@ export const obtenerMisOrdenes = async (req, res) => {
                     d.ID_SERVICIOS,
                     d.ID_PRODUCTOS,
                     d.cantidad,
+                    d.garantia,
                     d.precio_unitario,
                     d.subtotal,
                     s.nombre AS NombreServicio,
@@ -124,24 +145,54 @@ export const crearOrden = async (req, res) => {
         await connection.beginTransaction();
 
         // 🔥 Obtener el ID del cliente desde el token (NO del body)
-        const numeroDocumento = req.admin.id_usuario || req.admin.id; // asumiendo que el token tiene el campo 'id' o 'id_usuario'
-        if (!numeroDocumento) {
+        // Soporta ambos formatos de token:
+        //   - /api/auth/login      → { id_usuario, numero_documento, rol }
+        //   - /api/clientes/login  → { id: numero_documento }
+        const tokenData = req.admin;
+        if (!tokenData) {
             await connection.rollback();
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        // El token guarda el numero_documento en id_usuario, pero la BD exige el ID real (PK)
-        const [usuarioRows] = await connection.query(
-            'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
-            [numeroDocumento]
-        );
-        
-        if (!usuarioRows || usuarioRows.length === 0) {
+        let clienteId = null;
+
+        // Caso 1: El token ya trae id_usuario (login general /api/auth/login)
+        if (tokenData.id_usuario) {
+            const [rows] = await connection.query(
+                'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
+                [tokenData.id_usuario]
+            );
+            if (rows && rows.length > 0) {
+                clienteId = rows[0].id_usuario;
+            }
+        }
+
+        // Caso 2: El token trae numero_documento directamente
+        if (!clienteId && tokenData.numero_documento) {
+            const [rows] = await connection.query(
+                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                [tokenData.numero_documento]
+            );
+            if (rows && rows.length > 0) {
+                clienteId = rows[0].id_usuario;
+            }
+        }
+
+        // Caso 3: Token de /api/clientes/login → { id: numero_documento }
+        if (!clienteId && tokenData.id) {
+            const [rows] = await connection.query(
+                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                [tokenData.id]
+            );
+            if (rows && rows.length > 0) {
+                clienteId = rows[0].id_usuario;
+            }
+        }
+
+        if (!clienteId) {
             await connection.rollback();
             return res.status(401).json({ success: false, error: 'Usuario no encontrado en la base de datos' });
         }
-        
-        const clienteId = usuarioRows[0].id_usuario;
 
         let idMoto;
 
@@ -196,31 +247,21 @@ export const crearOrden = async (req, res) => {
 
         const idOrden = resultado.insertId;
 
-        // Insertar detalles (Agrupando servicios y productos en una sola fila cuando sea posible)
+        // Insertar detalles uno por uno usando la cantidad real enviada
         const detalles = req.body.detalles || [];
         
-        const servicios = detalles.filter(d => d.ID_SERVICIOS);
-        const productos = detalles.filter(d => d.ID_PRODUCTOS);
-        
-        const maxLength = Math.max(servicios.length, productos.length);
-        
-        for (let i = 0; i < maxLength; i++) {
-            const servicio = servicios[i];
-            const producto = productos[i];
-            
-            const idServicio = servicio ? servicio.ID_SERVICIOS : null;
-            const idProducto = producto ? producto.ID_PRODUCTOS : null;
-            
-            // Asumimos 1 cantidad y sumamos el precio para el subtotal si se agrupan
-            const precioServicio = servicio ? parseFloat(servicio.Precio || 0) : 0;
-            const precioProducto = producto ? parseFloat(producto.Precio || 0) : 0;
-            const subtotal = precioServicio + precioProducto;
+        for (const detalle of detalles) {
+            const idServicio = detalle.ID_SERVICIOS || null;
+            const idProducto = detalle.ID_PRODUCTOS || null;
+            const cantidad = detalle.cantidad || 1;
+            const precioUnitario = detalle.precio_unitario || (detalle.Precio / cantidad) || 0;
+            const subtotal = detalle.Precio || (cantidad * precioUnitario);
             
             await connection.query(
                 `INSERT INTO detalles_orden_servicio 
                  (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [idOrden, idServicio, idProducto, null, 1, subtotal, subtotal]
+                [idOrden, idServicio, idProducto, null, cantidad, precioUnitario, subtotal]
             );
         }
 
@@ -274,10 +315,22 @@ export const actualizarOrden = async (req, res) => {
             Fecha_estimada: existe.Fecha_estimada,
             Fecha_fin: existe.Fecha_fin,
             Estado: existe.Estado,
+            observaciones: req.body.observaciones !== undefined ? req.body.observaciones : existe.observaciones,
             ...req.body
         };
 
         await OrdenServicio.update(id, dataToUpdate);
+
+        // Si se envió una garantía de productos, actualizar los detalles que sean productos
+        if (req.body.garantia_productos !== undefined) {
+            await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_PRODUCTOS IS NOT NULL', [req.body.garantia_productos, id]);
+        }
+        
+        // Si se envió una garantía de servicios, actualizar los detalles que sean servicios
+        if (req.body.garantia_servicios !== undefined) {
+            await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_SERVICIOS IS NOT NULL', [req.body.garantia_servicios, id]);
+        }
+
         const ordenActualizada = await OrdenServicio.findById(id);
 
         // Guardar en el historial si cambió el estado y hay un técnico asignado

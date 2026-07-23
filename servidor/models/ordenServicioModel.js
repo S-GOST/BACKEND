@@ -12,6 +12,7 @@ const OrdenServicio = {
         fecha_estimada AS Fecha_estimada, 
         fecha_salida AS Fecha_fin, 
         estado AS Estado,
+        observaciones,
         total
       FROM orden_servicio
     `);
@@ -30,6 +31,7 @@ const OrdenServicio = {
         fecha_estimada AS Fecha_estimada, 
         fecha_salida AS Fecha_fin, 
         estado AS Estado,
+        observaciones,
         total
       FROM orden_servicio WHERE id_orden = ?`,
       [id]
@@ -80,6 +82,7 @@ const OrdenServicio = {
       Fecha_estimada,
       Fecha_fin,
       Estado,
+      observaciones,
     } = data;
 
     const [result] = await pool.query(
@@ -90,7 +93,8 @@ const OrdenServicio = {
            fecha_ingreso = ?, 
            fecha_estimada = ?, 
            fecha_salida = ?, 
-           estado = ?
+           estado = ?,
+           observaciones = ?
        WHERE id_orden = ?`,
       [
         ID_CLIENTES,
@@ -100,6 +104,7 @@ const OrdenServicio = {
         Fecha_estimada,
         Fecha_fin,
         Estado,
+        observaciones,
         id,
       ]
     );
