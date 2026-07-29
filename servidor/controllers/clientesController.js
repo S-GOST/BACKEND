@@ -1,7 +1,7 @@
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { logHistory } from "../utils/historyLogger.js";
+import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken.js";
 
 const mapToUsuario = (c) => {
     const obj = {};
@@ -18,31 +18,33 @@ const mapToUsuario = (c) => {
     return obj;
 };
 
+// RFN-002: Login con tokens JWT unificados + refresh token
 export const loginCliente = async (req, res) => {
   const { usuario, contrasena } = req.body;
   try {
-    const user = await Usuario.findOne({ where: { usuario, id_rol: 3 } });
+    // RFN-001: Usar findOneWithPassword para obtener hash (nunca exponer password)
+    const user = await Usuario.findOneWithPassword({ where: { usuario, id_rol: 3 } });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
 
     const esValida = await bcrypt.compare(contrasena, user.password);
     if (!esValida) {
-      return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+      return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
 
-    const token = jwt.sign(
-      { id: user.numero_documento },
-      process.env.JWT_SECRET || 'clave_secreta_temporal',
-      { expiresIn: '1h' }
-    );
+    // RFN-002: Generar accessToken (1h) + refreshToken (24h)
+    const { accessToken, refreshToken } = generarTokens(user);
+
+    // Setear refreshToken como cookie httpOnly
+    setRefreshTokenCookie(res, refreshToken);
 
     res.json({ 
       success: true,
-      id: user.numero_documento,
-      token,
+      token: accessToken,
       nombre: user.nombre,
-      rol: 'cliente'
+      rol: 'cliente',
+      id_usuario: user.id_usuario
     });
   } catch (error) {
     console.error("Error en el login de cliente:", error);
@@ -88,6 +90,9 @@ export const crearCliente = async (req, res) => {
 
     res.json({ success: true, data: newUser });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado' });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -115,6 +120,9 @@ export const actualizarCliente = async (req, res) => {
 
     res.json({ success: true, data: userActualizado });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado por otro usuario' });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 };

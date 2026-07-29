@@ -59,6 +59,9 @@ export const crearServicio = async (req, res) => {
             data: nuevoServicio 
         });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre del servicio ya existe' });
+        }
         console.error("Error al crear servicio:", error);
         res.status(500).json({ 
             success: false, 
@@ -88,6 +91,9 @@ export const actualizarServicio = async (req, res) => {
             data: servicioActualizado 
         });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre del servicio ya existe' });
+        }
         console.error("Error al actualizar servicio:", error);
         res.status(500).json({ 
             success: false, 

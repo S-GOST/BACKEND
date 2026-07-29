@@ -55,6 +55,9 @@ export const crearProducto = async (req, res) => {
 
         res.status(201).json({ success: true, data: resultado });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre del producto ya existe' });
+        }
         console.error("Error al crear producto:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -83,6 +86,9 @@ export const actualizarProducto = async (req, res) => {
 
         res.json({ success: true, data: productoActualizado });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre del producto ya existe' });
+        }
         console.error("Error al actualizar producto:", error);
         res.status(500).json({ success: false, error: error.message });
     }

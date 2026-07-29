@@ -1,7 +1,7 @@
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { logHistory } from "../utils/historyLogger.js";
+import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken.js";
 
 const mapToUsuario = (t) => {
     const obj = {};
@@ -17,28 +17,30 @@ const mapToUsuario = (t) => {
     return obj;
 };
 
+// RFN-002: Login con tokens JWT unificados + refresh token
 export const loginTecnico = async (req, res) => {
     const { usuario, contrasena } = req.body;
     try {
-        const user = await Usuario.findOne({ where: { usuario, id_rol: 2 } });
+        // RFN-001: Usar findOneWithPassword para obtener hash (nunca exponer password)
+        const user = await Usuario.findOneWithPassword({ where: { usuario, id_rol: 2 } });
         if (!user) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
 
         const esValida = await bcrypt.compare(contrasena, user.password);
         if (!esValida) {
-            return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+            return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
 
-        const token = jwt.sign(
-            { id: user.numero_documento, id_usuario: user.id_usuario },
-            process.env.JWT_SECRET || 'clave_secreta_temporal',
-            { expiresIn: '1h' }
-        );
+        // RFN-002: Generar accessToken (1h) + refreshToken (24h)
+        const { accessToken, refreshToken } = generarTokens(user);
+
+        // Setear refreshToken como cookie httpOnly
+        setRefreshTokenCookie(res, refreshToken);
 
         res.json({ 
             success: true, 
-            token, 
+            token: accessToken, 
             nombre: user.nombre,
             rol: 'tecnico',
             id_usuario: user.id_usuario
@@ -87,6 +89,9 @@ export const crearTec = async (req, res) => {
 
         res.json({ success: true, data: newUser });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado' });
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -111,6 +116,9 @@ export const actualizarTec = async (req, res) => {
 
         res.json({ success: true, data: userActualizado });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado por otro usuario' });
+        }
         res.status(500).json({ success: false, error: error.message });
     }   
 };
@@ -122,17 +130,17 @@ export const eliminarTec = async (req, res) => {
         if (!user || user.id_rol !== 2) {
             return res.status(404).json({ success: false, message: 'Tecnico no encontrado' });
         }
-        await Usuario.delete(id);
+        await Usuario.update(id, { estado: 'Inactivo' });
 
         await logHistory(
             req.user?.id_usuario || 1, 
             'usuarios', 
             user.id_usuario, 
             'DELETE', 
-            `Se eliminó el técnico ${user.nombre}`
+            `Se inhabilitó el técnico ${user.nombre}`
         );
 
-        res.json({ success: true, message: 'Tecnico eliminado' });
+        res.json({ success: true, message: 'Tecnico inhabilitado' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

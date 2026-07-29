@@ -103,3 +103,27 @@ export const eliminarHistorial = async (req, res) => {
         });
     }
 };
+
+/**
+ * Obtener historial del usuario autenticado
+ */
+export const obtenerMiHistorial = async (req, res) => {
+    try {
+        const idUsuario = req.user?.id_usuario;
+        if (!idUsuario) {
+            return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
+        }
+        
+        const historial = await Historial.findByUsuarioId(idUsuario);
+        res.json({ 
+            success: true, 
+            data: historial 
+        });
+    } catch (error) {
+        console.error("Error al obtener historial del usuario:", error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};

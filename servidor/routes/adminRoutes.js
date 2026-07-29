@@ -8,19 +8,23 @@ import {
     loginAdmin
 } from '../controllers/adminController.js';
 import { verificarToken } from "../middleware/Auth.js";
+import { autorizar } from "../middleware/autorizar.js";
+import { limiterLogin } from "../middleware/rateLimiter.js";
+import { validarLogin, validarUsuario } from "../middleware/validar.js";
 
 const router = express.Router();
 
 // ==============================================
 // Rutas (montadas sobre /api/admins)
+// Solo Admin (rol 1) puede gestionar admins
 // ==============================================
 
-router.get('/obtener', verificarToken, obtenerAdmins);
-router.get('/buscar/:id', verificarToken, obtenerAdminPorId);
-router.post('/login', loginAdmin);
-router.post('/insertar', verificarToken, crearAdmin);
-router.put('/actualizar/:id', verificarToken, actualizarAdmin);
-router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
+router.get('/obtener', verificarToken, autorizar(1), obtenerAdmins);
+router.get('/buscar/:id', verificarToken, autorizar(1), obtenerAdminPorId);
+router.post('/login', limiterLogin, validarLogin, loginAdmin);
+router.post('/insertar', verificarToken, autorizar(1), validarUsuario, crearAdmin);
+router.put('/actualizar/:id', verificarToken, autorizar(1), actualizarAdmin);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarAdmin);
 
 // ==============================================
 // Documentación Swagger
@@ -46,6 +50,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *         description: Lista de administradores
  *       401:
  *         description: No autorizado
+ *       403:
+ *         description: No tienes permisos
  */
 
 /**
@@ -187,12 +193,11 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - usuario
+ *               - contrasena
  *             properties:
  *               usuario:
  *                 type: string
- *                 format: email
  *               contrasena:
  *                 type: string
  *                 format: password
@@ -201,6 +206,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarAdmin);
  *         description: Login exitoso (devuelve token)
  *       401:
  *         description: Credenciales inválidas
+ *       429:
+ *         description: Demasiados intentos de login
  */
 
 export default router;

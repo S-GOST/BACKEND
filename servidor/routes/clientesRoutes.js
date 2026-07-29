@@ -5,25 +5,28 @@ import {
     crearCliente,
     actualizarCliente,
     eliminarCliente,
-    loginCliente               // ← Controlador de login para clientes
+    loginCliente
 } from '../controllers/clientesController.js';
 import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { limiterLogin } from '../middleware/rateLimiter.js';
+import { validarLogin, validarRegistroCliente } from '../middleware/validar.js';
 
 const router = express.Router();
 
 // ==============================================
 // Rutas (montadas sobre /api/clientes)
 // ==============================================
-
-router.get('/obtener', verificarToken, obtenerClientes);
-router.get('/buscar/:id', verificarToken, obtenerClientePorId);
-router.post('/login', loginCliente);               // ← Ruta pública de login
-router.post('/insertar', crearCliente);            // ← Registro público
-router.put('/actualizar/:id', verificarToken, actualizarCliente);
-router.delete('/eliminar/:id', verificarToken, eliminarCliente);
+// Admin y Técnico pueden listar clientes (para ver dueños de motos/órdenes)
+router.get('/obtener', verificarToken, autorizar(1, 2), obtenerClientes);
+router.get('/buscar/:id', verificarToken, autorizar(1, 3), obtenerClientePorId);
+router.post('/login', limiterLogin, validarLogin, loginCliente);
+router.post('/insertar', validarRegistroCliente, crearCliente);  // ← Registro público (desde homepage)
+router.put('/actualizar/:id', verificarToken, autorizar(1, 3), actualizarCliente);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCliente);
 
 // ==============================================
-// Documentación Swagger (summaries cortos)
+// Documentación Swagger
 // ==============================================
 
 /**
@@ -76,10 +79,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  * @swagger
  * /api/clientes/insertar:
  *   post:
- *     summary: Crear cliente
+ *     summary: Registrar nuevo cliente (público)
  *     tags: [Clientes]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -87,32 +88,40 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *           schema:
  *             type: object
  *             required:
- *               - id
+ *               - numero_documento
+ *               - id_tipo_documento
  *               - nombre
- *               - email
- *               - password        // Añadido porque login requiere contraseña
+ *               - usuario
+ *               - password
+ *               - correo
  *             properties:
- *               id:
+ *               numero_documento:
  *                 type: string
+ *                 description: "10 dígitos numéricos"
+ *               id_tipo_documento:
+ *                 type: integer
  *               nombre:
  *                 type: string
- *               email:
+ *                 maxLength: 100
+ *               usuario:
  *                 type: string
- *                 format: email
  *               password:
  *                 type: string
  *                 format: password
+ *                 minLength: 6
+ *               correo:
+ *                 type: string
+ *                 format: email
+ *                 maxLength: 100
  *               telefono:
  *                 type: string
- *               direccion:
+ *               ciudad:
  *                 type: string
  *     responses:
  *       201:
- *         description: Cliente creado
+ *         description: Cliente registrado
  *       400:
- *         description: Datos inválidos
- *       401:
- *         description: No autorizado
+ *         description: Datos inválidos (validación)
  */
 
 /**
@@ -138,13 +147,13 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *             properties:
  *               nombre:
  *                 type: string
- *               email:
+ *               correo:
  *                 type: string
  *               password:
  *                 type: string
  *               telefono:
  *                 type: string
- *               direccion:
+ *               ciudad:
  *                 type: string
  *     responses:
  *       200:
@@ -182,7 +191,7 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  * @swagger 
  * /api/clientes/login:
  *   post:
- *     summary: Iniciar sesión
+ *     summary: Iniciar sesión como cliente
  *     tags: [Clientes]
  *     requestBody:
  *       required: true
@@ -191,18 +200,21 @@ router.delete('/eliminar/:id', verificarToken, eliminarCliente);
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - usuario
+ *               - contrasena
  *             properties:
  *               usuario:
  *                 type: string
  *               contrasena:
  *                 type: string
+ *                 format: password
  *     responses:
  *       200:
  *         description: Login exitoso (devuelve token)
  *       401:
  *         description: Credenciales inválidas
+ *       429:
+ *         description: Demasiados intentos de login
  */
 
 export default router;

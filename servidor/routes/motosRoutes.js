@@ -6,6 +6,9 @@ import {
     actualizarMoto,
     eliminarMoto
 } from '../controllers/motosController.js';
+import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { validarMoto } from '../middleware/validar.js';
 
 const router = express.Router();
 
@@ -13,11 +16,16 @@ const router = express.Router();
 // Rutas (montadas sobre /api/motos)
 // ==============================================
 
-router.get('/obtener', obtenerMotos);
-router.get('/buscar/:id', obtenerMotoPorId);
-router.post('/insertar', crearMoto);
-router.put('/actualizar/:id', actualizarMoto);
-router.delete('/eliminar/:id', eliminarMoto);
+// Todos los roles (Admin, Técnico, Cliente) pueden leer motos (el controlador podría filtrar por dueño)
+router.get('/obtener', verificarToken, autorizar(1, 2, 3), obtenerMotos);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2, 3), obtenerMotoPorId);
+
+// Admin, Técnico y Cliente pueden crear motos (cliente lo hace desde el carrito)
+router.post('/insertar', verificarToken, autorizar(1, 2, 3), validarMoto, crearMoto);
+router.put('/actualizar/:id', verificarToken, autorizar(1, 2), validarMoto, actualizarMoto);
+
+// Solo Admin puede eliminar motos
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarMoto);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

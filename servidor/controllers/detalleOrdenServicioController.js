@@ -1,5 +1,6 @@
 import DetalleOrdenServicio from "../models/detalleOrdenServicioModel.js";
 import { logHistory } from "../utils/historyLogger.js";
+import pool from "../config/db.js";
 
 // 1. Obtener TODOS los detalles
 export const obtenerDetallesOrden = async (req, res) => {
@@ -46,26 +47,55 @@ export const obtenerDetallesPorId = async (req, res) => {
   }
 }
 
-// 4. Crear un nuevo detalle (CORREGIDO: Sanea campos opcionales)
+import Servicio from "../models/serviciosModel.js";
+import Producto from "../models/productosModel.js";
+
+// 4. Crear un nuevo detalle (CORREGIDO: Sanea campos opcionales y toma precio del catálogo)
 export const crearDetalleOrden = async (req, res) => {
   try {
     // ✅ SANEAMIENTO: Asegurar que los campos relacionales sean null si no existen
     const body = { ...req.body };
     if (body.ID_SERVICIOS === undefined || body.ID_SERVICIOS === null || body.ID_SERVICIOS === "") body.ID_SERVICIOS = null;
     if (body.ID_PRODUCTOS === undefined || body.ID_PRODUCTOS === null || body.ID_PRODUCTOS === "") body.ID_PRODUCTOS = null;
-    if (!body.NombreServicio) body.NombreServicio = null;
-    if (!body.NombreProducto) body.NombreProducto = null;
-    if (body.Precio === undefined || body.Precio === null) body.Precio = 0;
+
+    let precioUnitario = 0;
+    
+    // CA-010: RN-0010 Los precios se toman del catálogo al momento de crear el detalle
+    const cantidad = body.cantidad || 1;
+
+    if (body.ID_SERVICIOS) {
+        const servicio = await Servicio.findById(body.ID_SERVICIOS);
+        if (servicio) precioUnitario = parseFloat(servicio.Precio || 0);
+    } else if (body.ID_PRODUCTOS) {
+        const producto = await Producto.findById(body.ID_PRODUCTOS);
+        if (producto) {
+            // RN-008: Verificar stock
+            if (producto.stock < cantidad) {
+                return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${producto.Nombre}. Stock actual: ${producto.stock}` });
+            }
+            precioUnitario = parseFloat(producto.Precio || 0);
+        }
+    }
+
+    body.cantidad = cantidad;
+    body.precio_unitario = precioUnitario;
+    body.subtotal = precioUnitario * cantidad;
+
     if (body.Garantia === undefined || body.Garantia === null) body.Garantia = 0;
 
     const nuevoDetalle = await DetalleOrdenServicio.create(body);
 
+    // RN-009: Descontar stock
+    if (body.ID_PRODUCTOS) {
+        await pool.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, body.ID_PRODUCTOS]);
+    }
+
     await logHistory(
         req.user?.id_usuario || 1,
         'detalles_orden_servicio',
-        nuevoDetalle.insertId || 0,
+        nuevoDetalle.id_detalle || nuevoDetalle.insertId || 0,
         'INSERT',
-        `Se agregó detalle a la orden ${body.ID_ORDEN_SERVICIO || 'N/A'}`
+        `Se agregó detalle a la orden ${body.ID_ORDEN_SERVICIO || body.id_orden || 'N/A'}`
     );
 
     res.json({ success: true, data: nuevoDetalle });

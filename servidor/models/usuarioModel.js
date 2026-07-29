@@ -1,10 +1,18 @@
 import pool from "../config/db.js";
 import bcrypt from 'bcrypt';
 
+// ============================================================
+// RFN-001: Encriptación de contraseñas con bcrypt (10 rounds)
+// RFN-001: Nunca mostrar contraseñas en respuestas
+// ============================================================
+
+// Columnas seguras (SIN password) para usar en SELECT
+const COLUMNAS_SEGURAS = 'id_usuario, id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, correo, telefono, estado';
+
 const Usuario = {
-  // Obtener todos (opcionalmente filtrados por rol)
+  // Obtener todos (opcionalmente filtrados por rol) — SIN password
   findAll: async (conditions = {}) => {
-    let query = "SELECT * FROM usuarios";
+    let query = `SELECT ${COLUMNAS_SEGURAS} FROM usuarios`;
     const params = [];
     if (conditions.where) {
       const keys = Object.keys(conditions.where);
@@ -17,33 +25,44 @@ const Usuario = {
     return rows;
   },
 
-  // Buscar por número de documento o id_usuario (findByPk)
-  // Como el frontend enviaba "documento_*" como ID, vamos a buscar por numero_documento primariamente, 
-  // pero si el frontend manda un ID real, podríamos usar id_usuario. 
-  // Según lo definido, numero_documento es UNIQUE y lo usaremos como primary key conceptual.
+  // Buscar por número de documento — SIN password
   findByPk: async (numero_documento) => {
     const [rows] = await pool.query(
-      "SELECT * FROM usuarios WHERE numero_documento = ?",
+      `SELECT ${COLUMNAS_SEGURAS} FROM usuarios WHERE numero_documento = ?`,
       [numero_documento]
     );
     return rows[0];
   },
 
-  // Buscar un registro por condición (ej: { where: { usuario: '...' } })
+  // Buscar un registro por condición — SIN password
   findOne: async (conditions) => {
     const { where } = conditions;
     if (!where) return null;
     const keys = Object.keys(where);
     if (keys.length === 0) return null;
     
-    const query = `SELECT * FROM usuarios WHERE ` + keys.map(k => `${k} = ?`).join(" AND ");
+    const query = `SELECT ${COLUMNAS_SEGURAS} FROM usuarios WHERE ` + keys.map(k => `${k} = ?`).join(" AND ");
     const params = keys.map(k => where[k]);
     
     const [rows] = await pool.query(query, params);
     return rows[0];
   },
 
-  // Crear nuevo usuario
+  // Buscar un registro CON password — SOLO para login
+  findOneWithPassword: async (conditions) => {
+    const { where } = conditions;
+    if (!where) return null;
+    const keys = Object.keys(where);
+    if (keys.length === 0) return null;
+
+    const query = `SELECT * FROM usuarios WHERE ` + keys.map(k => `${k} = ?`).join(" AND ");
+    const params = keys.map(k => where[k]);
+
+    const [rows] = await pool.query(query, params);
+    return rows[0];
+  },
+
+  // Crear nuevo usuario — RFN-001: bcrypt con 10 rounds mínimo
   create: async (data) => {
     const { id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono } = data;
     const saltRounds = 10;
@@ -58,7 +77,7 @@ const Usuario = {
     return result;
   },
 
-  // Actualizar usuario
+  // Actualizar usuario — RFN-001: rehash password si se actualiza
   update: async (numero_documento_id, data) => {
     const existing = await Usuario.findByPk(numero_documento_id);
     if (!existing) {

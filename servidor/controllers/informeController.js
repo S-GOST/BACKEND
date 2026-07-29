@@ -194,3 +194,49 @@ export const eliminarInforme = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+/**
+ * Generar reporte de informes (HU-004.1)
+ */
+export const generarReporte = async (req, res) => {
+    try {
+        const { fecha_inicio, fecha_fin } = req.body;
+        const usuarioRol = req.user?.id_rol || req.admin?.id_rol;
+        const idUsuario = req.user?.id_usuario || req.admin?.id_usuario;
+
+        // Cliente no tiene acceso
+        if (usuarioRol === 3) {
+            return res.status(403).json({ success: false, message: 'Acceso denegado' });
+        }
+
+        let query = 'SELECT * FROM informe WHERE DATE(fecha) BETWEEN ? AND ?';
+        const queryParams = [fecha_inicio, fecha_fin];
+
+        // RN-003 y RN-004: Si es técnico (Rol 2), solo ver los suyos
+        if (usuarioRol === 2) {
+            query += ' AND id_tecnico = ?';
+            queryParams.push(idUsuario);
+        }
+
+        query += ' ORDER BY fecha DESC';
+
+        const [rows] = await pool.query(query, queryParams);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Sin datos disponibles' });
+        }
+
+        await logHistory(
+            idUsuario || 1,
+            'informe',
+            0, // No aplica a un informe específico
+            'REPORT',
+            `Generó reporte de informes desde ${fecha_inicio} hasta ${fecha_fin}`
+        );
+
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error al generar reporte de informes:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

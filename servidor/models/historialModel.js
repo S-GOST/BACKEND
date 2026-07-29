@@ -16,6 +16,16 @@ const historial = {
     return rows[0] || null;
   },
 
+  // Obtener historial de un usuario específico
+  findByUsuarioId: async (id_usuario) => {
+    const [rows] = await pool.query(
+      "SELECT * FROM historial WHERE id_usuario = ? ORDER BY fecha DESC",
+      [id_usuario]
+    );
+    return rows;
+  },
+
+
   // Crear un nuevo registro de historial
   create: async (data) => {
     const {

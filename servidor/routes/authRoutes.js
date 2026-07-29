@@ -1,18 +1,24 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuarioModel.js';
+import { generarTokens, setRefreshTokenCookie, renovarToken, logout } from '../middleware/refreshToken.js';
+import { limiterLogin } from '../middleware/rateLimiter.js';
+import { validarLogin } from '../middleware/validar.js';
+import { obtenerCsrfToken } from '../middleware/csrf.js';
 
 const router = express.Router();
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+// ============================================================
+// POST /api/auth/login — Login universal con rate limiting + validación
+// ============================================================
+router.post('/login', limiterLogin, validarLogin, async (req, res) => {
   const { usuario, password } = req.body;
   if (!usuario || !password) {
     return res.status(400).json({ error: true, mensaje: 'Usuario y contraseña requeridos' });
   }
   try {
-    const user = await Usuario.findOne({ where: { usuario } });
+    // RFN-001: Usar findOneWithPassword (nunca exponer password en respuestas)
+    const user = await Usuario.findOneWithPassword({ where: { usuario } });
     if (!user) {
       return res.status(401).json({ error: true, mensaje: 'Credenciales inválidas' });
     }
@@ -20,16 +26,38 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ error: true, mensaje: 'Credenciales inválidas' });
     }
-    const token = jwt.sign(
-      { id_usuario: user.id_usuario, numero_documento: user.numero_documento, rol: user.id_rol },
-      process.env.JWT_SECRET || 'clave_secreta_temporal',
-      { expiresIn: '1h' }
-    );
-    return res.json({ token, rol: user.id_rol, nombre: user.nombre, id_usuario: user.id_usuario });
+
+    // RFN-002: Generar accessToken (1h) + refreshToken (24h)
+    const { accessToken, refreshToken } = generarTokens(user);
+
+    // Setear refreshToken como cookie httpOnly
+    setRefreshTokenCookie(res, refreshToken);
+
+    return res.json({
+      token: accessToken,
+      rol: user.id_rol,
+      nombre: user.nombre,
+      id_usuario: user.id_usuario
+    });
   } catch (err) {
     console.error('Login error:', err);
     return res.status(500).json({ error: true, mensaje: 'Error interno del servidor' });
   }
 });
+
+// ============================================================
+// POST /api/auth/refresh — Renovar access token con refresh token
+// ============================================================
+router.post('/refresh', renovarToken);
+
+// ============================================================
+// POST /api/auth/logout — Cerrar sesión (invalidar refresh token)
+// ============================================================
+router.post('/logout', logout);
+
+// ============================================================
+// GET /api/auth/csrf-token — Obtener token CSRF fresco
+// ============================================================
+router.get('/csrf-token', obtenerCsrfToken);
 
 export default router;

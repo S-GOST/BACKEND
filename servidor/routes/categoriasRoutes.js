@@ -7,6 +7,9 @@ import {
     actualizarCategoria,
     eliminarCategoria
 } from '../controllers/categoriasController.js';
+import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { validarCategoria } from '../middleware/validar.js';
 
 const router = express.Router();
 
@@ -14,12 +17,15 @@ const router = express.Router();
 // Rutas (montadas sobre /api/categorias)
 // ==============================================
 
-router.get('/obtener', obtenerCategorias);
-router.get('/buscar/:id', obtenerCategoriaPorId);
-router.get('/tipo/:tipo', obtenerCategoriasPorTipo);
-router.post('/insertar', crearCategoria);
-router.put('/actualizar/:id', actualizarCategoria);
-router.delete('/eliminar/:id', eliminarCategoria);
+// Todos los roles pueden leer
+router.get('/obtener', verificarToken, autorizar(1, 2, 3), obtenerCategorias);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2, 3), obtenerCategoriaPorId);
+router.get('/tipo/:tipo', verificarToken, autorizar(1, 2, 3), obtenerCategoriasPorTipo);
+
+// Solo Admin puede crear, actualizar o eliminar
+router.post('/insertar', verificarToken, autorizar(1), validarCategoria, crearCategoria);
+router.put('/actualizar/:id', verificarToken, autorizar(1), validarCategoria, actualizarCategoria);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCategoria);
 
 // ==============================================
 // Documentación Swagger

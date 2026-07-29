@@ -4,18 +4,31 @@ import {
     obtenerComprobantePorId, 
     crearComprobante, 
     actualizarComprobante, 
-    eliminarComprobante 
+    eliminarComprobante,
+    generarComprobanteDesdeInforme,
+    obtenerMisComprobantes,
+    pagarComprobante
 } from '../controllers/comprobanteController.js';
 import { verificarToken } from "../middleware/Auth.js";
+import { autorizar } from "../middleware/autorizar.js";
 
 const router = express.Router();
 
 // Rutas para la gestión de comprobantes
-router.get('/obtener', verificarToken, obtenerComprobantes);
-router.get('/buscar/:id', verificarToken, obtenerComprobantePorId);
-router.post('/insertar', verificarToken, crearComprobante);
-router.put('/actualizar/:id', verificarToken, actualizarComprobante);
-router.delete('/eliminar/:id', verificarToken, eliminarComprobante);
+router.get('/obtener', verificarToken, autorizar(1), obtenerComprobantes);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2, 3), obtenerComprobantePorId);
+router.post('/insertar', verificarToken, autorizar(1), crearComprobante);
+router.put('/actualizar/:id', verificarToken, autorizar(1), actualizarComprobante);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarComprobante);
+
+// HU-004.1: Admin genera comprobante desde un informe
+router.post('/generar/:idInforme', verificarToken, autorizar(1), generarComprobanteDesdeInforme);
+
+// HU-004.1: Cliente consulta sus comprobantes
+router.get('/mis-comprobantes', verificarToken, autorizar(3), obtenerMisComprobantes);
+
+// Cliente (y Admin) pueden pagar comprobante
+router.put('/pagar/:id', verificarToken, autorizar(1, 3), pagarComprobante);
 
 // ==============================================
 // Documentación Swagger: Comprobantes

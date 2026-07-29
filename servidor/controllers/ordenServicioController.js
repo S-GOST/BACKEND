@@ -53,41 +53,28 @@ export const obtenerOrdenPorId = async (req, res) => {
 // Obtener órdenes del cliente autenticado (desde el token)
 export const obtenerMisOrdenes = async (req, res) => {
     try {
-        const tokenData = req.admin;
+        const tokenData = req.user;
         if (!tokenData) {
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        let clienteId = null;
+        const idUsuario = tokenData.id_usuario;
+        const rol = tokenData.rol;
 
-        if (tokenData.id_usuario) {
-            const [rows] = await pool.query(
-                'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
-                [tokenData.id_usuario]
-            );
-            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
-        }
-
-        if (!clienteId && tokenData.numero_documento) {
-            const [rows] = await pool.query(
-                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
-                [tokenData.numero_documento]
-            );
-            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
-        }
-
-        if (!clienteId && tokenData.id) {
-            const [rows] = await pool.query(
-                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
-                [tokenData.id]
-            );
-            if (rows && rows.length > 0) clienteId = rows[0].id_usuario;
-        }
-
-        if (!clienteId) {
+        if (!idUsuario) {
             return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
         }
 
+        let condicionWhere = '';
+        let parametros = [idUsuario];
+
+        if (rol === 2) {
+            // Es Técnico
+            condicionWhere = 'os.id_tecnico = ?';
+        } else {
+            // Asumir que es Cliente (rol 3) o fallback
+            condicionWhere = 'os.id_cliente = ?';
+        }
 
         // Traer órdenes con detalles incluidos
         const [ordenes] = await pool.query(`
@@ -106,9 +93,9 @@ export const obtenerMisOrdenes = async (req, res) => {
                 m.modelo AS ModeloMoto
             FROM orden_servicio os
             LEFT JOIN motos m ON os.id_moto = m.id_moto
-            WHERE os.id_cliente = ? 
+            WHERE ${condicionWhere}
             ORDER BY os.id_orden DESC
-        `, [clienteId]);
+        `, parametros);
 
         // Traer detalles para cada orden
         for (const orden of ordenes) {
@@ -159,10 +146,14 @@ export const crearOrden = async (req, res) => {
         // Caso 1: El token ya trae id_usuario (login general /api/auth/login)
         if (tokenData.id_usuario) {
             const [rows] = await connection.query(
-                'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
+                'SELECT id_usuario, estado FROM usuarios WHERE id_usuario = ?',
                 [tokenData.id_usuario]
             );
             if (rows && rows.length > 0) {
+                if (rows[0].estado !== 'Activo') {
+                    await connection.rollback();
+                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
+                }
                 clienteId = rows[0].id_usuario;
             }
         }
@@ -170,10 +161,14 @@ export const crearOrden = async (req, res) => {
         // Caso 2: El token trae numero_documento directamente
         if (!clienteId && tokenData.numero_documento) {
             const [rows] = await connection.query(
-                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                'SELECT id_usuario, estado FROM usuarios WHERE numero_documento = ?',
                 [tokenData.numero_documento]
             );
             if (rows && rows.length > 0) {
+                if (rows[0].estado !== 'Activo') {
+                    await connection.rollback();
+                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
+                }
                 clienteId = rows[0].id_usuario;
             }
         }
@@ -181,10 +176,14 @@ export const crearOrden = async (req, res) => {
         // Caso 3: Token de /api/clientes/login → { id: numero_documento }
         if (!clienteId && tokenData.id) {
             const [rows] = await connection.query(
-                'SELECT id_usuario FROM usuarios WHERE numero_documento = ?',
+                'SELECT id_usuario, estado FROM usuarios WHERE numero_documento = ?',
                 [tokenData.id]
             );
             if (rows && rows.length > 0) {
+                if (rows[0].estado !== 'Activo') {
+                    await connection.rollback();
+                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
+                }
                 clienteId = rows[0].id_usuario;
             }
         }
@@ -224,7 +223,7 @@ export const crearOrden = async (req, res) => {
             idMoto = motos[0].id_moto;
         }
 
-        const ahora = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const fechaIngreso = req.body.fecha_ingreso || new Date().toISOString().slice(0, 19).replace('T', ' ');
         const total = req.body.total || 0;
 
         // Insertar orden usando las columnas de la captura
@@ -236,7 +235,7 @@ export const crearOrden = async (req, res) => {
                 clienteId,
                 req.body.id_tecnico || 1, // Por defecto tecnico 1 si no se envía
                 idMoto,
-                ahora, // fecha_ingreso
+                fechaIngreso, // fecha_ingreso
                 null, // fecha_estimada
                 null, // fecha_salida
                 req.body.observaciones || '', // observaciones
@@ -254,8 +253,25 @@ export const crearOrden = async (req, res) => {
             const idServicio = detalle.ID_SERVICIOS || null;
             const idProducto = detalle.ID_PRODUCTOS || null;
             const cantidad = detalle.cantidad || 1;
-            const precioUnitario = detalle.precio_unitario || (detalle.Precio / cantidad) || 0;
-            const subtotal = detalle.Precio || (cantidad * precioUnitario);
+            let precioUnitario = 0;
+
+            if (idServicio) {
+                const [serv] = await connection.query('SELECT Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
+                if (serv && serv.length > 0) precioUnitario = parseFloat(serv[0].Precio || 0);
+            } else if (idProducto) {
+                const [prod] = await connection.query('SELECT Nombre, Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
+                if (prod && prod.length > 0) {
+                    if (prod[0].stock < cantidad) {
+                        await connection.rollback();
+                        return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}` });
+                    }
+                    precioUnitario = parseFloat(prod[0].Precio || 0);
+                    // RN-009: Descontar stock
+                    await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
+                }
+            }
+
+            const subtotal = cantidad * precioUnitario;
             
             await connection.query(
                 `INSERT INTO detalles_orden_servicio 
@@ -264,6 +280,12 @@ export const crearOrden = async (req, res) => {
                 [idOrden, idServicio, idProducto, null, cantidad, precioUnitario, subtotal]
             );
         }
+
+        // Recalcular total de la orden basado en los detalles
+        await connection.query(
+            'UPDATE orden_servicio SET total = (SELECT COALESCE(SUM(subtotal), 0) FROM detalles_orden_servicio WHERE id_orden = ?) WHERE id_orden = ?',
+            [idOrden, idOrden]
+        );
 
         await connection.commit();
 
@@ -306,6 +328,32 @@ export const actualizarOrden = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
         
+        // Máquina de estados (RN-0012, RN-0013)
+        const estadoAnterior = existe.Estado;
+        const estadoNuevo = req.body.Estado || estadoAnterior;
+
+        if (estadoNuevo !== estadoAnterior) {
+            // RN-0014: Solo técnico asignado o admin cambia estado
+            const usuarioAutenticado = req.admin;
+            if (usuarioAutenticado.rol !== 1 && (existe.ID_TECNICOS && existe.ID_TECNICOS !== usuarioAutenticado.id_usuario)) {
+                return res.status(403).json({ success: false, message: 'Solo el administrador o el técnico asignado pueden cambiar el estado' });
+            }
+
+            if (estadoAnterior === 'Completada' || estadoAnterior === 'Cancelada') {
+                return res.status(400).json({ success: false, message: `La orden está ${estadoAnterior} y no se puede modificar.` }); // CA-014
+            }
+
+            if (estadoNuevo === 'En Proceso' && estadoAnterior !== 'Pendiente') {
+                return res.status(400).json({ success: false, message: 'Solo se puede cambiar a En Proceso si está Pendiente.' });
+            }
+            if (estadoNuevo === 'Completada' && estadoAnterior !== 'En Proceso') {
+                return res.status(400).json({ success: false, message: 'Solo se puede Completar si está En Proceso.' });
+            }
+            if (estadoNuevo === 'Cancelada' && !req.body.observaciones) {
+                return res.status(400).json({ success: false, message: 'Se requieren observaciones para cancelar la orden.' }); // CA-016
+            }
+        }
+
         // Merge existing data with new data
         const dataToUpdate = {
             ID_CLIENTES: existe.ID_CLIENTES,
@@ -314,7 +362,7 @@ export const actualizarOrden = async (req, res) => {
             Fecha_inicio: existe.Fecha_inicio,
             Fecha_estimada: existe.Fecha_estimada,
             Fecha_fin: existe.Fecha_fin,
-            Estado: existe.Estado,
+            Estado: estadoNuevo,
             observaciones: req.body.observaciones !== undefined ? req.body.observaciones : existe.observaciones,
             ...req.body
         };
@@ -333,14 +381,14 @@ export const actualizarOrden = async (req, res) => {
 
         const ordenActualizada = await OrdenServicio.findById(id);
 
-        // Guardar en el historial si cambió el estado y hay un técnico asignado
-        if (dataToUpdate.Estado !== existe.Estado && dataToUpdate.ID_TECNICOS) {
+        // Guardar en el historial si cambió el estado
+        if (estadoNuevo !== estadoAnterior) {
             await logHistory(
-                dataToUpdate.ID_TECNICOS,
+                req.user?.id_usuario || 1,
                 'orden_servicio',
                 id,
                 'UPDATE',
-                `Actualizó el estado de la orden a ${dataToUpdate.Estado}`
+                `Cambió estado de ${estadoAnterior} a ${estadoNuevo}. Obs: ${dataToUpdate.observaciones || 'N/A'}`
             );
         }
 

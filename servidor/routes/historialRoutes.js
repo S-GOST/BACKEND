@@ -4,7 +4,8 @@ import {
     obtenerHistorialPorId,
     crearHistorial,
     actualizarHistorial,
-    eliminarHistorial
+    eliminarHistorial,
+    obtenerMiHistorial
 } from '../controllers/historialController.js';
 import { verificarToken } from "../middleware/Auth.js";
 
@@ -16,6 +17,9 @@ const router = express.Router();
 
 // Listar todos los registros del historial
 router.get('/obtener', verificarToken, obtenerHistorial);
+
+// Obtener el historial del usuario autenticado
+router.get('/mi-historial', verificarToken, obtenerMiHistorial);
 
 // Buscar un registro específico por su ID
 router.get('/buscar/:id', verificarToken, obtenerHistorialPorId);

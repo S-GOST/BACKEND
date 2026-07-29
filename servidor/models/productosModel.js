@@ -43,14 +43,15 @@ const Producto = {
       Marca,
       Nombre,
       Precio,
+      stock,
       Estado,
     } = data;
 
     const [result] = await pool.query(
       `INSERT INTO productos 
-       (ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, Estado)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, Estado]
+       (ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, stock, Estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, stock || 0, Estado]
     );
 
     return result;
@@ -64,23 +65,24 @@ const Producto = {
       Marca,
       Nombre,
       Precio,
+      stock,
       Estado,
     } = data;
 
     const [result] = await pool.query(
       `UPDATE productos 
        SET ID_PRODUCTOS = ?, ID_CATEGORIA = ?, Marca = ?, Nombre = ?,
-           Precio = ?, Estado = ?
+           Precio = ?, stock = ?, Estado = ?
        WHERE ID_PRODUCTOS = ?`,
-      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, Estado, id]
+      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, Precio, stock !== undefined ? stock : 0, Estado, id]
     );
 
     return result;
   },
 
-  // 6. Eliminar un producto
+  // 6. Eliminar un producto (ahora es inhabilitar)
   delete: async (id) => {
-    await pool.query("DELETE FROM productos WHERE ID_PRODUCTOS = ?", [id]);
+    await pool.query("UPDATE productos SET Estado = 'Inactivo' WHERE ID_PRODUCTOS = ?", [id]);
     return true;
   },
 };

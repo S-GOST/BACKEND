@@ -1,4 +1,5 @@
 import Moto from "../models/motosModel.js";
+import Usuario from "../models/usuarioModel.js";
 import { logHistory } from "../utils/historyLogger.js";
 
 /**
@@ -42,6 +43,14 @@ export const obtenerMotoPorId = async (req, res) => {
  */
 export const crearMoto = async (req, res) => {
     try {
+        const idCliente = req.body.id_cliente || req.body.ID_CLIENTES || req.body.ID_CLIENTE;
+        if (idCliente) {
+            const cliente = await Usuario.findByPk(idCliente);
+            if (!cliente || cliente.id_rol !== 3 || cliente.estado !== 'Activo') {
+                return res.status(400).json({ success: false, message: 'El cliente asociado no existe o no está activo' });
+            }
+        }
+
         const nuevaMoto = await Moto.create(req.body);
 
         await logHistory(
@@ -49,7 +58,7 @@ export const crearMoto = async (req, res) => {
             'motos',
             nuevaMoto.insertId || nuevaMoto.id_moto || 0,
             'INSERT',
-            `Se creó una nueva moto (placa: ${req.body.placa || 'N/A'})`
+            `Se creó una nueva moto (placa: ${req.body.placa || req.body.Placa || 'N/A'})`
         );
 
         res.json({ 
@@ -57,6 +66,9 @@ export const crearMoto = async (req, res) => {
             data: nuevaMoto 
         });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'La placa de la moto ya se encuentra registrada' });
+        }
         console.error("Error al crear moto:", error);
         res.status(500).json({ 
             success: false, 
@@ -86,6 +98,9 @@ export const actualizarMoto = async (req, res) => {
             data: motoActualizada 
         });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'La placa de la moto ya se encuentra registrada por otra moto' });
+        }
         console.error("Error al actualizar moto:", error);
         res.status(500).json({ 
             success: false, 
@@ -115,6 +130,9 @@ export const eliminarMoto = async (req, res) => {
             message: 'Moto eliminada correctamente' 
         });
     } catch (error) {
+        if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ success: false, message: 'No se puede eliminar la moto porque tiene órdenes de servicio asociadas. Debe ser inhabilitada.' });
+        }
         console.error("Error al eliminar moto:", error);
         res.status(500).json({ 
             success: false, 

@@ -7,6 +7,9 @@ import {
     actualizarProducto,
     eliminarProducto
 } from '../controllers/productosController.js';
+import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { validarProducto } from '../middleware/validar.js';
 
 const router = express.Router();
 
@@ -14,12 +17,15 @@ const router = express.Router();
 // Rutas (montadas sobre /api/productos)
 // ==============================================
 
+// Público: Todos pueden ver los productos (HomePage)
 router.get('/obtener', obtenerProductos);
 router.get('/buscar/:id', obtenerProductoPorId);
 router.get('/categoria/:idCategoria', obtenerProductosPorCategoria);
-router.post('/insertar', crearProducto);
-router.put('/actualizar/:id', actualizarProducto);
-router.delete('/eliminar/:id', eliminarProducto);
+
+// Solo Admin puede crear, actualizar o eliminar
+router.post('/insertar', verificarToken, autorizar(1), validarProducto, crearProducto);
+router.put('/actualizar/:id', verificarToken, autorizar(1), validarProducto, actualizarProducto);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarProducto);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

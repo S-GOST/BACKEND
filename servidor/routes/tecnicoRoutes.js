@@ -8,29 +8,33 @@ import {
     loginTecnico
 } from '../controllers/tecnicoController.js';
 import { verificarToken } from "../middleware/Auth.js";
+import { autorizar } from "../middleware/autorizar.js";
+import { limiterLogin } from "../middleware/rateLimiter.js";
+import { validarLogin, validarUsuario } from "../middleware/validar.js";
 
 const router = express.Router();
 
 // ==============================================
 // Rutas (montadas sobre /api/tecnicos)
+// Solo Admin (rol 1) puede gestionar técnicos
 // ==============================================
 
-router.get('/obtener', verificarToken, obtenerTec);
-router.get('/buscar/:id', verificarToken, obtenerTecPorId);
-router.post('/login', loginTecnico);
-router.post('/insertar', verificarToken, crearTec);
-router.put('/actualizar/:id', verificarToken, actualizarTec); // Solo una vez, con :id
-router.delete('/eliminar/:id', verificarToken, eliminarTec);
+router.get('/obtener', verificarToken, autorizar(1), obtenerTec);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2), obtenerTecPorId);
+router.post('/login', limiterLogin, validarLogin, loginTecnico);
+router.post('/insertar', verificarToken, autorizar(1), validarUsuario, crearTec);
+router.put('/actualizar/:id', verificarToken, autorizar(1), actualizarTec);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarTec);
 
 // ==============================================
-// Documentación Swagger (summaries cortos, IDs string)
+// Documentación Swagger
 // ==============================================
 
 /**
  * @swagger
  * tags:
- *   name: Tecnicos
- *   description: Gestión de técnicos (IDs tipo texto)
+ *   - name: Tecnicos
+ *     description: Gestión de técnicos
  */
 
 /**
@@ -46,13 +50,15 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *         description: Lista de técnicos
  *       401:
  *         description: No autorizado
+ *       403:
+ *         description: No tienes permisos
  */
 
 /**
  * @swagger
  * /api/tecnicos/buscar/{id}:
  *   get:
- *     summary: Buscar técnico
+ *     summary: Buscar técnico por ID
  *     tags: [Tecnicos]
  *     security:
  *       - bearerAuth: []
@@ -62,10 +68,11 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID del técnico (varchar)
  *     responses:
  *       200:
  *         description: Técnico encontrado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -85,21 +92,23 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *           schema:
  *             type: object
  *             required:
- *               - id
+ *               - numero_documento
  *               - nombre
- *               - email
+ *               - usuario
  *               - password
  *             properties:
- *               id:
+ *               numero_documento:
  *                 type: string
  *               nombre:
  *                 type: string
- *               email:
+ *               usuario:
  *                 type: string
- *                 format: email
  *               password:
  *                 type: string
  *                 format: password
+ *               correo:
+ *                 type: string
+ *                 format: email
  *               telefono:
  *                 type: string
  *     responses:
@@ -107,6 +116,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *         description: Técnico creado
  *       400:
  *         description: Datos inválidos
+ *       401:
+ *         description: No autorizado
  */
 
 /**
@@ -132,7 +143,7 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *             properties:
  *               nombre:
  *                 type: string
- *               email:
+ *               correo:
  *                 type: string
  *               password:
  *                 type: string
@@ -141,6 +152,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *     responses:
  *       200:
  *         description: Técnico actualizado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -162,6 +175,8 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *     responses:
  *       200:
  *         description: Técnico eliminado
+ *       401:
+ *         description: No autorizado
  *       404:
  *         description: No encontrado
  */
@@ -170,7 +185,7 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  * @swagger
  * /api/tecnicos/login:
  *   post:
- *     summary: Iniciar sesión
+ *     summary: Iniciar sesión como técnico
  *     tags: [Tecnicos]
  *     requestBody:
  *       required: true
@@ -186,11 +201,14 @@ router.delete('/eliminar/:id', verificarToken, eliminarTec);
  *                 type: string
  *               contrasena:
  *                 type: string
+ *                 format: password
  *     responses:
  *       200:
  *         description: Login exitoso (devuelve token)
  *       401:
  *         description: Credenciales inválidas
+ *       429:
+ *         description: Demasiados intentos de login
  */
 
 export default router;

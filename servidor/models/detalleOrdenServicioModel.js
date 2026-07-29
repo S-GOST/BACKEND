@@ -40,23 +40,25 @@ const DetalleOrdenServicio = {
 
   // 4. Crear un solo detalle
   create: async (data) => {
-    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio } = data;
+    const { id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal } = data;
   
     const [result] = await pool.query(
       `INSERT INTO detalles_orden_servicio
-       (ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio)
-       VALUES (?, ?, ?, ?, ?)`,
+       (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        ID_ORDEN_SERVICIO,
+        id_orden || data.ID_ORDEN_SERVICIO, // Soporte para frontend
         ID_SERVICIOS !== undefined && ID_SERVICIOS !== null ? ID_SERVICIOS : null,
         ID_PRODUCTOS !== undefined && ID_PRODUCTOS !== null ? ID_PRODUCTOS : null,
-        Garantia,
-        Precio
+        garantia || data.Garantia || 0,
+        cantidad || 1,
+        precio_unitario || data.Precio || 0,
+        subtotal || data.Precio || 0
       ]
     );
 
     // Retorna el ID generado y los datos
-    return { idDetalle: result.insertId, ...data };
+    return { id_detalle: result.insertId, ...data };
   },
 
   // 5. Actualizar un detalle

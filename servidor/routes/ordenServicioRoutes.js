@@ -8,6 +8,8 @@ import {
     obtenerMisOrdenes
 } from '../controllers/ordenServicioController.js';
 import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { validarOrden } from '../middleware/validar.js';
 
 const router = express.Router();
 
@@ -15,12 +17,21 @@ const router = express.Router();
 // Rutas (montadas sobre /api/ordenes_servicio)
 // ==============================================
 
-router.get('/obtener', obtenerOrdenes);
-router.get('/mis-ordenes', verificarToken, obtenerMisOrdenes);
-router.get('/buscar/:id', obtenerOrdenPorId);
-router.post('/insertar', verificarToken, crearOrden);
-router.put('/actualizar/:id', actualizarOrden);
-router.delete('/eliminar/:id', eliminarOrden);
+// Admin puede leer todo
+router.get('/obtener', verificarToken, autorizar(1), obtenerOrdenes);
+
+// Mis órdenes: Técnicos y Clientes ven solo lo suyo
+router.get('/mis-ordenes', verificarToken, autorizar(2, 3), obtenerMisOrdenes);
+
+// Todos pueden buscar por ID (controller debería validar que pertenezca)
+router.get('/buscar/:id', verificarToken, autorizar(1, 2, 3), obtenerOrdenPorId);
+
+// Admin, Técnico y Cliente pueden crear; Admin y Técnico actualizar
+router.post('/insertar', verificarToken, autorizar(1, 2, 3), validarOrden, crearOrden);
+router.put('/actualizar/:id', verificarToken, autorizar(1, 2), validarOrden, actualizarOrden);
+
+// Solo Admin puede eliminar
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarOrden);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

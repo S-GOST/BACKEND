@@ -7,6 +7,9 @@ import {
     actualizarDetalleOrden,
     eliminarDetalleOrden
 } from '../controllers/detalleOrdenServicioController.js';
+import { verificarToken } from '../middleware/Auth.js';
+import { autorizar } from '../middleware/autorizar.js';
+import { validarDetalleOrden } from '../middleware/validar.js';
 
 const router = express.Router();
 
@@ -14,21 +17,23 @@ const router = express.Router();
 // Rutas (montadas sobre /api/detalles_orden_servicio)
 // ==============================================
 
-// 1. Obtener todos los detalles
-router.get('/obtener', obtenerDetallesOrden);
+// 1. Obtener todos los detalles (Solo Admin)
+router.get('/obtener', verificarToken, autorizar(1), obtenerDetallesOrden);
 
-// 2. Obtener detalles filtrados por la ID de la Orden (Usa findAll)
+// 2. Obtener detalles filtrados por la ID de la Orden (Admin, Técnico, Cliente)
 // En Swagger aparecerá como: /api/detalles_orden_servicio/por_orden/1
-router.get('/por_orden/:idOrden', obtenerDetallesPorId); 
+router.get('/por_orden/:idOrden', verificarToken, autorizar(1, 2, 3), obtenerDetallesPorId); 
 
-// 3. Buscar un solo detalle por su ID propio (Usa findById)
+// 3. Buscar un solo detalle por su ID propio (Admin, Técnico, Cliente)
 // En Swagger aparecerá como: /api/detalles_orden_servicio/buscar/1
-router.get('/buscar/:id', obtenerDetalleOrdenPorId);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2, 3), obtenerDetalleOrdenPorId);
 
-// 4. Crear, Actualizar, Eliminar
-router.post('/insertar', crearDetalleOrden);
-router.put('/actualizar/:id', actualizarDetalleOrden);
-router.delete('/eliminar/:id', eliminarDetalleOrden);
+// 4. Crear, Actualizar (Admin, Técnico)
+router.post('/insertar', verificarToken, autorizar(1, 2), validarDetalleOrden, crearDetalleOrden);
+router.put('/actualizar/:id', verificarToken, autorizar(1, 2), validarDetalleOrden, actualizarDetalleOrden);
+
+// 5. Eliminar (Solo Admin)
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarDetalleOrden);
 
 // ==============================================
 // Documentación Swagger

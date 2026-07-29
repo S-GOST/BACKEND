@@ -62,6 +62,9 @@ export const crearCategoria = async (req, res) => {
 
         res.status(201).json({ success: true, data: nuevaCategoria });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre de la categoría ya existe' });
+        }
         console.error("Error al crear categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -88,6 +91,9 @@ export const actualizarCategoria = async (req, res) => {
 
         res.json({ success: true, message: "Categoría actualizada correctamente" });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'El nombre de la categoría ya existe' });
+        }
         console.error("Error al actualizar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -114,6 +120,9 @@ export const eliminarCategoria = async (req, res) => {
 
         res.json({ success: true, message: "Categoría eliminada correctamente" });
     } catch (error) {
+        if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ success: false, message: 'No se puede eliminar la categoría porque tiene servicios o productos asociados. Debe ser inhabilitada o vaciada primero.' });
+        }
         console.error("Error al eliminar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }

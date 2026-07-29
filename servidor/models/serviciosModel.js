@@ -55,9 +55,9 @@ const Servicio = {
         return { ID_SERVICIOS: id, ID_CATEGORIA, Nombre, Precio, Estado };
     },
 
-    // Eliminar un registro
+    // Eliminar un registro (ahora es inhabilitar)
     delete: async (id) => {
-        const [result] = await pool.query("DELETE FROM servicios WHERE ID_SERVICIOS = ?", [id]);
+        const [result] = await pool.query("UPDATE servicios SET Estado = 'Inactivo' WHERE ID_SERVICIOS = ?", [id]);
         return result;
     }
 };

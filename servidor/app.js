@@ -1,7 +1,19 @@
-import express from "express";// Importamos Express para crear nuestro servidor y manejar las rutas. Express es un framework de Node.js que facilita la creación de aplicaciones web y APIs. Nos permite definir rutas, manejar solicitudes HTTP, y gestionar middleware de manera sencilla. Al importar Express, podemos utilizar sus funcionalidades para configurar nuestro servidor, definir endpoints para nuestras rutas, y gestionar la lógica de negocio de nuestra aplicación. En este caso, estamos utilizando Express para crear un servidor que manejará las rutas relacionadas con administradores, servicios y productos en nuestra aplicación.
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger.js";
+
+// Middlewares de seguridad
+import { limiterGeneral } from "./middleware/rateLimiter.js";
+import { sanitizarEntrada } from "./middleware/validar.js";
+import { generarCsrfToken, validarCsrf } from "./middleware/csrf.js";
+
+// Rutas
 import Admins from "./routes/adminRoutes.js";
 import Servicio from "./routes/serviciosRoutes.js";
-import Productos from "./routes/productosRoutes.js"; // Revisa que el nombre del archivo sea exacto
+import Productos from "./routes/productosRoutes.js";
 import Tecnicos from "./routes/tecnicoRoutes.js";
 import Clientes from "./routes/clientesRoutes.js";
 import OrdenServicio from "./routes/ordenServicioRoutes.js";
@@ -11,25 +23,71 @@ import Informe from "./routes/informeRoutes.js";
 import Comprobante from "./routes/comprobanteRoutes.js";
 import Historial from "./routes/historialRoutes.js";
 import AuthRoutes from "./routes/authRoutes.js";
-
-// Auth routes registration moved below app initialization
 import Categorias from "./routes/categoriasRoutes.js";
 import TipoDocumento from "./routes/tipoDocumentoRoutes.js";
-import cors from "cors";// Importamos el middleware CORS para permitir solicitudes desde diferentes orígenes, lo cual es especialmente útil cuando el frontend y el backend están alojados en dominios diferentes. Al usar CORS, podemos configurar qué orígenes tienen permiso para acceder a los recursos de nuestro servidor, lo que mejora la seguridad y la flexibilidad de nuestra aplicación. En este caso, al importar y usar CORS en nuestra aplicación Express, estamos permitiendo que cualquier origen pueda realizar solicitudes a nuestro servidor, lo que es útil durante el desarrollo y pruebas. Sin embargo, en un entorno de producción, es recomendable configurar CORS de manera más restrictiva para limitar el acceso solo a los orígenes confiables.    
-import swaggerUi from "swagger-ui-express";
-import swaggerSpec from "./swagger.js";
+
 const app = express();
 
+// ============================================================
+// RFN-004: HTTPS — Headers de seguridad con Helmet
+// ============================================================
+// Incluye: HSTS, X-Frame-Options, X-Content-Type-Options, CSP, etc.
+app.use(helmet());
 
+// ============================================================
+// RFN-004: Redirección HTTP → HTTPS (en producción detrás de proxy)
+// ============================================================
+app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+});
 
-app.use(express.json());
-app.use(cors());
+// ============================================================
+// CORS Restrictivo (RFN-004)
+// ============================================================
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,  // Necesario para cookies (refreshToken + CSRF)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token']
+}));
+
+// ============================================================
+// Rate Limiting General (RFN-002)
+// ============================================================
+app.use(limiterGeneral);
+
+// ============================================================
+// Parsers
+// ============================================================
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/api/auth", AuthRoutes);
+app.use(cookieParser()); // Necesario para refresh tokens y CSRF
 
+// ============================================================
+// RFN-003: Sanitización global de inputs (anti-XSS)
+// ============================================================
+app.use(sanitizarEntrada);
+
+// ============================================================
+// RFN-005: Protección CSRF
+// ============================================================
+// Generar token CSRF en cada respuesta
+app.use(generarCsrfToken);
+// Validar CSRF en peticiones POST/PUT/DELETE
+app.use(validarCsrf);
+
+// ============================================================
+// Documentación API (Swagger) — Ruta pública
+// ============================================================
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Rutas base
+// ============================================================
+// Rutas de la API
+// ============================================================
+app.use("/api/auth", AuthRoutes);
 app.use("/api/admins", Admins);
 app.use("/api/servicios", Servicio);
 app.use("/api/productos", Productos);
@@ -44,7 +102,9 @@ app.use("/api/historial", Historial);
 app.use("/api/categorias", Categorias);
 app.use("/api/tipos-documento", TipoDocumento);
 
-// (Manejo de errores )
+// ============================================================
+// Manejo de errores
+// ============================================================
 app.use((req, res, next) => {
   res.status(404).json({
     error: true,

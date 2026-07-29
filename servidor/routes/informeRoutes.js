@@ -5,9 +5,12 @@ import {
     obtenerInformePorId,
     crearInforme,
     actualizarInforme,
-    eliminarInforme
+    eliminarInforme,
+    generarReporte
 } from '../controllers/informeController.js';
 import { verificarToken } from "../middleware/Auth.js";
+import { autorizar } from "../middleware/autorizar.js";
+import { validarPeriodoReporte, validarInforme } from "../middleware/validar.js";
 
 const router = express.Router();
 
@@ -15,12 +18,15 @@ const router = express.Router();
 // Rutas (montadas sobre /api/informes)
 // ==============================================
 
-router.get('/obtener', verificarToken, obtenerInformes);
-router.get('/mis-informes', verificarToken, obtenerMisInformes); // ← Informes del técnico autenticado
-router.get('/buscar/:id', verificarToken, obtenerInformePorId);
-router.post('/insertar', verificarToken, crearInforme);
-router.put('/actualizar/:id', verificarToken, actualizarInforme);
-router.delete('/eliminar/:id', verificarToken, eliminarInforme);
+router.get('/obtener', verificarToken, autorizar(1), obtenerInformes);
+router.get('/mis-informes', verificarToken, autorizar(2), obtenerMisInformes);
+router.get('/buscar/:id', verificarToken, autorizar(1, 2), obtenerInformePorId);
+router.post('/insertar', verificarToken, autorizar(1, 2), validarInforme, crearInforme);
+router.put('/actualizar/:id', verificarToken, autorizar(1, 2), validarInforme, actualizarInforme);
+router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarInforme);
+
+// HU-004.1: Generar reporte por periodo (Admin = global, Técnico = solo suyo)
+router.post('/generar-reporte', verificarToken, autorizar(1, 2), validarPeriodoReporte, generarReporte);
 
 // ==============================================
 // Documentación Swagger: Informes 
