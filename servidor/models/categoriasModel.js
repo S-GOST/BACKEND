@@ -1,7 +1,6 @@
 import pool from "../config/db.js";
 
 const Categoria = {
-    // Obtener todas las categorías
     findAll: async () => {
         const [rows] = await pool.query("SELECT * FROM categorias");
         return rows;
@@ -47,13 +46,32 @@ const Categoria = {
         return result;
     },
 
-    // Eliminar una categoría
+    // Eliminar (Inhabilitar) una categoría
     delete: async (id) => {
         const [result] = await pool.query(
-            "DELETE FROM categorias WHERE ID_CATEGORIA = ?",
+            "UPDATE categorias SET estado = 'Inactivo' WHERE ID_CATEGORIA = ?",
             [id]
         );
         return result;
+    },
+
+    // Restaurar (Habilitar) una categoría
+    restore: async (id) => {
+        const [result] = await pool.query(
+            "UPDATE categorias SET estado = 'Activo' WHERE ID_CATEGORIA = ?",
+            [id]
+        );
+        return result;
+    },
+
+    // Verificar dependencias
+    checkDependencies: async (id) => {
+        const [productos] = await pool.query("SELECT COUNT(*) AS count FROM productos WHERE ID_CATEGORIA = ? AND Estado = 'Activo'", [id]);
+        const [servicios] = await pool.query("SELECT COUNT(*) AS count FROM servicios WHERE ID_CATEGORIA = ? AND Estado = 'Activo'", [id]);
+        return {
+            productosCount: productos[0].count,
+            serviciosCount: servicios[0].count
+        };
     },
 };
 

@@ -2,12 +2,7 @@ import Informe from "../models/informeModel.js";
 import pool from "../config/db.js";
 import { logHistory } from "../utils/historyLogger.js";
 
-// Convierte fecha ISO a formato MySQL
-const formatearFechaMySQL = (fechaISO) => {
-    if (!fechaISO) return null;
-    const date = new Date(fechaISO);
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-};
+
 
 /**
  * Obtener todos los informes
@@ -27,7 +22,7 @@ export const obtenerInformes = async (req, res) => {
  */
 export const obtenerMisInformes = async (req, res) => {
     try {
-        const tecnicoId = req.admin?.id_usuario || req.admin?.id_usuario;
+        const tecnicoId = req.user?.id_usuario || req.admin?.id_usuario;
         if (!tecnicoId) {
             return res.status(401).json({ success: false, error: 'No autenticado' });
         }

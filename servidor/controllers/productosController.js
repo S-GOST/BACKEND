@@ -114,3 +114,29 @@ export const eliminarProducto = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+/**
+ * Habilitar (restaurar) un producto
+ */
+export const habilitarProducto = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await Producto.restore(id);
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Producto no encontrado" });
+        }
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'productos',
+            id,
+            'UPDATE',
+            `Se habilitó el producto ID ${id}`
+        );
+
+        res.json({ success: true, message: "Producto habilitado correctamente" });
+    } catch (error) {
+        console.error("Error al habilitar producto:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

@@ -122,8 +122,6 @@ export const generarComprobanteDesdeInforme = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Orden de servicio asociada no encontrada' });
         }
 
-        const orden = ordenRows[0];
-
         // 3. Calcular el monto total desde los detalles de la orden
         const [totalRows] = await pool.query(
             'SELECT COALESCE(SUM(subtotal), 0) AS monto FROM detalles_orden_servicio WHERE id_orden = ?',

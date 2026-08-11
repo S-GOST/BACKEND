@@ -5,7 +5,8 @@ import {
     obtenerProductosPorCategoria,
     crearProducto,
     actualizarProducto,
-    eliminarProducto
+    eliminarProducto,
+    habilitarProducto
 } from '../controllers/productosController.js';
 import { verificarToken } from '../middleware/Auth.js';
 import { autorizar } from '../middleware/autorizar.js';
@@ -26,6 +27,7 @@ router.get('/categoria/:idCategoria', obtenerProductosPorCategoria);
 router.post('/insertar', verificarToken, autorizar(1), validarProducto, crearProducto);
 router.put('/actualizar/:id', verificarToken, autorizar(1), validarProducto, actualizarProducto);
 router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarProducto);
+router.put('/habilitar/:id', verificarToken, autorizar(1), habilitarProducto);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

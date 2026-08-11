@@ -85,6 +85,12 @@ const Producto = {
     await pool.query("UPDATE productos SET Estado = 'Inactivo' WHERE ID_PRODUCTOS = ?", [id]);
     return true;
   },
+
+  // 7. Restaurar (Habilitar) un producto
+  restore: async (id) => {
+    const [result] = await pool.query("UPDATE productos SET Estado = 'Activo' WHERE ID_PRODUCTOS = ?", [id]);
+    return result;
+  },
 };
 
 export default Producto;

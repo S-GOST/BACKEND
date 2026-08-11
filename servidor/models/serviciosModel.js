@@ -59,6 +59,12 @@ const Servicio = {
     delete: async (id) => {
         const [result] = await pool.query("UPDATE servicios SET Estado = 'Inactivo' WHERE ID_SERVICIOS = ?", [id]);
         return result;
+    },
+
+    // Restaurar (Habilitar) un servicio
+    restore: async (id) => {
+        const [result] = await pool.query("UPDATE servicios SET Estado = 'Activo' WHERE ID_SERVICIOS = ?", [id]);
+        return result;
     }
 };
 

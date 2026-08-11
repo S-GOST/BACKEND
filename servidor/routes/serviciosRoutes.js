@@ -4,7 +4,8 @@ import {
     obtenerServicioPorId,
     crearServicio,
     actualizarServicio,
-    eliminarServicio
+    eliminarServicio,
+    habilitarServicio
 } from '../controllers/serviciosController.js';
 import { verificarToken } from '../middleware/Auth.js';
 import { autorizar } from '../middleware/autorizar.js';
@@ -24,6 +25,7 @@ router.get('/buscar/:id', obtenerServicioPorId);
 router.post('/insertar', verificarToken, autorizar(1), validarServicio, crearServicio);
 router.put('/actualizar/:id', verificarToken, autorizar(1), validarServicio, actualizarServicio);
 router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarServicio);
+router.put('/habilitar/:id', verificarToken, autorizar(1), habilitarServicio);
 
 // ==============================================
 // Documentación Swagger (summaries cortos, IDs string)

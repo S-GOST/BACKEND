@@ -115,6 +115,33 @@ const Usuario = {
   delete: async (numero_documento) => {
     await pool.query("DELETE FROM usuarios WHERE numero_documento = ?", [numero_documento]);
     return true;
+  },
+
+  // Guardar token de recuperación de contraseña
+  setResetToken: async (correo, token, expiracion) => {
+    const [result] = await pool.query(
+      "UPDATE usuarios SET reset_token = ?, reset_token_expires = ? WHERE correo = ?",
+      [token, expiracion, correo]
+    );
+    return result;
+  },
+
+  // Buscar usuario por token de recuperación
+  findByResetToken: async (token) => {
+    const [rows] = await pool.query(
+      `SELECT * FROM usuarios WHERE reset_token = ? AND reset_token_expires > NOW()`,
+      [token]
+    );
+    return rows[0];
+  },
+
+  // Actualizar la contraseña de un usuario directamente
+  updatePassword: async (numero_documento, passwordHash) => {
+    const [result] = await pool.query(
+      "UPDATE usuarios SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE numero_documento = ?",
+      [passwordHash, numero_documento]
+    );
+    return result;
   }
 };
 

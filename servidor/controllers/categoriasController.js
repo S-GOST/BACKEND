@@ -1,5 +1,6 @@
 import Categoria from "../models/categoriasModel.js";
 import { logHistory } from "../utils/historyLogger.js";
+import pool from "../config/db.js";
 
 /**
  * Obtener todas las categorías
@@ -100,30 +101,67 @@ export const actualizarCategoria = async (req, res) => {
 };
 
 /**
- * Eliminar una categoría
+ * Inhabilitar (soft delete) una categoría
  */
 export const eliminarCategoria = async (req, res) => {
     const { id } = req.params;
+    const force = req.query.force === 'true';
+
     try {
+        if (!force) {
+            const deps = await Categoria.checkDependencies(id);
+            if (deps.productosCount > 0 || deps.serviciosCount > 0) {
+                return res.status(409).json({
+                    success: false, 
+                    message: `La categoría tiene ${deps.productosCount} producto(s) y ${deps.serviciosCount} servicio(s) activos asociados. ¿Desea inhabilitarla junto con sus dependencias?`,
+                    dependencies: deps
+                });
+            }
+        }
+
         const resultado = await Categoria.delete(id);
         if (resultado.affectedRows === 0) {
             return res.status(404).json({ success: false, message: "Categoría no encontrada" });
+        }
+        
+        if (force) {
+            await pool.query("UPDATE productos SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
+            await pool.query("UPDATE servicios SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
         }
 
         await logHistory(
             req.user?.id_usuario || 1,
             'categorias',
             id,
-            'DELETE',
-            `Se eliminó la categoría ID ${id}`
+            'UPDATE',
+            `Se inhabilitó la categoría ID ${id}`
         );
 
-        res.json({ success: true, message: "Categoría eliminada correctamente" });
+        res.json({ success: true, message: "Categoría inhabilitada correctamente" });
     } catch (error) {
-        if (error.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(400).json({ success: false, message: 'No se puede eliminar la categoría porque tiene servicios o productos asociados. Debe ser inhabilitada o vaciada primero.' });
+        console.error("Error al inhabilitar categoría:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Habilitar (restaurar) una categoría
+ */
+export const habilitarCategoria = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await Categoria.restore(id);
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
         }
-        console.error("Error al eliminar categoría:", error);
+
+        // Reactivar productos y servicios asociados
+        await pool.query("UPDATE productos SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
+        await pool.query("UPDATE servicios SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
+
+        res.json({ success: true, message: "Categoría habilitada correctamente" });
+    } catch (error) {
+        console.error("Error al habilitar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

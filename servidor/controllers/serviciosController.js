@@ -130,3 +130,29 @@ export const eliminarServicio = async (req, res) => {
         });
     }
 };
+
+/**
+ * Habilitar (restaurar) un servicio
+ */
+export const habilitarServicio = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await Servicio.restore(id);
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Servicio no encontrado" });
+        }
+
+        await logHistory(
+            req.user?.id_usuario || 1,
+            'servicios',
+            id,
+            'UPDATE',
+            `Se habilitó el servicio ID ${id}`
+        );
+
+        res.json({ success: true, message: "Servicio habilitado correctamente" });
+    } catch (error) {
+        console.error("Error al habilitar servicio:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

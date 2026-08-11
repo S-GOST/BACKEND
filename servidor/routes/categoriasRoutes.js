@@ -5,7 +5,8 @@ import {
     obtenerCategoriasPorTipo,
     crearCategoria,
     actualizarCategoria,
-    eliminarCategoria
+    eliminarCategoria,
+    habilitarCategoria
 } from '../controllers/categoriasController.js';
 import { verificarToken } from '../middleware/Auth.js';
 import { autorizar } from '../middleware/autorizar.js';
@@ -26,6 +27,7 @@ router.get('/tipo/:tipo', verificarToken, autorizar(1, 2, 3), obtenerCategoriasP
 router.post('/insertar', verificarToken, autorizar(1), validarCategoria, crearCategoria);
 router.put('/actualizar/:id', verificarToken, autorizar(1), validarCategoria, actualizarCategoria);
 router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCategoria);
+router.put('/habilitar/:id', verificarToken, autorizar(1), habilitarCategoria);
 
 // ==============================================
 // Documentación Swagger
