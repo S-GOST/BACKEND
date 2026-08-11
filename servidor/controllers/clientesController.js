@@ -4,25 +4,34 @@ import { logHistory } from "../utils/historyLogger.js";
 import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken.js";
 
 const mapToUsuario = (c) => {
-    const obj = {};
-    if (c.numero_documento !== undefined) obj.numero_documento = c.numero_documento;
-    if (c.id_tipo_documento !== undefined) obj.id_tipo_documento = c.id_tipo_documento;
-    if (c.nombre !== undefined) obj.nombre = c.nombre;
-    if (c.usuario !== undefined) obj.usuario = c.usuario;
-    if (c.password !== undefined) obj.password = c.password;
-    if (c.correo !== undefined) obj.correo = c.correo;
-    if (c.telefono !== undefined) obj.telefono = c.telefono;
-    if (c.ciudad !== undefined) obj.ciudad = c.ciudad;
+  const obj = {};
+  if (c.numero_documento !== undefined) obj.numero_documento = c.numero_documento;
+  if (c.id_tipo_documento !== undefined) obj.id_tipo_documento = c.id_tipo_documento;
+  if (c.nombre !== undefined) obj.nombre = c.nombre;
+  if (c.usuario !== undefined) obj.usuario = c.usuario;
+  if (c.password !== undefined) obj.password = c.password;
+  if (c.correo !== undefined) obj.correo = c.correo;
+  if (c.telefono !== undefined) obj.telefono = c.telefono;
+  if (c.ciudad !== undefined) obj.ciudad = c.ciudad;
 
-    obj.id_rol = 3; // Rol de Cliente
-    return obj;
+  obj.id_rol = 3; // Rol de Cliente
+  return obj;
 };
 
-// RFN-002: Login con tokens JWT unificados + refresh token
+//Login con tokens JWT unificados + refresh token
 export const loginCliente = async (req, res) => {
   const { usuario, contrasena } = req.body;
+
+  // Validación de campos requeridos
+  if (!usuario || !contrasena || usuario.trim() === '' || contrasena.trim() === '') {
+    return res.status(400).json({
+      success: false,
+      message: 'Usuario y contraseña son requeridos'
+    });
+  }
+
   try {
-    // RFN-001: Usar findOneWithPassword para obtener hash (nunca exponer password)
+    //Usar findOneWithPassword para obtener hash (nunca exponer password)
     const user = await Usuario.findOneWithPassword({ where: { usuario, id_rol: 3 } });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
@@ -39,7 +48,7 @@ export const loginCliente = async (req, res) => {
     // Setear refreshToken como cookie httpOnly
     setRefreshTokenCookie(res, refreshToken);
 
-    res.json({ 
+    res.json({
       success: true,
       token: accessToken,
       nombre: user.nombre,
@@ -81,11 +90,11 @@ export const crearCliente = async (req, res) => {
     const newUser = await Usuario.findByPk(userPayload.numero_documento);
 
     await logHistory(
-        req.user?.id_usuario || 1, 
-        'usuarios', 
-        newUser.id_usuario, 
-        'INSERT', 
-        `Se creó el cliente ${newUser.nombre}`
+      req.user?.id_usuario || 1,
+      'usuarios',
+      newUser.id_usuario,
+      'INSERT',
+      `Se creó el cliente ${newUser.nombre}`
     );
 
     res.json({ success: true, data: newUser });
@@ -107,15 +116,15 @@ export const actualizarCliente = async (req, res) => {
     await Usuario.update(id, userPayload);
     const userActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
     if (!userActualizado || userActualizado.id_rol !== 3) {
-        return res.status(404).json({ success: false, message: 'Cliente no encontrado después de actualizar' });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado después de actualizar' });
     }
 
     await logHistory(
-        req.user?.id_usuario || 1, 
-        'usuarios', 
-        userActualizado.id_usuario, 
-        'UPDATE', 
-        `Se actualizó el cliente ${userActualizado.nombre}`
+      req.user?.id_usuario || 1,
+      'usuarios',
+      userActualizado.id_usuario,
+      'UPDATE',
+      `Se actualizó el cliente ${userActualizado.nombre}`
     );
 
     res.json({ success: true, data: userActualizado });
@@ -135,16 +144,16 @@ export const eliminarCliente = async (req, res) => {
   try {
     const user = await Usuario.findByPk(id);
     if (!user || user.id_rol !== 3) {
-        return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
     await Usuario.delete(id);
 
     await logHistory(
-        req.user?.id_usuario || 1, 
-        'usuarios', 
-        user.id_usuario, 
-        'DELETE', 
-        `Se eliminó el cliente ${user.nombre}`
+      req.user?.id_usuario || 1,
+      'usuarios',
+      user.id_usuario,
+      'DELETE',
+      `Se eliminó el cliente ${user.nombre}`
     );
 
     res.json({ success: true, message: 'Cliente eliminado' });

@@ -43,7 +43,7 @@ export const validarRegistroCliente = [
         .trim()
         .notEmpty().withMessage('El número de documento es requerido')
         .isNumeric().withMessage('El número de documento debe contener solo dígitos')
-        .isLength({ min: 10, max: 10 }).withMessage('El número de documento debe tener exactamente 10 dígitos'),
+        .isLength({ min: 6, max: 20 }).withMessage('El número de documento debe tener entre 6 y 20 dígitos'),
     body('id_tipo_documento')
         .notEmpty().withMessage('El tipo de documento es requerido')
         .isInt({ min: 1 }).withMessage('El tipo de documento debe ser un número válido'),
@@ -59,7 +59,7 @@ export const validarRegistroCliente = [
         .escape(),
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
-        .isLength({ min: 8, max: 100 }).withMessage('La contraseña debe tener mínimo 8 caracteres'),
+        .isStrongPassword({ minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1 }).withMessage('La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas, números y símbolos'),
     body('correo')
         .trim()
         .notEmpty().withMessage('El correo es requerido')
@@ -69,7 +69,8 @@ export const validarRegistroCliente = [
     body('telefono')
         .trim()
         .notEmpty().withMessage('El teléfono es requerido')
-        .isLength({ max: 20 }).withMessage('El teléfono no puede exceder 20 caracteres')
+        .matches(/^\+?[0-9\s\-]+$/).withMessage('El teléfono solo puede contener números, espacios, guiones y el prefijo +')
+        .isLength({ min: 7, max: 20 }).withMessage('El teléfono debe tener entre 7 y 20 caracteres')
         .escape(),
     body('ciudad')
         .trim()
@@ -87,7 +88,7 @@ export const validarUsuario = [
         .trim()
         .notEmpty().withMessage('El número de documento es requerido')
         .isNumeric().withMessage('El número de documento debe contener solo dígitos')
-        .isLength({ min: 10, max: 10 }).withMessage('El número de documento debe tener exactamente 10 dígitos'),
+        .isLength({ min: 6, max: 20 }).withMessage('El número de documento debe tener entre 6 y 20 dígitos'),
     body('nombre')
         .trim()
         .notEmpty().withMessage('El nombre es requerido')
@@ -106,43 +107,16 @@ export const validarUsuario = [
         .normalizeEmail(),
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
-        .isLength({ min: 8, max: 100 }).withMessage('La contraseña debe tener mínimo 8 caracteres'),
+        .isStrongPassword({ minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1 }).withMessage('La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas, números y símbolos'),
     body('telefono')
         .trim()
         .notEmpty().withMessage('El teléfono es requerido')
-        .isLength({ max: 20 }).withMessage('El teléfono no puede exceder 20 caracteres')
+        .matches(/^\+?[0-9\s\-]+$/).withMessage('El teléfono solo puede contener números, espacios, guiones y el prefijo +')
+        .isLength({ min: 7, max: 20 }).withMessage('El teléfono debe tener entre 7 y 20 caracteres')
         .escape(),
     manejarErrores
 ];
 
-// -------------------------------------------------------
-// Sanitización global de inputs (anti-XSS)
-// -------------------------------------------------------
-export const sanitizarEntrada = (req, res, next) => {
-    if (req.body && typeof req.body === 'object') {
-        sanitizarObjeto(req.body);
-    }
-    if (req.query && typeof req.query === 'object') {
-        sanitizarObjeto(req.query);
-    }
-    next();
-};
-
-function sanitizarObjeto(obj) {
-    for (const key of Object.keys(obj)) {
-        if (typeof obj[key] === 'string') {
-            // Eliminar tags HTML para prevenir XSS
-            obj[key] = obj[key]
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#x27;')
-                .replace(/\//g, '&#x2F;');
-        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-            sanitizarObjeto(obj[key]);
-        }
-    }
-}
 
 // -------------------------------------------------------
 // Validación de Categorías
@@ -325,17 +299,17 @@ export const validarInforme = [
     body('diagnostico')
         .trim()
         .notEmpty().withMessage('El diagnóstico es requerido')
-        .isLength({ max: 100 }).withMessage('El diagnóstico no puede exceder 100 caracteres')
+        .isLength({ max: 1000 }).withMessage('El diagnóstico no puede exceder 1000 caracteres')
         .escape(),
     body('trabajo_realizado')
         .trim()
         .notEmpty().withMessage('El trabajo realizado es requerido')
-        .isLength({ max: 100 }).withMessage('El trabajo realizado no puede exceder 100 caracteres')
+        .isLength({ max: 1000 }).withMessage('El trabajo realizado no puede exceder 1000 caracteres')
         .escape(),
     body('recomendaciones')
         .trim()
         .notEmpty().withMessage('Las recomendaciones son requeridas')
-        .isLength({ max: 100 }).withMessage('Las recomendaciones no pueden exceder 100 caracteres')
+        .isLength({ max: 1000 }).withMessage('Las recomendaciones no pueden exceder 1000 caracteres')
         .escape(),
     manejarErrores
 ];

@@ -7,7 +7,6 @@ import swaggerSpec from "./swagger.js";
 
 // Middlewares de seguridad
 import { limiterGeneral } from "./middleware/rateLimiter.js";
-import { sanitizarEntrada } from "./middleware/validar.js";
 import { generarCsrfToken, validarCsrf } from "./middleware/csrf.js";
 
 // Rutas
@@ -65,11 +64,6 @@ app.use(limiterGeneral);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Necesario para refresh tokens y CSRF
-
-// ============================================================
-// RFN-003: Sanitización global de inputs (anti-XSS)
-// ============================================================
-app.use(sanitizarEntrada);
 
 // ============================================================
 // RFN-005: Protección CSRF
