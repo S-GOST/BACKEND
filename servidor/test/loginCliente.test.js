@@ -91,7 +91,8 @@ describe('loginCliente', () => {
       const fakeUser = {
         id_usuario: 1,
         nombre: 'Test User',
-        password: 'hashedPassword'
+        password: 'hashedPassword',
+        estado: 'Activo'
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
@@ -116,7 +117,8 @@ describe('loginCliente', () => {
       const fakeUser = {
         id_usuario: 1,
         nombre: 'Test User',
-        password: 'hashedPassword'
+        password: 'hashedPassword',
+        estado: 'Activo'
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
@@ -251,7 +253,8 @@ describe('loginCliente', () => {
       const fakeUser = {
         id_usuario: 1,
         nombre: 'Test User',
-        password: 'hashedPassword'
+        password: 'hashedPassword',
+        estado: 'Activo'
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
@@ -275,7 +278,8 @@ describe('loginCliente', () => {
       const fakeUser = {
         id_usuario: 1,
         nombre: 'Test User',
-        password: 'hashedPassword'
+        password: 'hashedPassword',
+        estado: 'Activo'
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);

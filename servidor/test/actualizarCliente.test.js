@@ -45,8 +45,8 @@ describe('actualizarCliente', () => {
     test('Debe actualizar y devolver el cliente correctamente (ID desde params)', async () => {
       const reqBody = { nombre: 'Juan Actualizado', correo: 'nuevo@test.com' };
       const reqParams = { id: '12345678' };
-      const payloadEsperado = { ...reqBody, id_rol: 3 }; // mapToUsuario interna
-      const userActualizadoMock = { id_usuario: 1, ...reqBody, numero_documento: '12345678', id_rol: 3 };
+      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' }; // mapToUsuario interna
+      const userActualizadoMock = { id_usuario: 1, ...reqBody, numero_documento: '12345678', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.update.mockResolvedValue();
       Usuario.findByPk.mockResolvedValue(userActualizadoMock);
@@ -66,8 +66,8 @@ describe('actualizarCliente', () => {
 
     test('Debe usar req.body.numero_documento como ID cuando req.params.id no existe', async () => {
       const reqBody = { nombre: 'Ana', numero_documento: '87654321' };
-      const payloadEsperado = { ...reqBody, id_rol: 3 };
-      const userActualizadoMock = { id_usuario: 2, ...reqBody, id_rol: 3 };
+      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' };
+      const userActualizadoMock = { id_usuario: 2, ...reqBody, id_rol: 3, estado: 'Pendiente' };
 
       Usuario.update.mockResolvedValue();
       Usuario.findByPk.mockResolvedValue(userActualizadoMock);
@@ -85,8 +85,8 @@ describe('actualizarCliente', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const reqBody = { nombre: 'María' };
-      const payloadEsperado = { ...reqBody, id_rol: 3 };
-      const userActualizadoMock = { id_usuario: 99, ...reqBody, numero_documento: '8888', id_rol: 3 };
+      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' };
+      const userActualizadoMock = { id_usuario: 99, ...reqBody, numero_documento: '8888', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.update.mockResolvedValue();
       Usuario.findByPk.mockResolvedValue(userActualizadoMock);

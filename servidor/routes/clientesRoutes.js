@@ -5,7 +5,9 @@ import {
     crearCliente,
     actualizarCliente,
     eliminarCliente,
-    loginCliente
+    loginCliente,
+    obtenerClientesPendientes,
+    procesarAprobacionCliente
 } from '../controllers/clientesController.js';
 import { verificarToken } from '../middleware/Auth.js';
 import { autorizar } from '../middleware/autorizar.js';
@@ -19,6 +21,8 @@ const router = express.Router();
 // ==============================================
 // Admin y Técnico pueden listar clientes (para ver dueños de motos/órdenes)
 router.get('/obtener', verificarToken, autorizar(1, 2), obtenerClientes);
+router.get('/pendientes', verificarToken, autorizar(1), obtenerClientesPendientes);
+router.put('/aprobacion/:id', verificarToken, autorizar(1), procesarAprobacionCliente);
 router.get('/buscar/:id', verificarToken, autorizar(1, 3), obtenerClientePorId);
 router.post('/login', limiterLogin, validarLogin, loginCliente);
 router.post('/insertar', validarRegistroCliente, crearCliente);  // ← Registro público (desde homepage)
@@ -215,6 +219,66 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCliente);
  *         description: Credenciales inválidas
  *       429:
  *         description: Demasiados intentos de login
+ */
+
+/**
+ * @swagger
+ * /api/clientes/pendientes:
+ *   get:
+ *     summary: Listar clientes pendientes de aprobación (Solo Admin)
+ *     tags: [Clientes]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de clientes pendientes
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tienes permisos
+ */
+
+/**
+ * @swagger
+ * /api/clientes/aprobacion/{id}:
+ *   put:
+ *     summary: Aprobar o rechazar un cliente (Solo Admin)
+ *     tags: [Clientes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del cliente
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accion
+ *             properties:
+ *               accion:
+ *                 type: string
+ *                 enum: [Aprobar, Rechazar]
+ *               justificacion:
+ *                 type: string
+ *                 description: Requerido si la acción es Rechazar
+ *     responses:
+ *       200:
+ *         description: Cliente procesado y notificado
+ *       400:
+ *         description: Acción inválida o justificación faltante
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tienes permisos
+ *       404:
+ *         description: Cliente no encontrado
  */
 
 export default router;

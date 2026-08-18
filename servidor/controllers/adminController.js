@@ -14,6 +14,7 @@ const mapToUsuario = (a) => {
     if (a.telefono !== undefined) obj.telefono = a.telefono;
 
     obj.id_rol = 1; // Rol de Administrador
+    obj.estado = 'Activo';
     return obj;
 };
 

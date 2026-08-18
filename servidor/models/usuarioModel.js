@@ -64,15 +64,15 @@ const Usuario = {
 
   // Crear nuevo usuario — RFN-001: bcrypt con 10 rounds mínimo
   create: async (data) => {
-    const { id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono } = data;
+    const { id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono, estado } = data;
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     
     const [result] = await pool.query(
       `INSERT INTO usuarios
-       (id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, passwordHash, correo, telefono]
+       (id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'Activo'))`,
+      [id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, passwordHash, correo, telefono, estado]
     );
     return result;
   },

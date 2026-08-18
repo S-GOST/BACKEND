@@ -44,9 +44,9 @@ describe('crearCliente', () => {
   describe('Creación exitosa', () => {
     test('Debe devolver el cliente creado correctamente', async () => {
       const bodyMock = { nombre: 'Juan Pérez', numero_documento: '12345678', correo: 'juan@test.com' };
-      // mapToUsuario es interna, retornará automáticamente: { ...bodyMock, id_rol: 3 }
-      const payloadEsperado = { ...bodyMock, id_rol: 3 };
-      const nuevoClienteMock = { id_usuario: 1, nombre: 'Juan Pérez', numero_documento: '12345678', id_rol: 3 };
+      // mapToUsuario es interna, retornará automáticamente: { ...bodyMock, id_rol: 3, estado: 'Pendiente' }
+      const payloadEsperado = { ...bodyMock, id_rol: 3, estado: 'Pendiente' };
+      const nuevoClienteMock = { id_usuario: 1, nombre: 'Juan Pérez', numero_documento: '12345678', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.create.mockResolvedValue();
       Usuario.findByPk.mockResolvedValue(nuevoClienteMock);
@@ -66,8 +66,8 @@ describe('crearCliente', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'María López', numero_documento: '87654321' };
-      const payloadEsperado = { ...bodyMock, id_rol: 3 };
-      const nuevoClienteMock = { id_usuario: 2, nombre: 'María López', numero_documento: '87654321', id_rol: 3 };
+      const payloadEsperado = { ...bodyMock, id_rol: 3, estado: 'Pendiente' };
+      const nuevoClienteMock = { id_usuario: 2, nombre: 'María López', numero_documento: '87654321', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.create.mockResolvedValue();
       Usuario.findByPk.mockResolvedValue(nuevoClienteMock);

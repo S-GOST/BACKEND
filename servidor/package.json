@@ -29,7 +29,10 @@
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",
+    "@types/node": "^26.2.0",
     "babel-jest": "^30.4.1",
-    "jest": "^30.4.2"
+    "jest": "^30.4.2",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
   }
 }
