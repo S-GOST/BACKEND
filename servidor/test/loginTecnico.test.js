@@ -1,13 +1,25 @@
-//Importamos el controlador y herramientas que este usa
+// Importamos el controlador y herramientas que este usa
 import { loginTecnico } from "../controllers/tecnicoController";
 import bcrypt from 'bcrypt';
 import Usuario from '../models/usuarioModel.js';
 import { generarTokens, setRefreshTokenCookie } from '../middleware/refreshToken.js';
 
+// Mocks (Jest los hoistea automáticamente al inicio, antes de evaluar los imports)
+jest.mock('../config/db.js', () => ({
+  query: jest.fn().mockResolvedValue([]),
+  getConnection: jest.fn(),
+  end: jest.fn(),
+}));
 
-//Creamos los simulacros esto es clave para remplazar las funciones reales
+jest.mock('../models/historialModel.js', () => ({
+  __esModule: true,
+  default: {
+    logHistorial: jest.fn(),
+    registrarAccion: jest.fn(),
+    // Añade aquí otros métodos si los usa tu controlador o logger
+  },
+}));
 
-//El modelo pero simulado
 jest.mock('../models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
@@ -20,21 +32,16 @@ jest.mock('../models/usuarioModel.js', () => ({
   },
 }));
 
-//La encriptacion de contraseñas simulada
-
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
-
-//El refres del token simulado
 
 jest.mock('../middleware/refreshToken.js', () => ({
   generarTokens: jest.fn(),
   setRefreshTokenCookie: jest.fn(),
 }));
 
-// Helper para crear mock de response
-
+// Helper para simular la respuesta de Express
 const mockRes = () => {
   const res = {};
   res.status = jest.fn().mockReturnValue(res);
@@ -42,22 +49,18 @@ const mockRes = () => {
   return res;
 };
 
-//Los tests
-
+// Suite de pruebas
 describe('loginTecnico', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => { });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  //Los tests agrupados para mantener el codigo ordenado y legible
-  //Test 1
   describe('Validación de credenciales', () => {
-
     test('Debe devolver 401 si el usuario no existe', async () => {
       Usuario.findOneWithPassword.mockResolvedValue(null);
 
@@ -67,10 +70,7 @@ describe('loginTecnico', () => {
       await loginTecnico(req, res);
 
       expect(Usuario.findOneWithPassword).toHaveBeenCalledWith({
-        where: {
-          id_rol: 2,
-          usuario: 'test'
-        }
+        where: { id_rol: 2, usuario: 'test' }
       });
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
@@ -79,15 +79,8 @@ describe('loginTecnico', () => {
       });
     });
 
-    //Test 2
-
     test('Debe devolver 401 si la contraseña es incorrecta', async () => {
-      const fakeUser = {
-        id_usuario: 1,
-        nombre: 'Test User',
-        password: 'hashedPassword'
-      };
-
+      const fakeUser = { id_usuario: 1, nombre: 'Test User', password: 'hashedPassword' };
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockResolvedValue(false);
 
@@ -104,15 +97,8 @@ describe('loginTecnico', () => {
       });
     });
 
-    //Test 3
-
     test('Debe devolver 200 y los datos del usuario si las credenciales son correctas', async () => {
-      const fakeUser = {
-        id_usuario: 1,
-        nombre: 'Test User',
-        password: 'hashedPassword'
-      };
-
+      const fakeUser = { id_usuario: 1, nombre: 'Test User', password: 'hashedPassword' };
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockResolvedValue(true);
       generarTokens.mockReturnValue({
@@ -126,10 +112,7 @@ describe('loginTecnico', () => {
       await loginTecnico(req, res);
 
       expect(Usuario.findOneWithPassword).toHaveBeenCalledWith({
-        where: {
-          id_rol: 2,
-          usuario: 'test'
-        }
+        where: { id_rol: 2, usuario: 'test' }
       });
       expect(bcrypt.compare).toHaveBeenCalledWith('correctPassword', 'hashedPassword');
       expect(generarTokens).toHaveBeenCalledWith(fakeUser);
@@ -144,12 +127,9 @@ describe('loginTecnico', () => {
     });
   });
 
-  //Test 8
   describe('Manejo de errores', () => {
-
     test('Debe devolver 500 si ocurre un error en la base de datos', async () => {
       Usuario.findOneWithPassword.mockRejectedValue(new Error('Database error'));
-
       const req = { body: { usuario: 'test', contrasena: '1234' } };
       const res = mockRes();
 
@@ -162,15 +142,8 @@ describe('loginTecnico', () => {
       });
     });
 
-    //Test 9
-
     test('Debe devolver 500 si bcrypt falla', async () => {
-      const fakeUser = {
-        id_usuario: 1,
-        nombre: 'Test User',
-        password: 'hashedPassword'
-      };
-
+      const fakeUser = { id_usuario: 1, nombre: 'Test User', password: 'hashedPassword' };
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockRejectedValue(new Error('bcrypt error'));
 
@@ -186,15 +159,8 @@ describe('loginTecnico', () => {
       });
     });
 
-    //Test 10
-
     test('Debe devolver 500 si la generación de tokens falla', async () => {
-      const fakeUser = {
-        id_usuario: 1,
-        nombre: 'Test User',
-        password: 'hashedPassword'
-      };
-
+      const fakeUser = { id_usuario: 1, nombre: 'Test User', password: 'hashedPassword' };
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockResolvedValue(true);
       generarTokens.mockImplementation(() => {
