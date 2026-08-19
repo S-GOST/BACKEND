@@ -18,6 +18,7 @@ servidor/.env
 .idea/
 Thumbs.db
 .DS_Store
+tsconfig.json
 
 # =====================================================================
 # LOGS Y ERRORES
