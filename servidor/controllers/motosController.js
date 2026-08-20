@@ -46,12 +46,18 @@ export const crearMoto = async (req, res) => {
         const idCliente = req.body.id_cliente || req.body.ID_CLIENTES || req.body.ID_CLIENTE;
         if (idCliente) {
             const cliente = await Usuario.findByPk(idCliente);
-            if (!cliente || cliente.id_rol !== 3 || cliente.estado !== 'Activo') {
+            // Remap: findByPk busca por numero_documento, pero la FK en motos apunta a id_usuario
+            if (cliente && cliente.id_usuario) {
+                req.body.id_cliente = cliente.id_usuario;
+                req.body.ID_CLIENTES = cliente.id_usuario;
+            }
+            if (!cliente || cliente.id_rol !== 3 || cliente.estado !== 'Activo' && cliente.estado !== 'Pendiente') {
                 return res.status(400).json({ success: false, message: 'El cliente asociado no existe o no está activo' });
             }
         }
 
-        const nuevaMoto = await Moto.create(req.body);
+        
+          const nuevaMoto = await Moto.create(req.body);
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -140,3 +146,5 @@ export const eliminarMoto = async (req, res) => {
         });
     }
 };
+
+
