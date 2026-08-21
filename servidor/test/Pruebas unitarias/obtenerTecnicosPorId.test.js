@@ -1,9 +1,9 @@
 // test/obtenerTecPorId.test.js
 
-const { obtenerTecPorId } = require('../controllers/tecnicoController.js');
+const { obtenerTecPorId } = require('@controllers/tecnicoController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
@@ -15,12 +15,12 @@ jest.mock('../models/usuarioModel.js', () => ({
   },
 }));
 
-jest.mock('../utils/historyLogger.js', () => ({
+jest.mock('@utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
 // Referencia al modelo simulado
-const Usuario = require('../models/usuarioModel.js').default;
+const Usuario = require('@models/usuarioModel.js').default;
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -33,7 +33,7 @@ const mockRes = () => {
 describe('obtenerTecPorId', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {

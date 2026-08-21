@@ -1,14 +1,14 @@
 //Importamos el controlador y herramientas que este usa
-import { loginCliente } from "../controllers/clientesController";
+import { loginCliente } from "@controllers/clientesController.js";
 import bcrypt from 'bcrypt';
-import Usuario from '../models/usuarioModel.js';
-import { generarTokens, setRefreshTokenCookie } from '../middleware/refreshToken.js';
+import Usuario from '@models/usuarioModel.js';
+import { generarTokens, setRefreshTokenCookie } from '@middleware/refreshToken.js';
 
 
 //Creamos los simulacros esto es clave para remplazar las funciones reales
 
 //El modelo pero simulado
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findOneWithPassword: jest.fn(),
@@ -28,14 +28,14 @@ jest.mock('bcrypt', () => ({
 
 //El refres del token simulado
 
-jest.mock('../middleware/refreshToken.js', () => ({
+jest.mock('@middleware/refreshToken.js', () => ({
   generarTokens: jest.fn(),
   setRefreshTokenCookie: jest.fn(),
 }));
 
 //El registro en el historial simulado
 
-jest.mock('../utils/historyLogger.js', () => ({
+jest.mock('@utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 

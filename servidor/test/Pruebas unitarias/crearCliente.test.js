@@ -1,9 +1,9 @@
 // test/crearCliente.test.js
 
-const { crearCliente } = require('../controllers/clientesController.js');
+const { crearCliente } = require('@controllers/clientesController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
@@ -15,13 +15,13 @@ jest.mock('../models/usuarioModel.js', () => ({
   },
 }));
 
-jest.mock('../utils/historyLogger.js', () => ({
+jest.mock('@utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
 // Referencias a los módulos simulados
-const Usuario = require('../models/usuarioModel.js').default;
-const { logHistory } = require('../utils/historyLogger.js');
+const Usuario = require('@models/usuarioModel.js').default;
+const { logHistory } = require('@utils/historyLogger.js');
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -34,7 +34,7 @@ const mockRes = () => {
 describe('crearCliente', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {

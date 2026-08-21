@@ -1,17 +1,17 @@
 // Importamos el controlador y herramientas que este usa
 import { loginTecnico } from "../controllers/tecnicoController";
 import bcrypt from 'bcrypt';
-import Usuario from '../models/usuarioModel.js';
-import { generarTokens, setRefreshTokenCookie } from '../middleware/refreshToken.js';
+import Usuario from '@models/usuarioModel.js';
+import { generarTokens, setRefreshTokenCookie } from '@middleware/refreshToken.js';
 
 // Mocks (Jest los hoistea automáticamente al inicio, antes de evaluar los imports)
-jest.mock('../config/db.js', () => ({
+jest.mock('@config/db.js', () => ({
   query: jest.fn().mockResolvedValue([]),
   getConnection: jest.fn(),
   end: jest.fn(),
 }));
 
-jest.mock('../models/historialModel.js', () => ({
+jest.mock('@models/historialModel.js', () => ({
   __esModule: true,
   default: {
     logHistorial: jest.fn(),
@@ -20,7 +20,7 @@ jest.mock('../models/historialModel.js', () => ({
   },
 }));
 
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findOneWithPassword: jest.fn(),
@@ -36,7 +36,7 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-jest.mock('../middleware/refreshToken.js', () => ({
+jest.mock('@middleware/refreshToken.js', () => ({
   generarTokens: jest.fn(),
   setRefreshTokenCookie: jest.fn(),
 }));
@@ -53,7 +53,7 @@ const mockRes = () => {
 describe('loginTecnico', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {

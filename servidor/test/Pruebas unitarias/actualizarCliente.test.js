@@ -1,9 +1,9 @@
-// test/actualizarCliente.test.js
+// test/Pruebas unitarias/actualizarCliente.test.js
 
-const { actualizarCliente } = require('../controllers/clientesController.js');
+const { actualizarCliente } = require('@controllers/clientesController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
@@ -15,13 +15,13 @@ jest.mock('../models/usuarioModel.js', () => ({
   },
 }));
 
-jest.mock('../utils/historyLogger.js', () => ({
+jest.mock('@utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
 // Referencias a los módulos simulados
-const Usuario = require('../models/usuarioModel.js').default;
-const { logHistory } = require('../utils/historyLogger.js');
+const Usuario = require('@models/usuarioModel.js').default;
+const { logHistory } = require('@utils/historyLogger.js');
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -34,7 +34,7 @@ const mockRes = () => {
 describe('actualizarCliente', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -45,7 +45,7 @@ describe('actualizarCliente', () => {
     test('Debe actualizar y devolver el cliente correctamente (ID desde params)', async () => {
       const reqBody = { nombre: 'Juan Actualizado', correo: 'nuevo@test.com' };
       const reqParams = { id: '12345678' };
-      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' }; // mapToUsuario interna
+      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' };
       const userActualizadoMock = { id_usuario: 1, ...reqBody, numero_documento: '12345678', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.update.mockResolvedValue();

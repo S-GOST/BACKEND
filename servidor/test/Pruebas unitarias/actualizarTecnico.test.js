@@ -1,9 +1,9 @@
 // test/actualizarTec.test.js
 
-const { actualizarTec } = require('../controllers/tecnicoController.js');
+const { actualizarTec } = require('@controllers/tecnicoController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('../models/usuarioModel.js', () => ({
+jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
@@ -15,13 +15,13 @@ jest.mock('../models/usuarioModel.js', () => ({
   },
 }));
 
-jest.mock('../utils/historyLogger.js', () => ({
+jest.mock('@utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
 // Referencias a los módulos simulados
-const Usuario = require('../models/usuarioModel.js').default;
-const { logHistory } = require('../utils/historyLogger.js');
+const Usuario = require('@models/usuarioModel.js').default;
+const { logHistory } = require('@utils/historyLogger.js');
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -34,7 +34,7 @@ const mockRes = () => {
 describe('actualizarTec', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -89,10 +89,10 @@ describe('actualizarTec', () => {
     test('Debe devolver 404 si el usuario no existe o no es técnico después de actualizar', async () => {
       const id = '99';
       const bodyMock = { nombre: 'Prueba', numero_documento: '99999999' };
-      
+
       Usuario.update.mockResolvedValue();
       // Simula que el rol cambió o el usuario no existe
-      Usuario.findByPk.mockResolvedValue({ id_usuario: 99, id_rol: 3 }); 
+      Usuario.findByPk.mockResolvedValue({ id_usuario: 99, id_rol: 3 });
 
       const req = { params: { id }, body: bodyMock };
       const res = mockRes();
