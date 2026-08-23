@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "jest",
+    "test:coverage": "jest --coverage --testResultsProcessor jest-sonar-reporter",
     "start": "node server.js"
   },
   "keywords": [],
@@ -35,6 +36,7 @@
     "babel-jest": "^30.4.1",
     "cypress": "^15.21.0",
     "jest": "^30.4.2",
+    "jest-sonar-reporter": "^2.0.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   },

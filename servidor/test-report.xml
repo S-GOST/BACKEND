@@ -1,0 +1,578 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testExecutions version="1">
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarAdmin.test.js">
+    <testCase name="actualizarAdmin Actualización exitosa Debe actualizar administrador y devolver los datos actualizados" duration="12"/>
+    <testCase name="actualizarAdmin Actualización exitosa Debe buscar por id si numero_documento no está en el body" duration="0"/>
+    <testCase name="actualizarAdmin Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="actualizarAdmin Casos no encontrados (404) Debe devolver 404 si el admin no se encuentra después de actualizar" duration="0"/>
+    <testCase name="actualizarAdmin Casos no encontrados (404) Debe devolver 404 si el usuario encontrado no es admin (id_rol !== 1)" duration="0"/>
+    <testCase name="actualizarAdmin Manejo de duplicados (ER_DUP_ENTRY) Debe devolver 400 si el documento o correo ya está registrado" duration="1"/>
+    <testCase name="actualizarAdmin Manejo de errores Debe devolver 500 si falla la actualización" duration="0"/>
+    <testCase name="actualizarAdmin Manejo de errores Debe devolver 500 si falla la búsqueda después de actualizar" duration="1"/>
+    <testCase name="actualizarAdmin Manejo de errores Debe devolver 500 si falla logHistory" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearOrden.test.js">
+    <testCase name="crearOrden Validación de autenticación Debe devolver 401 si req.admin no está presente" duration="6"/>
+    <testCase name="crearOrden Obtención de cliente desde token Caso 1: Debe obtener cliente desde tokenData.id_usuario" duration="2"/>
+    <testCase name="crearOrden Obtención de cliente desde token Caso 2: Debe obtener cliente desde tokenData.numero_documento" duration="0"/>
+    <testCase name="crearOrden Obtención de cliente desde token Caso 3: Debe obtener cliente desde tokenData.id (login de clientes)" duration="1"/>
+    <testCase name="crearOrden Obtención de cliente desde token Debe devolver 401 si el cliente no se encuentra en la BD" duration="1"/>
+    <testCase name="crearOrden Obtención de cliente desde token Debe devolver 400 si el cliente no está activo" duration="0"/>
+    <testCase name="crearOrden Manejo de moto Debe usar id_moto si viene directamente en el body" duration="0"/>
+    <testCase name="crearOrden Manejo de moto Debe insertar moto nueva si viene objeto moto con placa" duration="0"/>
+    <testCase name="crearOrden Manejo de moto Debe buscar última moto del cliente si no se especifica" duration="0"/>
+    <testCase name="crearOrden Manejo de moto Debe devolver 400 si no hay motos asociadas al cliente" duration="0"/>
+    <testCase name="crearOrden Creación exitosa con detalles Debe crear orden con servicios y productos correctamente" duration="1"/>
+    <testCase name="crearOrden Creación exitosa con detalles Debe descontar stock cuando se agregan productos" duration="0"/>
+    <testCase name="crearOrden Creación exitosa con detalles Debe devolver 400 si el stock es insuficiente" duration="1"/>
+    <testCase name="crearOrden Manejo de errores Debe hacer rollback y devolver 500 si falla alguna consulta" duration="0"/>
+    <testCase name="crearOrden Manejo de errores Debe hacer rollback si falla el commit" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\generarComprobanteDesdeInforme.test.js">
+    <testCase name="generarComprobanteDesdeInforme Generación exitosa Debe generar comprobante exitosamente con todos los datos" duration="29"/>
+    <testCase name="generarComprobanteDesdeInforme Generación exitosa Debe usar &quot;Efectivo&quot; como metodo_pago por defecto si no se proporciona" duration="2"/>
+    <testCase name="generarComprobanteDesdeInforme Generación exitosa Debe usar req.admin si req.user no está presente" duration="12"/>
+    <testCase name="generarComprobanteDesdeInforme Generación exitosa Debe usar 1 como fallback si ni req.user ni req.admin están presentes" duration="1"/>
+    <testCase name="generarComprobanteDesdeInforme Generación exitosa Debe manejar correctamente cuando el total es 0" duration="2"/>
+    <testCase name="generarComprobanteDesdeInforme Casos no encontrados (404) Debe devolver 404 si el informe no existe" duration="1"/>
+    <testCase name="generarComprobanteDesdeInforme Casos no encontrados (404) Debe devolver 404 si la orden asociada no existe" duration="2"/>
+    <testCase name="generarComprobanteDesdeInforme Validaciones de negocio (400) Debe devolver 400 si ya existe un comprobante para esta orden" duration="2"/>
+    <testCase name="generarComprobanteDesdeInforme Manejo de errores Debe devolver 500 si falla alguna consulta" duration="3"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearAdmin.test.js">
+    <testCase name="crearAdmin Creación exitosa Debe crear administrador con id_rol = 1 y estado Activo" duration="2"/>
+    <testCase name="crearAdmin Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearAdmin Creación exitosa Debe ignorar campos adicionales en el body que no estén en mapToUsuario" duration="0"/>
+    <testCase name="crearAdmin Manejo de duplicados (ER_DUP_ENTRY) Debe devolver 400 si el documento ya está registrado" duration="0"/>
+    <testCase name="crearAdmin Manejo de duplicados (ER_DUP_ENTRY) Debe devolver 400 si el correo ya está registrado" duration="1"/>
+    <testCase name="crearAdmin Manejo de errores Debe devolver 500 si falla la creación del usuario" duration="0"/>
+    <testCase name="crearAdmin Manejo de errores Debe devolver 500 si falla la búsqueda del usuario creado" duration="1"/>
+    <testCase name="crearAdmin Manejo de errores Debe devolver 500 si falla logHistory" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarAdmin.test.js">
+    <testCase name="eliminarAdmin Eliminación exitosa (Inhabilitación) Debe inhabilitar al administrador cambiando su estado a Inactivo" duration="3"/>
+    <testCase name="eliminarAdmin Eliminación exitosa (Inhabilitación) Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="eliminarAdmin Eliminación exitosa (Inhabilitación) Debe permitir inhabilitar un admin que ya estaba inactivo" duration="0"/>
+    <testCase name="eliminarAdmin Casos no encontrados (404) Debe devolver 404 si el usuario no existe (null)" duration="1"/>
+    <testCase name="eliminarAdmin Casos no encontrados (404) Debe devolver 404 si el usuario existe pero no es admin (id_rol = 3 - cliente)" duration="0"/>
+    <testCase name="eliminarAdmin Casos no encontrados (404) Debe devolver 404 si el usuario es técnico (id_rol = 2)" duration="1"/>
+    <testCase name="eliminarAdmin Manejo de errores Debe devolver 500 si falla la búsqueda del usuario" duration="1"/>
+    <testCase name="eliminarAdmin Manejo de errores Debe devolver 500 si falla la actualización del estado" duration="0"/>
+    <testCase name="eliminarAdmin Manejo de errores Debe devolver 500 si falla logHistory" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearDetalleOrden.test.js">
+    <testCase name="crearDetalleOrden Creación exitosa con servicio Debe crear detalle con precio tomado del catálogo de servicios" duration="6"/>
+    <testCase name="crearDetalleOrden Creación exitosa con servicio Debe usar precio 0 si el servicio no tiene Precio definido" duration="2"/>
+    <testCase name="crearDetalleOrden Creación exitosa con producto Debe crear detalle con precio tomado del catálogo y descontar stock" duration="1"/>
+    <testCase name="crearDetalleOrden Validación de stock (RN-008) Debe devolver 400 si el stock es insuficiente" duration="1"/>
+    <testCase name="crearDetalleOrden Validación de stock (RN-008) Debe permitir la compra si el stock es exactamente igual a la cantidad" duration="4"/>
+    <testCase name="crearDetalleOrden Saneamiento de campos Debe convertir ID_SERVICIOS vacío a null" duration="1"/>
+    <testCase name="crearDetalleOrden Saneamiento de campos Debe convertir ID_PRODUCTOS vacío a null" duration="3"/>
+    <testCase name="crearDetalleOrden Saneamiento de campos Debe usar Garantia = 0 si no viene en el body" duration="1"/>
+    <testCase name="crearDetalleOrden Fallbacks Debe usar cantidad = 1 si no se proporciona" duration="0"/>
+    <testCase name="crearDetalleOrden Fallbacks Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearDetalleOrden Fallbacks Debe usar &quot;N/A&quot; si no hay ID de orden en el body" duration="0"/>
+    <testCase name="crearDetalleOrden Fallbacks Debe usar insertId si id_detalle no está presente en la respuesta" duration="1"/>
+    <testCase name="crearDetalleOrden Fallbacks Debe usar 0 como último fallback del ID en logHistory" duration="0"/>
+    <testCase name="crearDetalleOrden Manejo de errores Debe devolver 500 si falla la búsqueda del servicio" duration="2"/>
+    <testCase name="crearDetalleOrden Manejo de errores Debe devolver 500 si falla la búsqueda del producto" duration="2"/>
+    <testCase name="crearDetalleOrden Manejo de errores Debe devolver 500 si falla la creación del detalle" duration="1"/>
+    <testCase name="crearDetalleOrden Manejo de errores Debe devolver 500 si falla el descuento de stock" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarOrden.test.js">
+    <testCase name="eliminarOrden Validación de entrada Debe devolver 400 si no se proporciona ID" duration="2"/>
+    <testCase name="eliminarOrden Búsqueda de orden Debe encontrar la orden usando ID_ORDEN_SERVICIO" duration="1"/>
+    <testCase name="eliminarOrden Búsqueda de orden Debe usar fallback a id_orden si ID_ORDEN_SERVICIO no encuentra" duration="1"/>
+    <testCase name="eliminarOrden Casos no encontrados (404) Debe devolver 404 si la orden no existe en ninguna columna" duration="0"/>
+    <testCase name="eliminarOrden Eliminación exitosa Debe eliminar detalles y orden correctamente con req.user presente" duration="0"/>
+    <testCase name="eliminarOrden Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="eliminarOrden Manejo de errores Debe devolver 500 si falla la primera consulta SELECT" duration="1"/>
+    <testCase name="eliminarOrden Manejo de errores Debe devolver 500 si falla la eliminación de detalles" duration="0"/>
+    <testCase name="eliminarOrden Manejo de errores Debe devolver 500 si falla la eliminación de la orden" duration="1"/>
+    <testCase name="eliminarOrden Manejo de errores Debe devolver 500 si falla logHistory" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\pagarComprobante.test.js">
+    <testCase name="pagarComprobante Pago exitoso Debe pagar el comprobante y registrar el historial correctamente" duration="2"/>
+    <testCase name="pagarComprobante Pago exitoso Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="pagarComprobante Casos no encontrados (404) Debe devolver 404 si el comprobante no existe" duration="1"/>
+    <testCase name="pagarComprobante Casos no encontrados (404) Debe devolver 404 si el resultado del SELECT es null" duration="0"/>
+    <testCase name="pagarComprobante Validaciones de estado (400) Debe devolver 400 si el comprobante ya fue pagado" duration="1"/>
+    <testCase name="pagarComprobante Validaciones de estado (400) Debe devolver 400 si el comprobante está cancelado" duration="0"/>
+    <testCase name="pagarComprobante Manejo de errores Debe devolver 500 si falla la consulta SELECT" duration="0"/>
+    <testCase name="pagarComprobante Manejo de errores Debe devolver 500 si falla la consulta UPDATE" duration="1"/>
+    <testCase name="pagarComprobante Manejo de errores Debe devolver 500 si falla logHistory" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\loginAdmin.test.js">
+    <testCase name="loginAdmin Login exitoso Debe devolver 200, accessToken y datos del admin con credenciales válidas" duration="17"/>
+    <testCase name="loginAdmin Login exitoso Debe setear cookie httpOnly con refreshToken" duration="1"/>
+    <testCase name="loginAdmin Credenciales inválidas (401) Debe devolver 401 si el usuario no existe" duration="1"/>
+    <testCase name="loginAdmin Credenciales inválidas (401) Debe devolver 401 si la contraseña es incorrecta" duration="1"/>
+    <testCase name="loginAdmin Credenciales inválidas (401) No debe filtrar usuarios que no sean admin (id_rol !== 1)" duration="0"/>
+    <testCase name="loginAdmin Manejo de errores Debe devolver 500 si falla la búsqueda del usuario" duration="0"/>
+    <testCase name="loginAdmin Manejo de errores Debe devolver 500 si falla bcrypt.compare" duration="1"/>
+    <testCase name="loginAdmin Manejo de errores Debe devolver 500 si falla generarTokens" duration="0"/>
+    <testCase name="loginAdmin Manejo de errores Debe capturar el error en console.error con el prefijo correcto" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarCategoria.test.js">
+    <testCase name="eliminarCategoria Eliminación exitosa Debe devolver 200 y eliminar correctamente cuando no hay dependencias y force=false" duration="2"/>
+    <testCase name="eliminarCategoria Eliminación exitosa Debe devolver 200 y ejecutar queries en cascada cuando force=true" duration="2"/>
+    <testCase name="eliminarCategoria Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="eliminarCategoria Conflictos de dependencias (409) Debe devolver 409 si hay productos asociados y force=false" duration="1"/>
+    <testCase name="eliminarCategoria Conflictos de dependencias (409) Debe devolver 409 si hay servicios asociados y force=false" duration="0"/>
+    <testCase name="eliminarCategoria Conflictos de dependencias (409) Debe devolver 409 si hay productos y servicios asociados y force=false" duration="0"/>
+    <testCase name="eliminarCategoria Casos no encontrados (404) Debe devolver 404 si la categoría no existe (affectedRows === 0)" duration="0"/>
+    <testCase name="eliminarCategoria Manejo de errores Debe devolver 500 si falla la validación de dependencias" duration="1"/>
+    <testCase name="eliminarCategoria Manejo de errores Debe devolver 500 si falla la eliminación" duration="0"/>
+    <testCase name="eliminarCategoria Manejo de errores Debe devolver 500 si fallan las queries en cascada (force=true)" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarOrden.test.js">
+    <testCase name="actualizarOrden Validación de entrada Debe devolver 400 si no se proporciona ID" duration="6"/>
+    <testCase name="actualizarOrden Casos no encontrados (404) Debe devolver 404 si la orden no existe" duration="2"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 403 si un técnico no asignado intenta cambiar el estado" duration="1"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe permitir al admin cambiar el estado aunque no sea el técnico asignado" duration="0"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe permitir al técnico asignado cambiar el estado" duration="5"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta modificar una orden Completada" duration="1"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta modificar una orden Cancelada" duration="1"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta cambiar a En Proceso desde un estado no Pendiente" duration="0"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta cambiar a En Proceso desde estado distinto a Pendiente" duration="0"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta Completar sin estar En Proceso" duration="1"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe devolver 400 si intenta Cancelar sin observaciones" duration="0"/>
+    <testCase name="actualizarOrden Validaciones de permisos y estados Debe permitir Cancelar si se proporcionan observaciones" duration="2"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe actualizar la orden sin cambiar estado (sin logHistory)" duration="2"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe actualizar garantías de productos si se envía garantia_productos" duration="6"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe actualizar garantías de servicios si se envía garantia_servicios" duration="8"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe actualizar ambas garantías si se envían ambas" duration="5"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe registrar en logHistory si el estado cambia" duration="5"/>
+    <testCase name="actualizarOrden Actualización exitosa Debe usar &quot;N/A&quot; en logHistory si no hay observaciones" duration="1"/>
+    <testCase name="actualizarOrden Manejo de errores Debe devolver 500 si falla la búsqueda inicial" duration="1"/>
+    <testCase name="actualizarOrden Manejo de errores Debe devolver 500 si falla la actualización" duration="0"/>
+    <testCase name="actualizarOrden Manejo de errores Debe devolver 500 si falla la actualización de garantías" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarInforme.test.js">
+    <testCase name="actualizarInforme Actualización exitosa Debe devolver 200, el informe actualizado y registrar el historial (todos los campos nuevos)" duration="2"/>
+    <testCase name="actualizarInforme Actualización exitosa Debe usar los valores existentes cuando algunos campos faltan en el body" duration="0"/>
+    <testCase name="actualizarInforme Actualización exitosa Debe usar existe.id_tecnico en logHistory si req.user no está presente" duration="1"/>
+    <testCase name="actualizarInforme Casos no encontrados (404) Debe devolver 404 si el informe no existe (primera búsqueda)" duration="0"/>
+    <testCase name="actualizarInforme Manejo de errores Debe devolver 500 si falla la primera búsqueda (findById inicial)" duration="1"/>
+    <testCase name="actualizarInforme Manejo de errores Debe devolver 500 si falla la actualización" duration="1"/>
+    <testCase name="actualizarInforme Manejo de errores Debe devolver 500 si falla la segunda búsqueda (findById después del update)" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\loginCliente.test.js">
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarDetalleOrden.test.js">
+    <testCase name="eliminarDetalleOrden Validación de entrada (400) Debe devolver 400 si no se proporciona ID ni en params ni en body" duration="2"/>
+    <testCase name="eliminarDetalleOrden Eliminación exitosa Debe usar el ID de params si está presente" duration="1"/>
+    <testCase name="eliminarDetalleOrden Eliminación exitosa Debe usar ID_DETALLES_ORDEN_SERVICIO del body como fallback si params.id no existe" duration="0"/>
+    <testCase name="eliminarDetalleOrden Eliminación exitosa Debe priorizar params.id sobre body.ID_DETALLES_ORDEN_SERVICIO" duration="0"/>
+    <testCase name="eliminarDetalleOrden Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="eliminarDetalleOrden Casos no encontrados (404) Debe devolver 404 si affectedRows es 0" duration="1"/>
+    <testCase name="eliminarDetalleOrden Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="1"/>
+    <testCase name="eliminarDetalleOrden Manejo de errores Debe devolver 500 si falla logHistory" duration="1"/>
+    <testCase name="eliminarDetalleOrden Manejo de errores Debe capturar el error en console.error con el prefijo correcto" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerMisOrdenes.test.js">
+    <testCase name="obtenerMisOrdenes Validación de autenticación Debe devolver 401 si req.user no está presente" duration="3"/>
+    <testCase name="obtenerMisOrdenes Validación de autenticación Debe devolver 404 si req.user no tiene id_usuario" duration="15"/>
+    <testCase name="obtenerMisOrdenes Consulta exitosa según rol Debe filtrar por id_tecnico si el usuario es técnico (rol 2)" duration="2"/>
+    <testCase name="obtenerMisOrdenes Consulta exitosa según rol Debe filtrar por id_cliente si el usuario es cliente (rol 3)" duration="0"/>
+    <testCase name="obtenerMisOrdenes Consulta exitosa según rol Debe usar filtro por id_cliente como fallback para roles desconocidos" duration="1"/>
+    <testCase name="obtenerMisOrdenes Consulta exitosa según rol Debe cargar detalles para múltiples órdenes" duration="1"/>
+    <testCase name="obtenerMisOrdenes Manejo de errores Debe devolver 500 si falla la consulta principal" duration="0"/>
+    <testCase name="obtenerMisOrdenes Manejo de errores Debe devolver 500 si falla la carga de detalles" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarDetalleOrden.test.js">
+    <testCase name="actualizarDetalleOrden Validación de entrada (400) Debe devolver 400 si no se proporciona ID ni en params ni en body" duration="9"/>
+    <testCase name="actualizarDetalleOrden Actualización exitosa Debe usar el ID de params si está presente" duration="1"/>
+    <testCase name="actualizarDetalleOrden Actualización exitosa Debe usar ID_DETALLES_ORDEN_SERVICIO del body como fallback si params.id no existe" duration="1"/>
+    <testCase name="actualizarDetalleOrden Actualización exitosa Debe excluir ID_DETALLES_ORDEN_SERVICIO del objeto enviado al update" duration="3"/>
+    <testCase name="actualizarDetalleOrden Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="actualizarDetalleOrden Casos no encontrados (404) Debe devolver 404 si affectedRows es 0" duration="2"/>
+    <testCase name="actualizarDetalleOrden Manejo de errores Debe devolver 500 si falla la actualización en la base de datos" duration="3"/>
+    <testCase name="actualizarDetalleOrden Manejo de errores Debe devolver 500 si falla logHistory" duration="0"/>
+    <testCase name="actualizarDetalleOrden Manejo de errores Debe capturar el error en console.error con el prefijo correcto" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearInforme.test.js">
+    <testCase name="crearInforme Creación exitosa Debe devolver 201, el informe completo y registrar el historial" duration="17"/>
+    <testCase name="crearInforme Validación de campos obligatorios (400) Debe devolver 400 si falta id_orden" duration="1"/>
+    <testCase name="crearInforme Validación de campos obligatorios (400) Debe devolver 400 si falta id_tecnico" duration="0"/>
+    <testCase name="crearInforme Validación de campos obligatorios (400) Debe devolver 400 si faltan ambos campos obligatorios" duration="1"/>
+    <testCase name="crearInforme Manejo de errores Debe devolver 500 si falla la creación del informe" duration="26"/>
+    <testCase name="crearInforme Manejo de errores Debe devolver 500 si falla la búsqueda del informe recién creado" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarInforme.test.js">
+    <testCase name="eliminarInforme Eliminación exitosa Debe devolver 200 y registrar la eliminación con req.user presente" duration="2"/>
+    <testCase name="eliminarInforme Eliminación exitosa Debe usar existe.id_tecnico en logHistory si req.user no está presente" duration="1"/>
+    <testCase name="eliminarInforme Eliminación exitosa Debe usar 1 como último fallback si ni req.user ni existe.id_tecnico están presentes" duration="0"/>
+    <testCase name="eliminarInforme Casos no encontrados (404) Debe devolver 404 si el informe no existe" duration="1"/>
+    <testCase name="eliminarInforme Manejo de errores Debe devolver 500 si falla la búsqueda inicial (findById)" duration="1"/>
+    <testCase name="eliminarInforme Manejo de errores Debe devolver 500 si falla la eliminación (delete)" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerOrdenes.test.js">
+    <testCase name="obtenerOrdenes Consulta exitosa Debe devolver 200 y las órdenes con sus detalles cargados" duration="2"/>
+    <testCase name="obtenerOrdenes Consulta exitosa Debe devolver 200 y órdenes con detalles vacíos si no hay detalles" duration="1"/>
+    <testCase name="obtenerOrdenes Consulta exitosa Debe devolver 200 y arreglo vacío si no hay órdenes" duration="0"/>
+    <testCase name="obtenerOrdenes Manejo de errores Debe devolver 500 si falla findAll" duration="0"/>
+    <testCase name="obtenerOrdenes Manejo de errores Debe devolver 500 si falla la carga de detalles" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\generarReporte.test.js">
+    <testCase name="generarReporte Validación de roles Debe devolver 403 si el usuario es cliente (rol 3)" duration="1"/>
+    <testCase name="generarReporte Validación de roles Debe filtrar por id_tecnico si el usuario es técnico (rol 2)" duration="0"/>
+    <testCase name="generarReporte Validación de roles Debe mostrar todos los informes si el usuario es admin (rol 1)" duration="1"/>
+    <testCase name="generarReporte Validación de roles Debe usar req.admin si req.user no está presente" duration="0"/>
+    <testCase name="generarReporte Casos sin datos (404) Debe devolver 404 si no hay informes en el rango de fechas" duration="0"/>
+    <testCase name="generarReporte Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarMoto.test.js">
+    <testCase name="actualizarMoto Actualización exitosa Debe devolver 200 y la moto actualizada correctamente" duration="2"/>
+    <testCase name="actualizarMoto Actualización exitosa Debe actualizar solo algunos campos si el body es parcial" duration="1"/>
+    <testCase name="actualizarMoto Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="actualizarMoto Manejo de duplicados (ER_DUP_ENTRY) Debe devolver 400 si la placa ya está registrada por otra moto" duration="1"/>
+    <testCase name="actualizarMoto Manejo de errores Debe devolver 500 si falla la actualización en la base de datos" duration="1"/>
+    <testCase name="actualizarMoto Manejo de errores Debe capturar el error en console.error con el prefijo correcto" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearMoto.test.js">
+    <testCase name="crearMoto Creación exitosa Debe crear moto sin validar cliente si no se proporciona id_cliente" duration="2"/>
+    <testCase name="crearMoto Validación de cliente (400) Debe devolver error si el cliente no existe" duration="2"/>
+    <testCase name="crearMoto Validación de cliente (400) Debe devolver error si el cliente no tiene rol 3" duration="1"/>
+    <testCase name="crearMoto Validación de cliente (400) Debe devolver error si el cliente está inactivo" duration="0"/>
+    <testCase name="crearMoto Manejo de duplicados (ER_DUP_ENTRY) Debe devolver 400 si la placa ya existe" duration="0"/>
+    <testCase name="crearMoto Fallbacks en logHistory Debe usar &quot;Placa&quot; (mayúscula) si &quot;placa&quot; no está presente" duration="0"/>
+    <testCase name="crearMoto Fallbacks en logHistory Debe usar &quot;N/A&quot; si no hay placa en el body" duration="1"/>
+    <testCase name="crearMoto Fallbacks en logHistory Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="crearMoto Manejo de errores Debe devolver 500 si falla la creación de la moto" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarMoto.test.js">
+    <testCase name="eliminarMoto Eliminación exitosa Debe devolver 200 y confirmar la eliminación correctamente con req.user" duration="3"/>
+    <testCase name="eliminarMoto Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="eliminarMoto Eliminación exitosa Debe responder éxito incluso si affectedRows es 0 (ID inexistente)" duration="1"/>
+    <testCase name="eliminarMoto Manejo de integridad referencial (ER_ROW_IS_REFERENCED_2) Debe devolver 400 si la moto tiene órdenes de servicio asociadas" duration="1"/>
+    <testCase name="eliminarMoto Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="1"/>
+    <testCase name="eliminarMoto Manejo de errores Debe devolver 500 si falla logHistory" duration="4"/>
+    <testCase name="eliminarMoto Manejo de errores Debe capturar el error en console.error con el prefijo correcto" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\loginTecnico.test.js">
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearCategoria.test.js">
+    <testCase name="crearCategoria Creación exitosa Debe devolver 201 y registrar la categoría creada" duration="2"/>
+    <testCase name="crearCategoria Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearCategoria Creación exitosa Debe usar &quot;N/A&quot; si el nombre no viene en el body" duration="0"/>
+    <testCase name="crearCategoria Creación exitosa Debe usar 0 como insertId si no está disponible" duration="1"/>
+    <testCase name="crearCategoria Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="1"/>
+    <testCase name="crearCategoria Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarProducto.test.js">
+    <testCase name="actualizarProducto Actualización exitosa Debe devolver 200 y registrar la actualización correctamente" duration="2"/>
+    <testCase name="actualizarProducto Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="actualizarProducto Validación de entrada Debe devolver 400 si el ID no es proporcionado" duration="0"/>
+    <testCase name="actualizarProducto Casos no encontrados (404) Debe devolver 404 si el producto no existe (affectedRows === 0)" duration="1"/>
+    <testCase name="actualizarProducto Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="0"/>
+    <testCase name="actualizarProducto Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearProducto.test.js">
+    <testCase name="crearProducto Creación exitosa Debe devolver 201 y registrar el producto creado" duration="1"/>
+    <testCase name="crearProducto Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearProducto Creación exitosa Debe usar &quot;N/A&quot; si el nombre no viene en el body" duration="0"/>
+    <testCase name="crearProducto Creación exitosa Debe usar 0 como insertId si no está disponible" duration="0"/>
+    <testCase name="crearProducto Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="1"/>
+    <testCase name="crearProducto Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerMisInformes.test.js">
+    <testCase name="obtenerMisInformes Validación de autenticación Debe devolver 401 si no hay req.user ni req.admin" duration="17"/>
+    <testCase name="obtenerMisInformes Validación de autenticación Debe usar req.admin si req.user no está presente" duration="0"/>
+    <testCase name="obtenerMisInformes Casos no encontrados (404) Debe devolver 404 si el técnico no existe en la base de datos" duration="3"/>
+    <testCase name="obtenerMisInformes Consulta exitosa Debe devolver 200 y los informes del técnico autenticado" duration="2"/>
+    <testCase name="obtenerMisInformes Manejo de errores Debe devolver 500 si falla la primera consulta (búsqueda de usuario)" duration="2"/>
+    <testCase name="obtenerMisInformes Manejo de errores Debe devolver 500 si falla la segunda consulta (búsqueda de informes)" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearServicio.test.js">
+    <testCase name="crearServicio Creación exitosa Debe devolver 200 y registrar el servicio creado" duration="1"/>
+    <testCase name="crearServicio Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearServicio Creación exitosa Debe usar &quot;N/A&quot; si el nombre no viene en el body" duration="0"/>
+    <testCase name="crearServicio Creación exitosa Debe usar 0 como insertId si no está disponible" duration="0"/>
+    <testCase name="crearServicio Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="1"/>
+    <testCase name="crearServicio Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerAdminPorId.test.js">
+    <testCase name="obtenerAdminPorId Consulta exitosa Debe devolver 200 y el administrador si existe con id_rol = 1" duration="1"/>
+    <testCase name="obtenerAdminPorId Casos no encontrados (404) Debe devolver 404 si el usuario no existe (null)" duration="0"/>
+    <testCase name="obtenerAdminPorId Casos no encontrados (404) Debe devolver 404 si el usuario existe pero no es administrador (id_rol !== 1)" duration="1"/>
+    <testCase name="obtenerAdminPorId Casos no encontrados (404) Debe devolver 404 si el usuario es técnico (id_rol = 2)" duration="0"/>
+    <testCase name="obtenerAdminPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+    <testCase name="obtenerAdminPorId Manejo de errores Debe manejar correctamente el mensaje del error recibido" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarServicio.test.js">
+    <testCase name="actualizarServicio Actualización exitosa Debe devolver 200 y registrar la actualización correctamente" duration="2"/>
+    <testCase name="actualizarServicio Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="actualizarServicio Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="0"/>
+    <testCase name="actualizarServicio Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarCategoria.test.js">
+    <testCase name="actualizarCategoria Actualización exitosa Debe devolver 200 y registrar la actualización correctamente" duration="1"/>
+    <testCase name="actualizarCategoria Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="actualizarCategoria Casos no encontrados (404) Debe devolver 404 si la categoría no existe (affectedRows === 0)" duration="0"/>
+    <testCase name="actualizarCategoria Manejo de errores Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)" duration="1"/>
+    <testCase name="actualizarCategoria Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerDetallesPorId.test.js">
+    <testCase name="obtenerDetallesPorId Validación de entrada (400) Debe devolver 400 si no se proporciona idOrden ni id" duration="2"/>
+    <testCase name="obtenerDetallesPorId Consulta exitosa Debe usar idOrden si está presente en req.params" duration="1"/>
+    <testCase name="obtenerDetallesPorId Consulta exitosa Debe usar id como fallback si idOrden no está presente" duration="1"/>
+    <testCase name="obtenerDetallesPorId Consulta exitosa Debe priorizar idOrden sobre id si ambos están presentes" duration="0"/>
+    <testCase name="obtenerDetallesPorId Consulta exitosa Debe devolver 200 y array vacío si no hay detalles para la orden" duration="1"/>
+    <testCase name="obtenerDetallesPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarHistorial.test.js">
+    <testCase name="actualizarHistorial Actualización exitosa Debe devolver 200 y el registro de historial actualizado" duration="1"/>
+    <testCase name="actualizarHistorial Actualización exitosa Debe manejar correctamente cuando el body tiene solo algunos campos" duration="0"/>
+    <testCase name="actualizarHistorial Manejo de errores Debe devolver 500 si falla la actualización en la base de datos" duration="1"/>
+    <testCase name="actualizarHistorial Manejo de errores Debe devolver 500 si hay error de validación de base de datos" duration="0"/>
+    <testCase name="actualizarHistorial Manejo de errores Debe capturar el error en console.error" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearComprobante.test.js">
+    <testCase name="crearComprobante Creación exitosa Debe devolver 200 y registrar el comprobante creado" duration="1"/>
+    <testCase name="crearComprobante Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="crearComprobante Creación exitosa Debe usar 0 como insertId si no está disponible" duration="1"/>
+    <testCase name="crearComprobante Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\habilitarServicio.test.js">
+    <testCase name="habilitarServicio Habilitación exitosa Debe devolver 200 y registrar la habilitación correctamente" duration="2"/>
+    <testCase name="habilitarServicio Habilitación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="habilitarServicio Casos no encontrados (404) Debe devolver 404 si el servicio no existe (affectedRows === 0)" duration="1"/>
+    <testCase name="habilitarServicio Manejo de errores Debe devolver 500 si falla la restauración en la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\habilitarProducto.test.js">
+    <testCase name="habilitarProducto Habilitación exitosa Debe devolver 200 y registrar la habilitación correctamente" duration="2"/>
+    <testCase name="habilitarProducto Habilitación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="habilitarProducto Casos no encontrados (404) Debe devolver 404 si el producto no existe (affectedRows === 0)" duration="1"/>
+    <testCase name="habilitarProducto Manejo de errores Debe devolver 500 si falla la restauración en la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\habilitarCategoria.test.js">
+    <testCase name="habilitarCategoria Habilitación exitosa Debe devolver 200 y ejecutar queries en cascada para reactivar dependencias" duration="2"/>
+    <testCase name="habilitarCategoria Casos no encontrados (404) Debe devolver 404 si la categoría no existe (affectedRows === 0)" duration="0"/>
+    <testCase name="habilitarCategoria Manejo de errores Debe devolver 500 si falla la restauración de la categoría" duration="1"/>
+    <testCase name="habilitarCategoria Manejo de errores Debe devolver 500 si fallan las queries en cascada" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerDetalleOrdenPorId.test.js">
+    <testCase name="obtenerDetalleOrdenPorId Consulta exitosa Debe devolver 200 y el detalle si existe" duration="1"/>
+    <testCase name="obtenerDetalleOrdenPorId Consulta exitosa Debe devolver 200 y el detalle como objeto si el modelo retorna un objeto" duration="0"/>
+    <testCase name="obtenerDetalleOrdenPorId Casos no encontrados (404) Debe devolver 404 si el detalle es null" duration="0"/>
+    <testCase name="obtenerDetalleOrdenPorId Casos no encontrados (404) Debe devolver 404 si el detalle es un array vacío" duration="0"/>
+    <testCase name="obtenerDetalleOrdenPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarTecnico.test.js">
+    <testCase name="actualizarTec Actualización exitosa Debe devolver el técnico actualizado correctamente" duration="1"/>
+    <testCase name="actualizarTec Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="actualizarTec Manejo de errores Debe devolver 404 si el usuario no existe o no es técnico después de actualizar" duration="2"/>
+    <testCase name="actualizarTec Manejo de errores Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)" duration="0"/>
+    <testCase name="actualizarTec Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerMiHistorial.test.js">
+    <testCase name="obtenerMiHistorial Validación de autenticación (401) Debe devolver 401 si req.user no está presente" duration="2"/>
+    <testCase name="obtenerMiHistorial Validación de autenticación (401) Debe devolver 401 si req.user existe pero no tiene id_usuario" duration="0"/>
+    <testCase name="obtenerMiHistorial Consulta exitosa Debe devolver 200 y el historial del usuario autenticado" duration="1"/>
+    <testCase name="obtenerMiHistorial Consulta exitosa Debe devolver 200 y un arreglo vacío si el usuario no tiene registros" duration="0"/>
+    <testCase name="obtenerMiHistorial Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarTecnico.test.js">
+    <testCase name="eliminarTec Inhabilitación exitosa Debe devolver 200 y marcar el técnico como inactivo correctamente" duration="2"/>
+    <testCase name="eliminarTec Inhabilitación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="eliminarTec Manejo de errores Debe devolver 404 si el usuario no existe" duration="0"/>
+    <testCase name="eliminarTec Manejo de errores Debe devolver 404 si el usuario existe pero no es técnico (id_rol !== 2)" duration="0"/>
+    <testCase name="eliminarTec Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearTecnico.test.js">
+    <testCase name="crearTec Creación exitosa Debe devolver el técnico creado correctamente" duration="1"/>
+    <testCase name="crearTec Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearTec Manejo de errores Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)" duration="0"/>
+    <testCase name="crearTec Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerAdmins.test.js">
+    <testCase name="obtenerAdmins Consulta exitosa Debe devolver 200 y la lista de administradores" duration="1"/>
+    <testCase name="obtenerAdmins Consulta exitosa Debe devolver 200 y arreglo vacío si no hay administradores" duration="0"/>
+    <testCase name="obtenerAdmins Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+    <testCase name="obtenerAdmins Manejo de errores Debe manejar correctamente el mensaje del error recibido" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarHistorial.test.js">
+    <testCase name="eliminarHistorial Eliminación exitosa Debe devolver 200 y confirmar la eliminación correctamente" duration="5"/>
+    <testCase name="eliminarHistorial Eliminación exitosa Debe ejecutarse sin error incluso si affectedRows es 0 (ID inexistente)" duration="1"/>
+    <testCase name="eliminarHistorial Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="8"/>
+    <testCase name="eliminarHistorial Manejo de errores Debe capturar el error en console.error con el mensaje correcto" duration="0"/>
+    <testCase name="eliminarHistorial Manejo de errores Debe devolver 500 si hay error de integridad referencial" duration="2"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerTipoDocumentoPorId.test.js">
+    <testCase name="obtenerTipoDocumentoPorId Consulta exitosa Debe devolver 200 y el tipo de documento si existe" duration="6"/>
+    <testCase name="obtenerTipoDocumentoPorId Casos no encontrados (404) Debe devolver 404 si el tipo de documento no existe (null)" duration="1"/>
+    <testCase name="obtenerTipoDocumentoPorId Casos no encontrados (404) Debe devolver 404 si el tipo de documento no existe (undefined)" duration="4"/>
+    <testCase name="obtenerTipoDocumentoPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+    <testCase name="obtenerTipoDocumentoPorId Manejo de errores Debe manejar correctamente el mensaje del error recibido" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarComprobante.test.js">
+    <testCase name="actualizarComprobante Actualización exitosa Debe devolver 200 y registrar la actualización correctamente" duration="1"/>
+    <testCase name="actualizarComprobante Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="actualizarComprobante Manejo de errores Debe devolver 500 si falla la actualización en la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearHistorial.test.js">
+    <testCase name="crearHistorial Creación exitosa Debe devolver 200 y el registro de historial creado" duration="1"/>
+    <testCase name="crearHistorial Creación exitosa Debe manejar correctamente cuando el modelo retorna solo insertId" duration="1"/>
+    <testCase name="crearHistorial Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+    <testCase name="crearHistorial Manejo de errores Debe devolver 500 si hay error de validación de base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarComprobante.test.js">
+    <testCase name="eliminarComprobante Eliminación exitosa Debe devolver 200 y registrar la eliminación correctamente" duration="2"/>
+    <testCase name="eliminarComprobante Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="eliminarComprobante Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarServicio.test.js">
+    <testCase name="eliminarServicio Eliminación exitosa Debe devolver 200 y registrar la eliminación correctamente" duration="1"/>
+    <testCase name="eliminarServicio Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="2"/>
+    <testCase name="eliminarServicio Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarProducto.test.js">
+    <testCase name="eliminarProducto Eliminación exitosa Debe devolver 200 y registrar la eliminación correctamente" duration="1"/>
+    <testCase name="eliminarProducto Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="eliminarProducto Manejo de errores Debe devolver 500 si falla la eliminación en la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerTiposDocumento.test.js">
+    <testCase name="obtenerTiposDocumento Consulta exitosa Debe devolver 200 y la lista de tipos de documento" duration="1"/>
+    <testCase name="obtenerTiposDocumento Consulta exitosa Debe devolver 200 y arreglo vacío si no hay tipos de documento" duration="0"/>
+    <testCase name="obtenerTiposDocumento Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+    <testCase name="obtenerTiposDocumento Manejo de errores Debe manejar correctamente el mensaje del error recibido" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerTecnicosPorId.test.js">
+    <testCase name="obtenerTecPorId Consulta exitosa Debe devolver 200 y los datos del técnico si existe y es técnico (id_rol=2)" duration="1"/>
+    <testCase name="obtenerTecPorId Casos no encontrados (404) Debe devolver 404 si el usuario no existe" duration="0"/>
+    <testCase name="obtenerTecPorId Casos no encontrados (404) Debe devolver 404 si el usuario existe pero no es técnico (id_rol !== 2)" duration="1"/>
+    <testCase name="obtenerTecPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerProductosPorCategoria.test.js">
+    <testCase name="obtenerProductosPorCategoria Consulta exitosa Debe devolver 200 y los productos filtrados por categoría" duration="1"/>
+    <testCase name="obtenerProductosPorCategoria Consulta exitosa Debe devolver 200 y un arreglo vacío si no hay productos en esa categoría" duration="1"/>
+    <testCase name="obtenerProductosPorCategoria Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerHistorialPorId.test.js">
+    <testCase name="obtenerHistorialPorId Consulta exitosa Debe devolver 200 y el registro de historial si existe" duration="1"/>
+    <testCase name="obtenerHistorialPorId Casos no encontrados (404) Debe devolver 404 si el registro de historial no existe" duration="1"/>
+    <testCase name="obtenerHistorialPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerOrdenPorId.test.js">
+    <testCase name="obtenerOrdenPorId Consulta exitosa Debe devolver 200 y la orden si existe" duration="1"/>
+    <testCase name="obtenerOrdenPorId Casos no encontrados (404) Debe devolver 404 si la orden no existe" duration="0"/>
+    <testCase name="obtenerOrdenPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerComprobantePorId.test.js">
+    <testCase name="obtenerComprobantePorId Consulta exitosa Debe devolver 200 y el comprobante si existe" duration="2"/>
+    <testCase name="obtenerComprobantePorId Casos no encontrados (404) Debe devolver 404 si el comprobante no existe" duration="0"/>
+    <testCase name="obtenerComprobantePorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerCategoriasPorTipo.test.js">
+    <testCase name="obtenerCategoriasPorTipo Consulta exitosa Debe devolver 200 y las categorías filtradas por tipo" duration="1"/>
+    <testCase name="obtenerCategoriasPorTipo Consulta exitosa Debe devolver 200 y un arreglo vacío si no hay categorías de ese tipo" duration="0"/>
+    <testCase name="obtenerCategoriasPorTipo Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerInformePorId.test.js">
+    <testCase name="obtenerInformePorId Consulta exitosa Debe devolver 200 y el informe si existe" duration="1"/>
+    <testCase name="obtenerInformePorId Casos no encontrados (404) Debe devolver 404 si el informe no existe" duration="0"/>
+    <testCase name="obtenerInformePorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerMotoPorId.test.js">
+    <testCase name="obtenerMotoPorId Consulta exitosa Debe devolver 200 y la moto si existe" duration="1"/>
+    <testCase name="obtenerMotoPorId Casos no encontrados (404) Debe devolver 404 si la moto no existe" duration="1"/>
+    <testCase name="obtenerMotoPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerDetallesOrden.test.js">
+    <testCase name="obtenerDetallesOrden Consulta exitosa Debe devolver 200 y la lista de detalles de orden" duration="2"/>
+    <testCase name="obtenerDetallesOrden Consulta exitosa Debe devolver 200 y arreglo vacío si no hay detalles" duration="0"/>
+    <testCase name="obtenerDetallesOrden Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerProductoPorId.test.js">
+    <testCase name="obtenerProductoPorId Consulta exitosa Debe devolver 200 y el producto si existe" duration="1"/>
+    <testCase name="obtenerProductoPorId Casos no encontrados (404) Debe devolver 404 si el producto no existe" duration="1"/>
+    <testCase name="obtenerProductoPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerCategoriaPorId.test.js">
+    <testCase name="obtenerCategoriaPorId Consulta exitosa Debe devolver 200 y la categoría si existe" duration="1"/>
+    <testCase name="obtenerCategoriaPorId Casos no encontrados (404) Debe devolver 404 si la categoría no existe" duration="0"/>
+    <testCase name="obtenerCategoriaPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerServicioPorId.test.js">
+    <testCase name="obtenerServicioPorId Consulta exitosa Debe devolver 200 y el servicio si existe" duration="1"/>
+    <testCase name="obtenerServicioPorId Casos no encontrados (404) Debe devolver 404 si el servicio no existe" duration="0"/>
+    <testCase name="obtenerServicioPorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerClientePorId.test.js">
+    <testCase name="obtenerClientePorId Consulta exitosa Debe devolver el cliente cuando existe y es rol 3" duration="1"/>
+    <testCase name="obtenerClientePorId Manejo de errores Debe devolver 404 si el usuario no existe" duration="1"/>
+    <testCase name="obtenerClientePorId Manejo de errores Debe devolver 404 si el usuario encontrado no es rol 3" duration="0"/>
+    <testCase name="obtenerClientePorId Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\actualizarCliente.test.js">
+    <testCase name="actualizarCliente Actualización exitosa Debe actualizar y devolver el cliente correctamente (ID desde params)" duration="3"/>
+    <testCase name="actualizarCliente Actualización exitosa Debe usar req.body.numero_documento como ID cuando req.params.id no existe" duration="1"/>
+    <testCase name="actualizarCliente Actualización exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="0"/>
+    <testCase name="actualizarCliente Manejo de errores Debe devolver 400 si no se proporciona un ID válido" duration="31"/>
+    <testCase name="actualizarCliente Manejo de errores Debe devolver 400 si hay duplicado (ER_DUP_ENTRY)" duration="1"/>
+    <testCase name="actualizarCliente Manejo de errores Debe devolver 404 si el cliente no se encuentra o no es rol 3" duration="1"/>
+    <testCase name="actualizarCliente Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="4"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerComprobantes.test.js">
+    <testCase name="obtenerComprobantes Consulta exitosa Debe devolver 200 y la lista de comprobantes" duration="7"/>
+    <testCase name="obtenerComprobantes Consulta exitosa Debe devolver 200 y arreglo vacío si no hay comprobantes" duration="1"/>
+    <testCase name="obtenerComprobantes Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\eliminarCliente.test.js">
+    <testCase name="eliminarCliente Eliminación exitosa Debe eliminar y devolver mensaje de éxito correctamente" duration="7"/>
+    <testCase name="eliminarCliente Eliminación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="eliminarCliente Manejo de errores Debe devolver 400 si no se proporciona un ID válido" duration="2"/>
+    <testCase name="eliminarCliente Manejo de errores Debe devolver 404 si el cliente no se encuentra" duration="1"/>
+    <testCase name="eliminarCliente Manejo de errores Debe devolver 404 si el usuario encontrado no es rol 3" duration="0"/>
+    <testCase name="eliminarCliente Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerHistorial.test.js">
+    <testCase name="obtenerHistorial Consulta exitosa Debe devolver 200 y la lista de historial" duration="1"/>
+    <testCase name="obtenerHistorial Consulta exitosa Debe devolver 200 y arreglo vacío si no hay registros de historial" duration="1"/>
+    <testCase name="obtenerHistorial Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\crearCliente.test.js">
+    <testCase name="crearCliente Creación exitosa Debe devolver el cliente creado correctamente" duration="4"/>
+    <testCase name="crearCliente Creación exitosa Debe usar id_usuario = 1 por defecto si req.user no está presente" duration="1"/>
+    <testCase name="crearCliente Manejo de errores Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)" duration="0"/>
+    <testCase name="crearCliente Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="12"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerProductos.test.js">
+    <testCase name="obtenerProductos Consulta exitosa Debe devolver 200 y la lista de productos" duration="1"/>
+    <testCase name="obtenerProductos Consulta exitosa Debe devolver 200 y arreglo vacío si no hay productos" duration="2"/>
+    <testCase name="obtenerProductos Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerInformes.test.js">
+    <testCase name="obtenerInformes Consulta exitosa Debe devolver 200 y la lista de informes" duration="2"/>
+    <testCase name="obtenerInformes Consulta exitosa Debe devolver 200 y arreglo vacío si no hay informes" duration="1"/>
+    <testCase name="obtenerInformes Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerMotos.test.js">
+    <testCase name="obtenerMotos Consulta exitosa Debe devolver 200 y la lista de motos" duration="1"/>
+    <testCase name="obtenerMotos Consulta exitosa Debe devolver 200 y arreglo vacío si no hay motos" duration="1"/>
+    <testCase name="obtenerMotos Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerServicios.test.js">
+    <testCase name="obtenerServicios Consulta exitosa Debe devolver 200 y la lista de servicios" duration="1"/>
+    <testCase name="obtenerServicios Consulta exitosa Debe devolver 200 y arreglo vacío si no hay servicios" duration="0"/>
+    <testCase name="obtenerServicios Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="1"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerCategorias.test.js">
+    <testCase name="obtenerCategorias Consulta exitosa Debe devolver 200 y la lista de categorías" duration="2"/>
+    <testCase name="obtenerCategorias Consulta exitosa Debe devolver 200 y arreglo vacío si no hay categorías" duration="1"/>
+    <testCase name="obtenerCategorias Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="2"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerTecnicos.test.js">
+    <testCase name="obtenerTec Consulta exitosa Debe devolver 200 y la lista de técnicos (id_rol=2)" duration="2"/>
+    <testCase name="obtenerTec Consulta exitosa Debe devolver 200 y arreglo vacío si no hay técnicos" duration="0"/>
+    <testCase name="obtenerTec Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="4"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\Pruebas unitarias\obtenerClientes.test.js">
+    <testCase name="obtenerClientes Consulta exitosa Debe devolver 200 y la lista de clientes (id_rol=3)" duration="1"/>
+    <testCase name="obtenerClientes Consulta exitosa Debe devolver 200 y arreglo vacío si no hay clientes" duration="1"/>
+    <testCase name="obtenerClientes Manejo de errores Debe devolver 500 si falla la consulta a la base de datos" duration="0"/>
+  </file>
+  <file path="C:\Users\duvan\BACKEND\servidor\test\selenium\login.test.js">
+  </file>
+</testExecutions>
