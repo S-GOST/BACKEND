@@ -16,7 +16,8 @@ const mapToUsuario = (c) => {
   if (c.ciudad !== undefined) obj.ciudad = c.ciudad;
 
   obj.id_rol = 3; // Rol de Cliente
-  obj.estado = 'Pendiente'; // RF-007: Clientes inician pendientes
+  if (c.estado !== undefined) obj.estado = c.estado;
+  else if (!c.id_usuario) obj.estado = 'Pendiente'; // RF-007: Clientes inician pendientes
   return obj;
 };
 
@@ -158,17 +159,17 @@ export const eliminarCliente = async (req, res) => {
     if (!user || user.id_rol !== 3) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
-    await Usuario.delete(id);
+    await Usuario.update(id, { estado: 'Inactivo' });
 
     await logHistory(
       req.user?.id_usuario || 1,
       'usuarios',
       user.id_usuario,
-      'DELETE',
-      `Se eliminó el cliente ${user.nombre}`
+      'UPDATE',
+      `Se inhabilitó el cliente ${user.nombre}`
     );
 
-    res.json({ success: true, message: 'Cliente eliminado' });
+    res.json({ success: true, message: 'Cliente inhabilitado' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

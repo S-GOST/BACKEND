@@ -6,7 +6,9 @@ import {
     crearInforme,
     actualizarInforme,
     eliminarInforme,
-    generarReporte
+    generarReporte,
+    obtenerProductividadTecnicos,
+    obtenerReporteInventario
 } from '../controllers/informeController.js';
 import { verificarToken } from "../middleware/Auth.js";
 import { autorizar } from "../middleware/autorizar.js";
@@ -27,6 +29,14 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarInforme);
 
 // HU-004.1: Generar reporte por periodo (Admin = global, Técnico = solo suyo)
 router.post('/generar-reporte', verificarToken, autorizar(1, 2), validarPeriodoReporte, generarReporte);
+
+// RF-0036: Productividad de Tecnicos
+router.get('/productividad', verificarToken, autorizar(1), obtenerProductividadTecnicos);
+
+// RF-0035: Inventario de Productos y Servicios
+router.get('/inventario', verificarToken, autorizar(1, 2), obtenerReporteInventario);
+
+
 
 // ==============================================
 // Documentación Swagger: Informes 

@@ -12,6 +12,7 @@ const mapToUsuario = (t) => {
     if (t.password !== undefined) obj.password = t.password;
     if (t.correo !== undefined) obj.correo = t.correo;
     if (t.telefono !== undefined) obj.telefono = t.telefono;
+    if (t.estado !== undefined) obj.estado = t.estado;
 
     obj.id_rol = 2; // Rol de Técnico
     return obj;

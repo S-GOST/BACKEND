@@ -7,7 +7,8 @@ import {
     eliminarComprobante,
     generarComprobanteDesdeInforme,
     obtenerMisComprobantes,
-    pagarComprobante
+    pagarComprobante,
+    buscarComprobantesFiltro
 } from '../controllers/comprobanteController.js';
 import { verificarToken } from "../middleware/Auth.js";
 import { autorizar } from "../middleware/autorizar.js";
@@ -29,6 +30,9 @@ router.get('/mis-comprobantes', verificarToken, autorizar(3), obtenerMisComproba
 
 // Cliente (y Admin) pueden pagar comprobante
 router.put('/pagar/:id', verificarToken, autorizar(1, 3), pagarComprobante);
+
+// HU-004.1 / RF-0038: Buscar comprobantes unificado
+router.get('/buscar-todos', verificarToken, autorizar(1, 2, 3), buscarComprobantesFiltro);
 
 // ==============================================
 // Documentación Swagger: Comprobantes

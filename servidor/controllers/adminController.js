@@ -1,3 +1,4 @@
+import pool from "../config/db.js";
 import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import { logHistory } from "../utils/historyLogger.js";
@@ -14,7 +15,8 @@ const mapToUsuario = (a) => {
     if (a.telefono !== undefined) obj.telefono = a.telefono;
 
     obj.id_rol = 1; // Rol de Administrador
-    obj.estado = 'Activo';
+    if (a.estado !== undefined) obj.estado = a.estado;
+    else if (!a.id_usuario) obj.estado = 'Activo';
     return obj;
 };
 
@@ -100,6 +102,9 @@ export const crearAdmin = async (req, res) => {
 export const actualizarAdmin = async (req, res) => {
     const id = req.params.id;
     try {
+        const [antesResult] = await pool.query('SELECT * FROM usuarios WHERE id_usuario = ?', [id]);
+        const antes = antesResult[0];
+
         const userPayload = mapToUsuario(req.body);
         await Usuario.update(id, userPayload);
         const adminActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
@@ -127,6 +132,9 @@ export const actualizarAdmin = async (req, res) => {
 export const eliminarAdmin = async (req, res) => {
     const { id } = req.params;
     try {
+        const [antesResult] = await pool.query('SELECT * FROM usuarios WHERE id_usuario = ?', [id]);
+        const antes = antesResult[0];
+
         const user = await Usuario.findByPk(id);
         if (!user || user.id_rol !== 1) {
             return res.status(404).json({ success: false, message: 'Administrador no encontrado' });
@@ -141,6 +149,18 @@ export const eliminarAdmin = async (req, res) => {
             `Se inhabilitó el administrador ${user.nombre}`
         );
 
+        
+        const [despuesResult] = await pool.query('SELECT * FROM usuarios WHERE id_usuario = ?', [id]);
+        
+        await registrarHistorial({
+            id_usuario: req.user?.id_usuario || req.admin?.id_usuario || 1,
+            tabla_afectada: 'usuarios',
+            id_registro: id,
+            accion: 'DELETE',
+            descripcion: `Se inhabilitó el administrador ID: ${id}`,
+            datos_antes: antes,
+            datos_despues: despuesResult[0]
+        });
         res.json({ success: true, message: 'Administrador inhabilitado' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

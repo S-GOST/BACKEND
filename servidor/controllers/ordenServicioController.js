@@ -203,7 +203,7 @@ export const crearOrden = async (req, res) => {
         else if (req.body.moto && req.body.moto.placa) {
             const { placa, marca, modelo, cilindraje, kilometraje } = req.body.moto;
             const [motoRes] = await connection.query(
-                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 [clienteId, placa, marca, modelo, cilindraje, kilometraje]
             );
             idMoto = motoRes.insertId;
@@ -229,8 +229,8 @@ export const crearOrden = async (req, res) => {
         // Insertar orden usando las columnas de la captura
         const [resultado] = await connection.query(
             `INSERT INTO orden_servicio 
-             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, total)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, total, metodo_pago)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 clienteId,
                 req.body.id_tecnico || 1, // Por defecto tecnico 1 si no se envía
@@ -239,7 +239,8 @@ export const crearOrden = async (req, res) => {
                 null, // fecha_estimada
                 null, // fecha_salida
                 req.body.observaciones || '', // observaciones
-                'Pendiente', // estado
+                'Pendiente', // estado,
+                  req.body.metodo_pago || 'efectivo',
                 total
             ]
         );
@@ -276,7 +277,7 @@ export const crearOrden = async (req, res) => {
             await connection.query(
                 `INSERT INTO detalles_orden_servicio 
                  (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [idOrden, idServicio, idProducto, null, cantidad, precioUnitario, subtotal]
             );
         }

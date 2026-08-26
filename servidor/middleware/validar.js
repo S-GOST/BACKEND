@@ -1,4 +1,5 @@
 import { body, validationResult } from 'express-validator';
+import fs from 'fs';
 
 // ============================================================
 // RFN-003: Validación y Sanitización de Datos
@@ -6,7 +7,7 @@ import { body, validationResult } from 'express-validator';
 
 // Middleware que procesa los errores de validación
 const manejarErrores = (req, res, next) => {
-    const errores = validationResult(req);
+    const errores = validationResult(req); if (!errores.isEmpty()) fs.writeFileSync('validation_error.json', JSON.stringify({errores: errores.array(), body: req.body}, null, 2));
     if (!errores.isEmpty()) {
         return res.status(400).json({
             success: false,
@@ -165,7 +166,7 @@ export const validarProducto = [
         .notEmpty().withMessage('El nombre del producto es requerido')
         .isLength({ max: 100 }).withMessage('El nombre no puede exceder 100 caracteres')
         .escape(),
-    body('Precio')
+    body('precio_venta')
         .notEmpty().withMessage('El precio es requerido')
         .isFloat({ min: 0 }).withMessage('El precio debe ser un número mayor o igual a cero'),
     body('stock')

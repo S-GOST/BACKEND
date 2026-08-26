@@ -229,6 +229,7 @@ export const obtenerMisComprobantes = async (req, res) => {
 export const pagarComprobante = async (req, res) => {
     try {
         const { id } = req.params;
+        const { metodo_pago } = req.body;
         const idUsuario = req.user?.id_usuario;
 
         // Verificar que el comprobante exista y esté pendiente
@@ -247,8 +248,8 @@ export const pagarComprobante = async (req, res) => {
 
         // Actualizar estado a Pagado
         await pool.query(
-            'UPDATE comprobante SET estado = "Pagado" WHERE id_comprobante = ?',
-            [id]
+            'UPDATE comprobante SET estado = "Pagado", metodo_pago = COALESCE(?, metodo_pago) WHERE id_comprobante = ?',
+            [metodo_pago || null, id]
         );
 
         // Registrar en historial para que el Admin lo vea
@@ -265,4 +266,64 @@ export const pagarComprobante = async (req, res) => {
         console.error("Error al pagar comprobante:", error);
         res.status(500).json({ success: false, message: error.message });
     }
-};
+};
+
+export const buscarComprobantesFiltro = async (req, res) => {
+    try {
+        const idRol = req.user?.id_rol || req.admin?.id_rol;
+        const idUsuario = req.user?.id_usuario || req.admin?.id_usuario;
+        
+        if (!idUsuario) {
+            return res.status(401).json({ success: false, message: 'No autenticado' });
+        }
+
+        const { numero, cliente, fecha_inicio, fecha_fin } = req.query;
+
+        let query = `
+            SELECT c.id_comprobante, c.id_orden, c.numero_comprobante,
+                   c.fecha, c.subtotal, c.total_pagar, c.metodo_pago, c.estado,
+                   u.nombre as cliente_nombre, u.documento as cliente_documento,
+                   m.placa as moto_placa
+            FROM comprobante c
+            INNER JOIN orden_servicio os ON c.id_orden = os.id_orden
+            INNER JOIN motos m ON os.id_moto = m.id_moto
+            INNER JOIN usuarios u ON os.id_cliente = u.id_usuario
+            WHERE 1=1
+        `;
+        
+        const params = [];
+
+        // Filtro de rol
+        if (idRol === 2) {
+            // Tcnico solo ve los comprobantes de sus rdenes
+            query += ' AND os.id_tecnico = ?';
+            params.push(idUsuario);
+        } else if (idRol === 3) {
+            // Cliente solo ve sus motos
+            query += ' AND os.id_cliente = ?';
+            params.push(idUsuario);
+        }
+
+        // Filtros adicionales
+        if (numero) {
+            query += ' AND c.numero_comprobante LIKE ?';
+            params.push(`%${numero}%`);
+        }
+        if (cliente && idRol !== 3) { // Cliente no necesita buscar por cliente
+            query += ' AND (u.nombre LIKE ? OR u.documento LIKE ?)';
+            params.push(`%${cliente}%`, `%${cliente}%`);
+        }
+        if (fecha_inicio && fecha_fin) {
+            query += ' AND DATE(c.fecha) BETWEEN ? AND ?';
+            params.push(fecha_inicio, fecha_fin);
+        }
+
+        query += ' ORDER BY c.fecha DESC';
+
+        const [rows] = await pool.query(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error("Error en buscarComprobantesFiltro:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

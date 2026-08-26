@@ -1,4 +1,5 @@
-import express from 'express';
+﻿import express from 'express';
+import { registrarHistorial } from '../helpers/logger.js';
 import bcrypt from 'bcrypt';
 import Usuario from '../models/usuarioModel.js';
 import { generarTokens, setRefreshTokenCookie, renovarToken, logout } from '../middleware/refreshToken.js';
@@ -28,6 +29,18 @@ router.post('/login', limiterLogin, validarLogin, async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: true, mensaje: 'Credenciales inválidas' });
+    }
+
+    // RF-007: Verificar estado del usuario antes de permitir login
+    const estadoUsuario = String(user.estado || '').toLowerCase();
+    if (estadoUsuario === 'pendiente') {
+      return res.status(403).json({ error: true, mensaje: 'Tu cuenta está pendiente de aprobación por un administrador. Por favor espera a ser aprobado.' });
+    }
+    if (estadoUsuario === 'rechazado') {
+      return res.status(403).json({ error: true, mensaje: 'Tu solicitud de cuenta ha sido rechazada. Contacta al administrador para más información.' });
+    }
+    if (estadoUsuario === 'inactivo' || user.estado === 0 || user.estado === '0') {
+      return res.status(403).json({ error: true, mensaje: 'Tu cuenta ha sido inhabilitada. Contacta al administrador.' });
     }
 
     // RFN-002: Generar accessToken (1h) + refreshToken (24h)
@@ -138,3 +151,4 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export default router;
+
