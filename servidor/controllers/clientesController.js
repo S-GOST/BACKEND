@@ -2,7 +2,7 @@ import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import { logHistory } from "../utils/historyLogger.js";
 import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken.js";
-import { enviarCorreoAprobacion } from "../utils/mailer.js";
+import { enviarCorreoAprobacion, enviarCorreoRegistroPendiente } from "../utils/mailer.js";
 
 const mapToUsuario = (c) => {
   const obj = {};
@@ -99,6 +99,23 @@ export const obtenerClientePorId = async (req, res) => {
 export const crearCliente = async (req, res) => {
   try {
     const userPayload = mapToUsuario(req.body);
+
+    // Validaciones explícitas para dar mensajes claros al usuario
+    const existeDoc = await Usuario.findByPk(userPayload.numero_documento);
+    if (existeDoc) {
+      return res.status(400).json({ success: false, message: 'El número de documento ya se encuentra registrado.' });
+    }
+
+    const existeCorreo = await Usuario.findOne({ where: { correo: userPayload.correo } });
+    if (existeCorreo) {
+      return res.status(400).json({ success: false, message: 'El correo electrónico ya se encuentra registrado.' });
+    }
+
+    const existeUsuario = await Usuario.findOne({ where: { usuario: userPayload.usuario } });
+    if (existeUsuario) {
+      return res.status(400).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, intenta con otro.' });
+    }
+
     await Usuario.create(userPayload);
     const newUser = await Usuario.findByPk(userPayload.numero_documento);
 
@@ -110,10 +127,41 @@ export const crearCliente = async (req, res) => {
       `Se creó el cliente ${newUser.nombre}`
     );
 
-    res.json({ success: true, data: newUser });
+    // Validar si el frontend envió los datos de la moto junto con el cliente
+    let motoData = req.body.moto || req.body;
+    // Comprobamos si existe la placa (ya sea en camelCase o PascalCase)
+    if (motoData.placa || motoData.Placa) {
+      const Moto = (await import("../models/motosModel.js")).default;
+      // Aseguramos que la moto quede asociada al nuevo cliente
+      motoData.id_cliente = newUser.id_usuario;
+      
+      try {
+        await Moto.create(motoData);
+        await logHistory(
+          req.user?.id_usuario || 1,
+          'motos',
+          0, // El ID se genera en la DB
+          'INSERT',
+          `Se creó una nueva moto (placa: ${motoData.placa || motoData.Placa}) para el nuevo cliente`
+        );
+      } catch (errorMoto) {
+        console.error("Error al registrar la moto durante el registro del cliente:", errorMoto);
+        // Podríamos decidir si fallar todo o solo avisar que la moto no se guardó.
+        // Por ahora, lo dejamos pasar pero lo registramos en el log.
+      }
+    }
+
+    // Enviar correo al cliente indicando que su cuenta está en aprobación
+    await enviarCorreoRegistroPendiente(userPayload.correo, userPayload.nombre);
+
+    res.json({ 
+      success: true, 
+      data: newUser,
+      message: "Registro exitoso. Revisa tu correo, tu cuenta está en proceso de aprobación."
+    });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado' });
+      return res.status(400).json({ success: false, message: 'Un dato ingresado (documento, correo o usuario) ya se encuentra registrado.' });
     }
     res.status(500).json({ success: false, error: error.message });
   }

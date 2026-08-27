@@ -167,11 +167,17 @@ export const validarProducto = [
         .isLength({ max: 100 }).withMessage('El nombre no puede exceder 100 caracteres')
         .escape(),
     body('precio_venta')
-        .notEmpty().withMessage('El precio es requerido')
-        .isFloat({ min: 0 }).withMessage('El precio debe ser un número mayor o igual a cero'),
+        .notEmpty().withMessage('El precio de venta es requerido')
+        .isFloat({ min: 0 }).withMessage('El precio de venta debe ser un número mayor o igual a cero'),
+    body('precio_costo')
+        .optional({ nullable: true })
+        .isFloat({ min: 0 }).withMessage('El precio de costo debe ser un número mayor o igual a cero'),
     body('stock')
         .optional()
         .isInt({ min: 0 }).withMessage('El stock debe ser un número entero mayor o igual a cero'),
+    body('stock_minimo')
+        .optional()
+        .isInt({ min: 0 }).withMessage('El stock mínimo debe ser un número entero mayor o igual a cero'),
     body('ID_CATEGORIA')
         .notEmpty().withMessage('El producto debe estar asociado a una categoría'),
     manejarErrores

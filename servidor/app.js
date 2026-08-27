@@ -1,9 +1,14 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Middlewares de seguridad
 import { limiterGeneral } from "./middleware/rateLimiter.js";
@@ -72,6 +77,11 @@ app.use(cookieParser()); // Necesario para refresh tokens y CSRF
 app.use(generarCsrfToken);
 // Validar CSRF en peticiones POST/PUT/DELETE
 app.use(validarCsrf);
+
+app.use(express.static(path.join(__dirname, "public")));
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // ============================================================
 // Documentación API (Swagger) — Ruta pública

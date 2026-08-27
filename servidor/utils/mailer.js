@@ -55,6 +55,38 @@ export const enviarCorreoRecuperacion = async (destinatario, token) => {
 };
 
 /**
+ * Send account pending approval email (upon registration)
+ * @param {string} destinatario Email of the user
+ * @param {string} nombre Name of the user
+ */
+export const enviarCorreoRegistroPendiente = async (destinatario, nombre) => {
+  const mailOptions = {
+    from: `"Soporte KTM" <${process.env.EMAIL_USER || 'no-reply@ktm.com'}>`,
+    to: destinatario,
+    subject: 'Registro Exitoso - Cuenta Pendiente de Aprobación',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #ff6600;">¡Hola, ${nombre}!</h2>
+        <p>Tu registro y el de tu motocicleta se han completado exitosamente en nuestra plataforma.</p>
+        <p>Actualmente, tu cuenta se encuentra en estado <strong>Pendiente de Aprobación</strong>.</p>
+        <p>Un administrador revisará tus datos pronto. Te notificaremos por este medio tan pronto como tu cuenta sea aprobada para que puedas iniciar sesión y acceder a todos nuestros servicios.</p>
+        <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
+        <p style="font-size: 12px; color: #777;">Gracias por unirte a nosotros.</p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Correo de registro pendiente enviado: %s', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error enviando correo de registro pendiente:', error);
+    return false;
+  }
+};
+
+/**
  * Send account approval/rejection email
  * @param {string} destinatario Email of the user
  * @param {string} estado 'Activo' or 'Rechazado'

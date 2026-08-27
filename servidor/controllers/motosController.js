@@ -7,7 +7,11 @@ import { logHistory } from "../utils/historyLogger.js";
  */
 export const obtenerMotos = async (req, res) => {
     try {
-        const motos = await Moto.findAll();
+        let motos = await Moto.findAll();
+        // Si el usuario es un cliente (rol 3), solo mostramos sus motos
+        if (req.user && req.user.id_rol === 3) {
+            motos = motos.filter(moto => moto.id_cliente === req.user.id_usuario);
+        }
         res.json({ 
             success: true, 
             data: motos 
@@ -45,13 +49,16 @@ export const crearMoto = async (req, res) => {
     try {
         const idCliente = req.body.id_cliente || req.body.ID_CLIENTES || req.body.ID_CLIENTE;
         if (idCliente) {
-            const cliente = await Usuario.findByPk(idCliente);
+            let cliente = await Usuario.findOne({ where: { id_usuario: idCliente } });
+            if (!cliente) {
+                cliente = await Usuario.findByPk(idCliente);
+            }
             // Remap: findByPk busca por numero_documento, pero la FK en motos apunta a id_usuario
             if (cliente && cliente.id_usuario) {
                 req.body.id_cliente = cliente.id_usuario;
                 req.body.ID_CLIENTES = cliente.id_usuario;
             }
-            if (!cliente || cliente.id_rol !== 3 || cliente.estado !== 'Activo' && cliente.estado !== 'Pendiente') {
+            if (!cliente || cliente.id_rol !== 3 || (cliente.estado !== 'Activo' && cliente.estado !== 'Pendiente')) {
                 return res.status(400).json({ success: false, message: 'El cliente asociado no existe o no está activo' });
             }
         }

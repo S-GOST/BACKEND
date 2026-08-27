@@ -1,0 +1,124 @@
+:root {
+  --bg: #0a0d11;
+  --panel: #0f1115;
+  --header: #ff6a00;
+  --border: rgba(255, 255, 255, 0.12);
+  --muted: #cfcfcf;
+  --highlight: #5a3620;
+  --highlight-2: #3b3b3b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: #ffffff;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.pricing-shell {
+  width: min(760px, 92vw);
+  margin-top: 14px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.pricing-table {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: #0b0d0f;
+}
+
+.pricing-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1.7fr 1.7fr;
+  min-height: 82px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pricing-header {
+  min-height: 60px;
+  background: #04070a;
+  color: var(--header);
+}
+
+.pricing-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 12px;
+  border-right: 1px solid var(--border);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.pricing-row:last-child .pricing-cell {
+  border-bottom: none;
+}
+
+.pricing-header .pricing-cell {
+  font-size: clamp(0.8rem, 1.3vw, 1.2rem);
+  color: var(--header);
+  border-right: 1px solid var(--border);
+}
+
+.pricing-spacer {
+  background: transparent;
+  border-right: 1px solid transparent;
+}
+
+.pricing-label {
+  justify-content: flex-start;
+  text-transform: uppercase;
+  color: #f3f3f3;
+  font-size: clamp(0.9rem, 1vw, 1.2rem);
+  font-weight: 600;
+  padding-left: 24px;
+}
+
+.price {
+  font-size: clamp(1.1rem, 2vw, 2rem);
+  font-weight: 700;
+  color: #f4f4f4;
+  font-variant-numeric: tabular-nums;
+}
+
+.pricing-highlight {
+  background: var(--highlight);
+}
+
+.pricing-highlight .pricing-label {
+  color: #f4f4f4;
+}
+
+.pricing-highlight .price {
+  color: #ffffff;
+}
+
+@media (max-width: 560px) {
+  .pricing-row {
+    grid-template-columns: 1.2fr 1.5fr 1.5fr;
+  }
+
+  .pricing-label {
+    padding-left: 12px;
+  }
+
+  .price {
+    font-size: 1.1rem;
+  }
+}

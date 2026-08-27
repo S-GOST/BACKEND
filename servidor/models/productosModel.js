@@ -43,15 +43,27 @@ const Producto = {
       Marca,
       Nombre,
       precio_venta,
+      precio_costo,
       stock,
+      stock_minimo,
       Estado,
     } = data;
 
     const [result] = await pool.query(
       `INSERT INTO productos 
-       (ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, precio_venta, stock, Estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, precio_venta, stock || 0, Estado]
+       (ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, precio_venta, precio_costo, stock, stock_minimo, Estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+       ID_PRODUCTOS,
+       ID_CATEGORIA,
+       Marca,
+       Nombre,
+       precio_venta,
+       precio_costo !== undefined ? precio_costo : 0,
+       stock || 0,
+       stock_minimo !== undefined ? stock_minimo : 0,
+       Estado,
+      ]
     );
 
     return result;
@@ -65,16 +77,29 @@ const Producto = {
       Marca,
       Nombre,
       precio_venta,
+      precio_costo,
       stock,
+      stock_minimo,
       Estado,
     } = data;
 
     const [result] = await pool.query(
       `UPDATE productos 
        SET ID_PRODUCTOS = ?, ID_CATEGORIA = ?, Marca = ?, Nombre = ?,
-           precio_venta = ?, stock = ?, Estado = ?
+           precio_venta = ?, precio_costo = ?, stock = ?, stock_minimo = ?, Estado = ?
        WHERE ID_PRODUCTOS = ?`,
-      [ID_PRODUCTOS, ID_CATEGORIA, Marca, Nombre, precio_venta, stock !== undefined ? stock : 0, Estado, id]
+      [
+       ID_PRODUCTOS,
+       ID_CATEGORIA,
+       Marca,
+       Nombre,
+       precio_venta,
+       precio_costo !== undefined ? precio_costo : 0,
+       stock !== undefined ? stock : 0,
+       stock_minimo !== undefined ? stock_minimo : 0,
+       Estado,
+       id,
+      ]
     );
 
     return result;
