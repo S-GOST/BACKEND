@@ -203,7 +203,7 @@ export const crearOrden = async (req, res) => {
         else if (req.body.moto && req.body.moto.placa) {
             const { placa, marca, modelo, cilindraje, kilometraje } = req.body.moto;
             const [motoRes] = await connection.query(
-                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
                 [clienteId, placa, marca, modelo, cilindraje, kilometraje]
             );
             idMoto = motoRes.insertId;
@@ -229,18 +229,18 @@ export const crearOrden = async (req, res) => {
         // Insertar orden usando las columnas de la captura
         const [resultado] = await connection.query(
             `INSERT INTO orden_servicio 
-             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, total, metodo_pago)
+             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, metodo_pago, total)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 clienteId,
                 req.body.id_tecnico || 1, // Por defecto tecnico 1 si no se envía
                 idMoto,
-                fechaIngreso, // fecha_ingreso
-                null, // fecha_estimada
-                null, // fecha_salida
-                req.body.observaciones || '', // observaciones
-                'Pendiente', // estado,
-                  req.body.metodo_pago || 'efectivo',
+               fechaIngreso,
+               null,
+               null,
+               req.body.observaciones || '',
+               'Pendiente',
+               req.body.metodo_pago || 'efectivo',
                 total
             ]
         );
@@ -257,27 +257,36 @@ export const crearOrden = async (req, res) => {
             let precioUnitario = 0;
 
             if (idServicio) {
-                const [serv] = await connection.query('SELECT Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
-                if (serv && serv.length > 0) precioUnitario = parseFloat(serv[0].Precio || 0);
-            } else if (idProducto) {
-                const [prod] = await connection.query('SELECT Nombre, Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
-                if (prod && prod.length > 0) {
-                    if (prod[0].stock < cantidad) {
-                        await connection.rollback();
-                        return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}` });
-                    }
-                    precioUnitario = parseFloat(prod[0].Precio || 0);
-                    // RN-009: Descontar stock
-                    await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
+                const [serv] = await connection.query('SELECT ID_SERVICIOS, Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
+                if (!serv || serv.length === 0) {
+                   await connection.rollback();
+                   return res.status(400).json({ success: false, message: `El servicio con ID ${idServicio} no existe` });
                 }
+                precioUnitario = parseFloat(serv[0].Precio || 0);
+            } else if (idProducto) {
+                const [prod] = await connection.query('SELECT Nombre, precio_venta AS Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
+                if (!prod || prod.length === 0) {
+                   await connection.rollback();
+                   return res.status(400).json({ success: false, message: `El producto con ID ${idProducto} no existe` });
+                }
+                if (prod[0].stock < cantidad) {
+                   await connection.rollback();
+                   return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}` });
+                }
+                precioUnitario = parseFloat(prod[0].Precio ?? prod[0].precio_venta ?? 0);
+                // RN-009: Descontar stock
+                await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
+            } else {
+                await connection.rollback();
+                return res.status(400).json({ success: false, message: 'Cada detalle debe incluir un servicio o un producto válido' });
             }
 
             const subtotal = cantidad * precioUnitario;
-            
+             
             await connection.query(
                 `INSERT INTO detalles_orden_servicio 
                  (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 [idOrden, idServicio, idProducto, null, cantidad, precioUnitario, subtotal]
             );
         }

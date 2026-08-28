@@ -377,7 +377,7 @@ describe('crearOrden', () => {
       const clienteData = [{ id_usuario: 10, estado: 'Activo' }];
       const motoData = [{ id_moto: 5 }];
       const ordenResult = { insertId: 100 };
-      const productoData = [{ Nombre: 'Filtro', Precio: 15, stock: 5 }];
+      const productoData = [{ Nombre: 'Filtro', precio_venta: 15, stock: 5 }];
 
       mockConnection.query
         .mockResolvedValueOnce([clienteData, []])
@@ -433,6 +433,33 @@ describe('crearOrden', () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: 'Stock insuficiente para el producto Filtro. Stock actual: 1'
+      });
+    });
+
+    test('Debe devolver 400 si el servicio del detalle no existe', async () => {
+      const clienteData = [{ id_usuario: 10, estado: 'Activo' }];
+      const motoData = [{ id_moto: 5 }];
+      const ordenResult = { insertId: 100 };
+
+      mockConnection.query
+        .mockResolvedValueOnce([clienteData, []])
+        .mockResolvedValueOnce([motoData, []])
+        .mockResolvedValueOnce([ordenResult, []])
+        .mockResolvedValueOnce([[], []]);
+
+      const req = {
+        admin: { id_usuario: 10 },
+        body: { detalles: [{ ID_SERVICIOS: 999, cantidad: 1 }] }
+      };
+      const res = mockRes();
+
+      await crearOrden(req, res);
+
+      expect(mockConnection.rollback).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'El servicio con ID 999 no existe'
       });
     });
   });

@@ -65,16 +65,22 @@ export const crearDetalleOrden = async (req, res) => {
 
     if (body.ID_SERVICIOS) {
         const servicio = await Servicio.findById(body.ID_SERVICIOS);
-        if (servicio) precioUnitario = parseFloat(servicio.Precio || 0);
+        if (!servicio) {
+            return res.status(400).json({ success: false, message: `El servicio con ID ${body.ID_SERVICIOS} no existe` });
+        }
+        precioUnitario = parseFloat(servicio.Precio || 0);
     } else if (body.ID_PRODUCTOS) {
         const producto = await Producto.findById(body.ID_PRODUCTOS);
-        if (producto) {
-            // RN-008: Verificar stock
-            if (producto.stock < cantidad) {
-                return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${producto.Nombre}. Stock actual: ${producto.stock}` });
-            }
-            precioUnitario = parseFloat(producto.Precio || 0);
+        if (!producto) {
+            return res.status(400).json({ success: false, message: `El producto con ID ${body.ID_PRODUCTOS} no existe` });
         }
+        // RN-008: Verificar stock
+        if (producto.stock < cantidad) {
+            return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${producto.Nombre}. Stock actual: ${producto.stock}` });
+        }
+        precioUnitario = parseFloat(producto.precio_venta ?? producto.Precio ?? 0);
+    } else {
+        return res.status(400).json({ success: false, message: 'Cada detalle debe incluir un servicio o un producto válido' });
     }
 
     body.cantidad = cantidad;
