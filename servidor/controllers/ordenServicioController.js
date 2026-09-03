@@ -125,173 +125,131 @@ export const obtenerMisOrdenes = async (req, res) => {
     }
 };
 
+// --- Helpers para crearOrden ---
+const obtenerClienteId = async (tokenData, connection) => {
+    const isIdUsuario = !!tokenData.id_usuario;
+    const searchValue = tokenData.id_usuario || tokenData.numero_documento || tokenData.id;
+    const column = isIdUsuario ? 'id_usuario' : 'numero_documento';
+
+    if (!searchValue) return { error: 'Usuario no encontrado en la base de datos', status: 401 };
+
+    const [rows] = await connection.query(`SELECT id_usuario, estado FROM usuarios WHERE ${column} = ?`, [searchValue]);
+    
+    if (!rows || rows.length === 0) {
+        return { error: 'Usuario no encontrado en la base de datos', status: 401 };
+    }
+    
+    if (rows[0].estado !== 'Activo') {
+        return { error: 'El cliente debe estar activo para crear órdenes', status: 400 };
+    }
+    
+    return { clienteId: rows[0].id_usuario };
+};
+
+const obtenerIdMoto = async (body, clienteId, connection) => {
+    const idMotoBody = body.id_moto || body.moto?.id_moto;
+    if (idMotoBody) return { idMoto: idMotoBody };
+
+    if (body.moto?.placa) {
+        const { placa, marca, modelo, cilindraje, kilometraje } = body.moto;
+        const [res] = await connection.query(
+            `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
+            [clienteId, placa, marca, modelo, cilindraje, kilometraje]
+        );
+        return { idMoto: res.insertId };
+    }
+
+    const [motos] = await connection.query('SELECT id_moto FROM motos WHERE id_cliente = ? ORDER BY id_moto DESC LIMIT 1', [clienteId]);
+    if (!motos || motos.length === 0) {
+        return { error: 'No se encontró ninguna moto asociada a este cliente', status: 400 };
+    }
+    return { idMoto: motos[0].id_moto };
+};
+
+const procesarDetalles = async (detalles, idOrden, connection) => {
+    for (const detalle of detalles) {
+        const { ID_SERVICIOS: idServicio, ID_PRODUCTOS: idProducto, cantidad = 1 } = detalle;
+        let precioUnitario = 0;
+
+        if (idServicio) {
+            const [serv] = await connection.query('SELECT Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
+            if (!serv || serv.length === 0) return { error: `El servicio con ID ${idServicio} no existe`, status: 400 };
+            precioUnitario = parseFloat(serv[0].Precio || 0);
+        } else if (idProducto) {
+            const [prod] = await connection.query('SELECT Nombre, precio_venta AS Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
+            if (!prod || prod.length === 0) return { error: `El producto con ID ${idProducto} no existe`, status: 400 };
+            if (prod[0].stock < cantidad) return { error: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}`, status: 400 };
+            precioUnitario = parseFloat(prod[0].Precio ?? prod[0].precio_venta ?? 0);
+            await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
+        } else {
+            return { error: 'Cada detalle debe incluir un servicio o un producto válido', status: 400 };
+        }
+
+        const subtotal = cantidad * precioUnitario;
+        await connection.query(
+            `INSERT INTO detalles_orden_servicio (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [idOrden, idServicio || null, idProducto || null, null, cantidad, precioUnitario, subtotal]
+        );
+    }
+    return { success: true };
+};
+
 // Crear una nueva orden de servicio
 export const crearOrden = async (req, res) => {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 🔥 Obtener el ID del cliente desde el token (NO del body)
-        // Soporta ambos formatos de token:
-        //   - /api/auth/login      → { id_usuario, numero_documento, rol }
-        //   - /api/clientes/login  → { id: numero_documento }
         const tokenData = req.admin;
         if (!tokenData) {
             await connection.rollback();
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        let clienteId = null;
-
-        // Caso 1: El token ya trae id_usuario (login general /api/auth/login)
-        if (tokenData.id_usuario) {
-            const [rows] = await connection.query(
-                'SELECT id_usuario, estado FROM usuarios WHERE id_usuario = ?',
-                [tokenData.id_usuario]
-            );
-            if (rows && rows.length > 0) {
-                if (rows[0].estado !== 'Activo') {
-                    await connection.rollback();
-                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
-                }
-                clienteId = rows[0].id_usuario;
-            }
-        }
-
-        // Caso 2: El token trae numero_documento directamente
-        if (!clienteId && tokenData.numero_documento) {
-            const [rows] = await connection.query(
-                'SELECT id_usuario, estado FROM usuarios WHERE numero_documento = ?',
-                [tokenData.numero_documento]
-            );
-            if (rows && rows.length > 0) {
-                if (rows[0].estado !== 'Activo') {
-                    await connection.rollback();
-                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
-                }
-                clienteId = rows[0].id_usuario;
-            }
-        }
-
-        // Caso 3: Token de /api/clientes/login → { id: numero_documento }
-        if (!clienteId && tokenData.id) {
-            const [rows] = await connection.query(
-                'SELECT id_usuario, estado FROM usuarios WHERE numero_documento = ?',
-                [tokenData.id]
-            );
-            if (rows && rows.length > 0) {
-                if (rows[0].estado !== 'Activo') {
-                    await connection.rollback();
-                    return res.status(400).json({ success: false, error: 'El cliente debe estar activo para crear órdenes' });
-                }
-                clienteId = rows[0].id_usuario;
-            }
-        }
-
-        if (!clienteId) {
+        const resCliente = await obtenerClienteId(tokenData, connection);
+        if (resCliente.error) {
             await connection.rollback();
-            return res.status(401).json({ success: false, error: 'Usuario no encontrado en la base de datos' });
+            return res.status(resCliente.status).json({ success: false, error: resCliente.error });
         }
+        const clienteId = resCliente.clienteId;
 
-        let idMoto;
-
-        // Si viene el ID de la moto, usarlo directamente
-        if (req.body.id_moto || (req.body.moto && req.body.moto.id_moto)) {
-            idMoto = req.body.id_moto || req.body.moto.id_moto;
-        } 
-        // Si viene un objeto moto con placa (moto nueva), la insertamos
-        else if (req.body.moto && req.body.moto.placa) {
-            const { placa, marca, modelo, cilindraje, kilometraje } = req.body.moto;
-            const [motoRes] = await connection.query(
-                `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
-                [clienteId, placa, marca, modelo, cilindraje, kilometraje]
-            );
-            idMoto = motoRes.insertId;
-        } else {
-            // Buscar la moto del cliente (fallback)
-            const [motos] = await connection.query(
-                'SELECT id_moto FROM motos WHERE id_cliente = ? ORDER BY id_moto DESC LIMIT 1',
-                [clienteId]
-            );
-            if (!motos || motos.length === 0) {
-                await connection.rollback();
-                return res.status(400).json({
-                    success: false,
-                    error: 'No se encontró ninguna moto asociada a este cliente'
-                });
-            }
-            idMoto = motos[0].id_moto;
+        const resMoto = await obtenerIdMoto(req.body, clienteId, connection);
+        if (resMoto.error) {
+            await connection.rollback();
+            return res.status(resMoto.status).json({ success: false, error: resMoto.error });
         }
+        const idMoto = resMoto.idMoto;
 
         const fechaIngreso = req.body.fecha_ingreso || new Date().toISOString().slice(0, 19).replace('T', ' ');
         const total = req.body.total || 0;
 
-        // Insertar orden usando las columnas de la captura
         const [resultado] = await connection.query(
             `INSERT INTO orden_servicio 
              (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, metodo_pago, total)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 clienteId,
-                req.body.id_tecnico || 1, // Por defecto tecnico 1 si no se envía
+                req.body.id_tecnico || 1,
                 idMoto,
-               fechaIngreso,
-               null,
-               null,
-               req.body.observaciones || '',
-               'Pendiente',
-               req.body.metodo_pago || 'efectivo',
+                fechaIngreso,
+                null,
+                null,
+                req.body.observaciones || '',
+                'Pendiente',
+                req.body.metodo_pago || 'efectivo',
                 total
             ]
         );
 
         const idOrden = resultado.insertId;
-
-        // Insertar detalles uno por uno usando la cantidad real enviada
         const detalles = req.body.detalles || [];
         
-        for (const detalle of detalles) {
-            const idServicio = detalle.ID_SERVICIOS || null;
-            const idProducto = detalle.ID_PRODUCTOS || null;
-            const cantidad = detalle.cantidad || 1;
-            let precioUnitario = 0;
-
-            if (idServicio) {
-                const [serv] = await connection.query('SELECT ID_SERVICIOS, Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
-                if (!serv || serv.length === 0) {
-                   await connection.rollback();
-                   return res.status(400).json({ success: false, message: `El servicio con ID ${idServicio} no existe` });
-                }
-                precioUnitario = parseFloat(serv[0].Precio || 0);
-            } else if (idProducto) {
-                const [prod] = await connection.query('SELECT Nombre, precio_venta AS Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
-                if (!prod || prod.length === 0) {
-                   await connection.rollback();
-                   return res.status(400).json({ success: false, message: `El producto con ID ${idProducto} no existe` });
-                }
-                if (prod[0].stock < cantidad) {
-                   await connection.rollback();
-                   return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}` });
-                }
-                precioUnitario = parseFloat(prod[0].Precio ?? prod[0].precio_venta ?? 0);
-                // RN-009: Descontar stock
-                await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
-            } else {
-                await connection.rollback();
-                return res.status(400).json({ success: false, message: 'Cada detalle debe incluir un servicio o un producto válido' });
-            }
-
-            const subtotal = cantidad * precioUnitario;
-             
-            await connection.query(
-                `INSERT INTO detalles_orden_servicio 
-                 (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [idOrden, idServicio, idProducto, null, cantidad, precioUnitario, subtotal]
-            );
+        const resDetalles = await procesarDetalles(detalles, idOrden, connection);
+        if (resDetalles.error) {
+            await connection.rollback();
+            return res.status(resDetalles.status).json({ success: false, message: resDetalles.error });
         }
 
-        // Recalcular total de la orden basado en los detalles
         await connection.query(
             'UPDATE orden_servicio SET total = (SELECT COALESCE(SUM(subtotal), 0) FROM detalles_orden_servicio WHERE id_orden = ?) WHERE id_orden = ?',
             [idOrden, idOrden]
@@ -325,6 +283,28 @@ export const crearOrden = async (req, res) => {
     }
 };
 
+// --- Helpers para actualizarOrden ---
+const validarTransicionEstado = (estadoAnterior, estadoNuevo, usuarioAutenticado, existe, observaciones) => {
+    if (estadoNuevo === estadoAnterior) return null;
+
+    if (usuarioAutenticado.rol !== 1 && (existe.ID_TECNICOS && existe.ID_TECNICOS !== usuarioAutenticado.id_usuario)) {
+        return { message: 'Solo el administrador o el técnico asignado pueden cambiar el estado', status: 403 };
+    }
+    if (estadoAnterior === 'Completada' || estadoAnterior === 'Cancelada') {
+        return { message: `La orden está ${estadoAnterior} y no se puede modificar.`, status: 400 };
+    }
+    if (estadoNuevo === 'En Proceso' && estadoAnterior !== 'Pendiente') {
+        return { message: 'Solo se puede cambiar a En Proceso si está Pendiente.', status: 400 };
+    }
+    if (estadoNuevo === 'Completada' && estadoAnterior !== 'En Proceso') {
+        return { message: 'Solo se puede Completar si está En Proceso.', status: 400 };
+    }
+    if (estadoNuevo === 'Cancelada' && !observaciones) {
+        return { message: 'Se requieren observaciones para cancelar la orden.', status: 400 };
+    }
+    return null;
+};
+
 // Actualizar una orden de servicio existente
 export const actualizarOrden = async (req, res) => {
     const { id } = req.params;
@@ -332,39 +312,19 @@ export const actualizarOrden = async (req, res) => {
         return res.status(400).json({ success: false, message: 'ID_ORDEN_SERVICIO es requerido' });
     }
     try {
-        // Verificar existencia
         const existe = await OrdenServicio.findById(id);
         if (!existe) {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
         
-        // Máquina de estados (RN-0012, RN-0013)
         const estadoAnterior = existe.Estado;
         const estadoNuevo = req.body.Estado || estadoAnterior;
 
-        if (estadoNuevo !== estadoAnterior) {
-            // RN-0014: Solo técnico asignado o admin cambia estado
-            const usuarioAutenticado = req.admin;
-            if (usuarioAutenticado.rol !== 1 && (existe.ID_TECNICOS && existe.ID_TECNICOS !== usuarioAutenticado.id_usuario)) {
-                return res.status(403).json({ success: false, message: 'Solo el administrador o el técnico asignado pueden cambiar el estado' });
-            }
-
-            if (estadoAnterior === 'Completada' || estadoAnterior === 'Cancelada') {
-                return res.status(400).json({ success: false, message: `La orden está ${estadoAnterior} y no se puede modificar.` }); // CA-014
-            }
-
-            if (estadoNuevo === 'En Proceso' && estadoAnterior !== 'Pendiente') {
-                return res.status(400).json({ success: false, message: 'Solo se puede cambiar a En Proceso si está Pendiente.' });
-            }
-            if (estadoNuevo === 'Completada' && estadoAnterior !== 'En Proceso') {
-                return res.status(400).json({ success: false, message: 'Solo se puede Completar si está En Proceso.' });
-            }
-            if (estadoNuevo === 'Cancelada' && !req.body.observaciones) {
-                return res.status(400).json({ success: false, message: 'Se requieren observaciones para cancelar la orden.' }); // CA-016
-            }
+        const errorValidacion = validarTransicionEstado(estadoAnterior, estadoNuevo, req.admin, existe, req.body.observaciones);
+        if (errorValidacion) {
+            return res.status(errorValidacion.status).json({ success: false, message: errorValidacion.message });
         }
 
-        // Merge existing data with new data
         const dataToUpdate = {
             ID_CLIENTES: existe.ID_CLIENTES,
             ID_TECNICOS: existe.ID_TECNICOS,
@@ -379,19 +339,15 @@ export const actualizarOrden = async (req, res) => {
 
         await OrdenServicio.update(id, dataToUpdate);
 
-        // Si se envió una garantía de productos, actualizar los detalles que sean productos
         if (req.body.garantia_productos !== undefined) {
             await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_PRODUCTOS IS NOT NULL', [req.body.garantia_productos, id]);
         }
-        
-        // Si se envió una garantía de servicios, actualizar los detalles que sean servicios
         if (req.body.garantia_servicios !== undefined) {
             await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_SERVICIOS IS NOT NULL', [req.body.garantia_servicios, id]);
         }
 
         const ordenActualizada = await OrdenServicio.findById(id);
 
-        // Guardar en el historial si cambió el estado
         if (estadoNuevo !== estadoAnterior) {
             await logHistory(
                 req.user?.id_usuario || 1,
