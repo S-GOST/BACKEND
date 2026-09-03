@@ -1,94 +1,65 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js';
 
 const historial = {
-  // Obtener todo el historial
+  // Obtener todo el historial ordenado por fecha descendente
   findAll: async () => {
-    const [rows] = await pool.query("SELECT * FROM historial ORDER BY fecha DESC");
-    return rows;
+    return await prisma.historial.findMany({
+      orderBy: {
+        fecha: 'desc'
+      }
+    });
   },
 
   // Buscar un registro por su ID
   findById: async (id) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM historial WHERE id_historial = ?",
-      [id]
-    );
-    return rows[0] || null;
+    return await prisma.historial.findUnique({
+      where: { id_historial: Number(id) }
+    });
   },
 
-  // Obtener historial de un usuario específico
+  // Obtener historial de un usuario específico, ordenado
   findByUsuarioId: async (id_usuario) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM historial WHERE id_usuario = ? ORDER BY fecha DESC",
-      [id_usuario]
-    );
-    return rows;
+    return await prisma.historial.findMany({
+      where: { id_usuario: Number(id_usuario) },
+      orderBy: {
+        fecha: 'desc'
+      }
+    });
   },
-
 
   // Crear un nuevo registro de historial
   create: async (data) => {
-    const {
-      id_usuario,
-      tabla_afectada,
-      id_registro,
-      accion,
-      descripcion
-    } = data;
-
-    const [result] = await pool.query(
-      `INSERT INTO historial
-       (id_usuario, tabla_afectada, id_registro, accion, descripcion)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        id_usuario,
-        tabla_afectada,
-        id_registro,
-        accion,
-        descripcion || null
-      ]
-    );
-    return result;
+    return await prisma.historial.create({
+      data: {
+        id_usuario: Number(data.id_usuario),
+        tabla_afectada: data.tabla_afectada,
+        id_registro: Number(data.id_registro),
+        accion: data.accion,
+        descripcion: data.descripcion || null
+      }
+    });
   },
 
-  // Actualizar un registro existente (raramente usado en historiales, pero mantenido por compatibilidad)
+  // Actualizar un registro existente (raramente usado en historiales)
   update: async (id, data) => {
-    const {
-      id_usuario,
-      tabla_afectada,
-      id_registro,
-      accion,
-      descripcion
-    } = data;
-
-    const [result] = await pool.query(
-      `UPDATE historial
-       SET id_usuario = ?,
-           tabla_afectada = ?,
-           id_registro = ?,
-           accion = ?,
-           descripcion = ?
-       WHERE id_historial = ?`,
-      [
-        id_usuario,
-        tabla_afectada,
-        id_registro,
-        accion,
-        descripcion || null,
-        id
-      ]
-    );
-    return result;
+    return await prisma.historial.update({
+      where: { id_historial: Number(id) },
+      data: {
+        id_usuario: data.id_usuario ? Number(data.id_usuario) : undefined,
+        tabla_afectada: data.tabla_afectada,
+        id_registro: data.id_registro ? Number(data.id_registro) : undefined,
+        accion: data.accion,
+        descripcion: data.descripcion
+      }
+    });
   },
 
   // Eliminar un registro
   delete: async (id) => {
-    const [result] = await pool.query(
-      "DELETE FROM historial WHERE id_historial = ?",
-      [id]
-    );
-    return result;
-  },
+    return await prisma.historial.delete({
+      where: { id_historial: Number(id) }
+    });
+  }
 };
 
 export default historial;

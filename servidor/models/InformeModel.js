@@ -1,71 +1,53 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js';
 
 const Informe = {
     // Obtener todos los informes
     findAll: async () => {
-        const [rows] = await pool.query("SELECT * FROM informe");
-        return rows;
+        return await prisma.informe.findMany();
     },
 
     // Buscar un informe por su ID (PK: id_informe)
     findById: async (id) => {
-        const [rows] = await pool.query(
-            "SELECT * FROM informe WHERE id_informe = ?",
-            [id]
-        );
-        if (!rows.length) return null;
-        return rows[0];
+        return await prisma.informe.findUnique({
+            where: { id_informe: Number(id) }
+        });
     },
 
     // Crear un nuevo informe
     create: async (data) => {
-        const { 
-            id_orden, 
-            id_tecnico, 
-            diagnostico, 
-            trabajo_realizado, 
-            recomendaciones
-        } = data;
-        
-        const [result] = await pool.query(
-            `INSERT INTO informe 
-             (id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones)
-             VALUES (?, ?, ?, ?, ?)`,
-            [id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones]
-        );
-
-        return result;
+        return await prisma.informe.create({
+            data: {
+                id_orden: Number(data.id_orden),
+                id_tecnico: Number(data.id_tecnico),
+                diagnostico: data.diagnostico,
+                trabajo_realizado: data.trabajo_realizado,
+                recomendaciones: data.recomendaciones
+                // "fecha" se crea automáticamente con default(now()) en tu base de datos/Prisma
+            }
+        });
     },
 
     // Actualizar un informe existente
     update: async (id, data) => {
-        const { 
-            id_orden, 
-            id_tecnico, 
-            diagnostico, 
-            trabajo_realizado, 
-            recomendaciones
-        } = data;
-        
-        const [result] = await pool.query(
-            `UPDATE informe
-             SET id_orden = ?,
-                 id_tecnico = ?,
-                 diagnostico = ?,
-                 trabajo_realizado = ?,
-                 recomendaciones = ?
-             WHERE id_informe = ?`,
-            [id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones, id]
-        );
-        
-        return result;
+        return await prisma.informe.update({
+            where: { id_informe: Number(id) },
+            data: {
+                // Usamos undefined condicional para actualizar solo lo que venga en "data"
+                id_orden: data.id_orden ? Number(data.id_orden) : undefined,
+                id_tecnico: data.id_tecnico ? Number(data.id_tecnico) : undefined,
+                diagnostico: data.diagnostico,
+                trabajo_realizado: data.trabajo_realizado,
+                recomendaciones: data.recomendaciones
+            }
+        });
     },
 
     // Eliminar un informe
     delete: async (id) => {
-        await pool.query("DELETE FROM informe WHERE id_informe = ?", [id]);
-        return true;
-    },
+        return await prisma.informe.delete({
+            where: { id_informe: Number(id) }
+        });
+    }
 };
 
 export default Informe;

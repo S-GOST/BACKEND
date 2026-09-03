@@ -20,28 +20,24 @@ const mapToUsuario = (t) => {
 
 // RFN-002: Login con tokens JWT unificados + refresh token
 export const loginTecnico = async (req, res) => {
-    const { usuario, contrasena } = req.body;
+    const { usuario, password } = req.body;
     try {
-        // RFN-001: Usar findOneWithPassword para obtener hash (nunca exponer password)
         const user = await Usuario.findOneWithPassword({ where: { usuario, id_rol: 2 } });
         if (!user) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
 
-        const esValida = await bcrypt.compare(contrasena, user.password);
+        const esValida = await bcrypt.compare(password, user.password);
         if (!esValida) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
 
-        // RFN-002: Generar accessToken (1h) + refreshToken (24h)
         const { accessToken, refreshToken } = generarTokens(user);
-
-        // Setear refreshToken como cookie httpOnly
         setRefreshTokenCookie(res, refreshToken);
 
-        res.json({ 
-            success: true, 
-            token: accessToken, 
+        res.json({
+            success: true,
+            token: accessToken,
             nombre: user.nombre,
             rol: 'tecnico',
             id_usuario: user.id_usuario
@@ -55,7 +51,14 @@ export const loginTecnico = async (req, res) => {
 export const obtenerTec = async (req, res) => {
     try {
         const users = await Usuario.findAll({ where: { id_rol: 2 } });
-        res.json({ success: true, data: users });
+        res.json({
+            success: true,
+            // Prisma devuelve BigInt nativo, lo parseamos a String para evitar que res.json falle
+            data: users.map(u => ({
+                ...u,
+                numero_documento: u.numero_documento ? u.numero_documento.toString() : null
+            }))
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -68,6 +71,10 @@ export const obtenerTecPorId = async (req, res) => {
         if (!user || user.id_rol !== 2) {
             return res.status(404).json({ success: false, message: 'Tecnico no encontrado' });
         }
+
+        // Convertimos BigInt a String
+        user.numero_documento = user.numero_documento ? user.numero_documento.toString() : null;
+
         res.json({ success: true, data: user });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -77,20 +84,22 @@ export const obtenerTecPorId = async (req, res) => {
 export const crearTec = async (req, res) => {
     try {
         const userPayload = mapToUsuario(req.body);
-        await Usuario.create(userPayload);    
+        await Usuario.create(userPayload);
         const newUser = await Usuario.findByPk(userPayload.numero_documento);
-        
+
         await logHistory(
-            req.user?.id_usuario || 1, 
-            'usuarios', 
-            newUser.id_usuario, 
-            'INSERT', 
+            req.user?.id_usuario || 1,
+            'usuarios',
+            newUser.id_usuario,
+            'INSERT',
             `Se creó el técnico ${newUser.nombre}`
         );
 
+        newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
         res.json({ success: true, data: newUser });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        // En Prisma P2002 indica que falló una regla de Unique Constraint
+        if (error.code === 'P2002') {
             return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado' });
         }
         res.status(500).json({ success: false, error: error.message });
@@ -101,27 +110,28 @@ export const actualizarTec = async (req, res) => {
     const id = req.params.id;
     try {
         const userPayload = mapToUsuario(req.body);
-        await Usuario.update(id, userPayload);  
+        await Usuario.update(id, userPayload);
         const userActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
         if (!userActualizado || userActualizado.id_rol !== 2) {
             return res.status(404).json({ success: false, message: 'Tecnico no encontrado después de actualizar' });
         }
 
         await logHistory(
-            req.user?.id_usuario || 1, 
-            'usuarios', 
-            userActualizado.id_usuario, 
-            'UPDATE', 
+            req.user?.id_usuario || 1,
+            'usuarios',
+            userActualizado.id_usuario,
+            'UPDATE',
             `Se actualizó el técnico ${userActualizado.nombre}`
         );
 
+        userActualizado.numero_documento = userActualizado.numero_documento ? userActualizado.numero_documento.toString() : null;
         res.json({ success: true, data: userActualizado });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') {
             return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado por otro usuario' });
         }
         res.status(500).json({ success: false, error: error.message });
-    }   
+    }
 };
 
 export const eliminarTec = async (req, res) => {
@@ -134,10 +144,10 @@ export const eliminarTec = async (req, res) => {
         await Usuario.update(id, { estado: 'Inactivo' });
 
         await logHistory(
-            req.user?.id_usuario || 1, 
-            'usuarios', 
-            user.id_usuario, 
-            'DELETE', 
+            req.user?.id_usuario || 1,
+            'usuarios',
+            user.id_usuario,
+            'DELETE',
             `Se inhabilitó el técnico ${user.nombre}`
         );
 

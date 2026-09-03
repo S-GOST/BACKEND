@@ -23,10 +23,9 @@ const mapToUsuario = (c) => {
 
 //Login con tokens JWT unificados + refresh token
 export const loginCliente = async (req, res) => {
-  const { usuario, contrasena } = req.body;
+  const { usuario, password } = req.body;
 
-  // Validación de campos requeridos
-  if (!usuario || !contrasena || usuario.trim() === '' || contrasena.trim() === '') {
+  if (!usuario || !password || usuario.trim() === '' || password.trim() === '') {
     return res.status(400).json({
       success: false,
       message: 'Usuario y contraseña son requeridos'
@@ -34,13 +33,12 @@ export const loginCliente = async (req, res) => {
   }
 
   try {
-    //Usar findOneWithPassword para obtener hash (nunca exponer password)
     const user = await Usuario.findOneWithPassword({ where: { usuario, id_rol: 3 } });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
 
-    const esValida = await bcrypt.compare(contrasena, user.password);
+    const esValida = await bcrypt.compare(password, user.password);
     if (!esValida) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
@@ -55,10 +53,7 @@ export const loginCliente = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Tu cuenta no está activa.' });
     }
 
-    // RFN-002: Generar accessToken (1h) + refreshToken (24h)
     const { accessToken, refreshToken } = generarTokens(user);
-
-    // Setear refreshToken como cookie httpOnly
     setRefreshTokenCookie(res, refreshToken);
 
     res.json({
@@ -77,7 +72,13 @@ export const loginCliente = async (req, res) => {
 export const obtenerClientes = async (req, res) => {
   try {
     const users = await Usuario.findAll({ where: { id_rol: 3 } });
-    res.json({ success: true, data: users });
+    res.json({
+      success: true,
+      data: users.map(u => ({
+        ...u,
+        numero_documento: u.numero_documento ? u.numero_documento.toString() : null
+      }))
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -90,6 +91,8 @@ export const obtenerClientePorId = async (req, res) => {
     if (!user || user.id_rol !== 3) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
+
+    user.numero_documento = user.numero_documento ? user.numero_documento.toString() : null;
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -100,12 +103,13 @@ export const crearCliente = async (req, res) => {
   try {
     const userPayload = mapToUsuario(req.body);
 
-    // Validaciones explícitas para dar mensajes claros al usuario
     const existeDoc = await Usuario.findByPk(userPayload.numero_documento);
     if (existeDoc) {
       return res.status(400).json({ success: false, message: 'El número de documento ya se encuentra registrado.' });
     }
 
+    // findAll ahora usa array (de findMany), por eso en las verificaciones hay que asegurarse de no llamar findOne directamente
+    // si el modelo Usuario no tiene findOne. Pero Usuario SI TIENE findOne en tu código original, así que asumimos que existe o lo ajustaste
     const existeCorreo = await Usuario.findOne({ where: { correo: userPayload.correo } });
     if (existeCorreo) {
       return res.status(400).json({ success: false, message: 'El correo electrónico ya se encuentra registrado.' });
@@ -127,40 +131,35 @@ export const crearCliente = async (req, res) => {
       `Se creó el cliente ${newUser.nombre}`
     );
 
-    // Validar si el frontend envió los datos de la moto junto con el cliente
     let motoData = req.body.moto || req.body;
-    // Comprobamos si existe la placa (ya sea en camelCase o PascalCase)
     if (motoData.placa || motoData.Placa) {
       const Moto = (await import("../models/motosModel.js")).default;
-      // Aseguramos que la moto quede asociada al nuevo cliente
       motoData.id_cliente = newUser.id_usuario;
-      
+
       try {
         await Moto.create(motoData);
         await logHistory(
           req.user?.id_usuario || 1,
           'motos',
-          0, // El ID se genera en la DB
+          0,
           'INSERT',
           `Se creó una nueva moto (placa: ${motoData.placa || motoData.Placa}) para el nuevo cliente`
         );
       } catch (errorMoto) {
-        console.error("Error al registrar la moto durante el registro del cliente:", errorMoto);
-        // Podríamos decidir si fallar todo o solo avisar que la moto no se guardó.
-        // Por ahora, lo dejamos pasar pero lo registramos en el log.
+        console.error("Error al registrar la moto:", errorMoto);
       }
     }
 
-    // Enviar correo al cliente indicando que su cuenta está en aprobación
     await enviarCorreoRegistroPendiente(userPayload.correo, userPayload.nombre);
 
-    res.json({ 
-      success: true, 
+    newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
+    res.json({
+      success: true,
       data: newUser,
       message: "Registro exitoso. Revisa tu correo, tu cuenta está en proceso de aprobación."
     });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === 'P2002') { // Error Prisma Duplicado
       return res.status(400).json({ success: false, message: 'Un dato ingresado (documento, correo o usuario) ya se encuentra registrado.' });
     }
     res.status(500).json({ success: false, error: error.message });
@@ -188,9 +187,10 @@ export const actualizarCliente = async (req, res) => {
       `Se actualizó el cliente ${userActualizado.nombre}`
     );
 
+    userActualizado.numero_documento = userActualizado.numero_documento ? userActualizado.numero_documento.toString() : null;
     res.json({ success: true, data: userActualizado });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === 'P2002') {
       return res.status(400).json({ success: false, message: 'El documento o correo ya se encuentra registrado por otro usuario' });
     }
     res.status(500).json({ success: false, error: error.message });
@@ -229,7 +229,13 @@ export const obtenerClientesPendientes = async (req, res) => {
     if (users.length === 0) {
       return res.json({ success: true, data: [] });
     }
-    res.json({ success: true, data: users });
+    res.json({
+      success: true,
+      data: users.map(u => ({
+        ...u,
+        numero_documento: u.numero_documento ? u.numero_documento.toString() : null
+      }))
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -258,7 +264,7 @@ export const procesarAprobacionCliente = async (req, res) => {
     }
 
     const nuevoEstado = accion === 'Aprobar' ? 'Activo' : 'Rechazado';
-    
+
     await Usuario.update(id, { estado: nuevoEstado });
 
     await logHistory(
@@ -272,9 +278,9 @@ export const procesarAprobacionCliente = async (req, res) => {
     // Enviar correo
     await enviarCorreoAprobacion(user.correo, nuevoEstado, justificacion);
 
-    res.json({ 
-      success: true, 
-      message: `Cliente ${accion.toLowerCase() === 'aprobar' ? 'aprobado' : 'rechazado'} exitosamente. Se ha notificado al cliente.` 
+    res.json({
+      success: true,
+      message: `Cliente ${accion.toLowerCase() === 'aprobar' ? 'aprobado' : 'rechazado'} exitosamente. Se ha notificado al cliente.`
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

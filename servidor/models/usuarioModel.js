@@ -1,147 +1,122 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js'; // Tu nuevo archivo de conexión
 import bcrypt from 'bcrypt';
 
-// ============================================================
-// RFN-001: Encriptación de contraseñas con bcrypt (10 rounds)
-// RFN-001: Nunca mostrar contraseñas en respuestas
-// ============================================================
-
-// Columnas seguras (SIN password) para usar en SELECT
-const COLUMNAS_SEGURAS = 'id_usuario, id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, correo, telefono, estado';
+// RFN-001: Nunca mostrar contraseñas en respuestas.
+// En Prisma, en lugar de un string, usamos un objeto 'select' para decir qué campos queremos
+const COLUMNAS_SEGURAS = {
+  id_usuario: true,
+  id_rol: true,
+  id_tipo_documento: true,
+  numero_documento: true,
+  nombre: true,
+  ciudad: true,
+  usuario: true,
+  correo: true,
+  telefono: true,
+  estado: true,
+  // NOTA: password no está aquí, así que Prisma nunca lo devolverá en estos queries
+};
 
 const Usuario = {
-  // Obtener todos (opcionalmente filtrados por rol) — SIN password
+  // Obtener todos
   findAll: async (conditions = {}) => {
-    let query = `SELECT ${COLUMNAS_SEGURAS} FROM usuarios`;
-    const params = [];
-    if (conditions.where) {
-      const keys = Object.keys(conditions.where);
-      if (keys.length > 0) {
-        query += " WHERE " + keys.map(k => `${k} = ?`).join(" AND ");
-        params.push(...keys.map(k => conditions.where[k]));
-      }
-    }
-    const [rows] = await pool.query(query, params);
-    return rows;
+    return await prisma.usuarios.findMany({
+      where: conditions.where || {},
+      select: COLUMNAS_SEGURAS
+    });
   },
 
-  // Buscar por número de documento — SIN password
+  // Buscar por número de documento
   findByPk: async (numero_documento) => {
-    const [rows] = await pool.query(
-      `SELECT ${COLUMNAS_SEGURAS} FROM usuarios WHERE numero_documento = ?`,
-      [numero_documento]
-    );
-    return rows[0];
+    return await prisma.usuarios.findUnique({
+      where: { numero_documento: BigInt(numero_documento) },
+      select: COLUMNAS_SEGURAS
+    });
   },
 
-  // Buscar un registro por condición — SIN password
+  // Buscar un registro por condición general (Ej: correo o usuario)
   findOne: async (conditions) => {
-    const { where } = conditions;
-    if (!where) return null;
-    const keys = Object.keys(where);
-    if (keys.length === 0) return null;
-    
-    const query = `SELECT ${COLUMNAS_SEGURAS} FROM usuarios WHERE ` + keys.map(k => `${k} = ?`).join(" AND ");
-    const params = keys.map(k => where[k]);
-    
-    const [rows] = await pool.query(query, params);
-    return rows[0];
+    return await prisma.usuarios.findFirst({
+      where: conditions.where,
+      select: COLUMNAS_SEGURAS
+    });
   },
 
-  // Buscar un registro CON password — SOLO para login
+  // Buscar un registro CON password (SOLO PARA LOGIN)
   findOneWithPassword: async (conditions) => {
-    const { where } = conditions;
-    if (!where) return null;
-    const keys = Object.keys(where);
-    if (keys.length === 0) return null;
-
-    const query = `SELECT * FROM usuarios WHERE ` + keys.map(k => `${k} = ?`).join(" AND ");
-    const params = keys.map(k => where[k]);
-
-    const [rows] = await pool.query(query, params);
-    return rows[0];
+    return await prisma.usuarios.findFirst({
+      where: conditions.where
+      // Al no poner 'select', Prisma trae todo, incluyendo el password
+    });
   },
 
-  // Crear nuevo usuario — RFN-001: bcrypt con 10 rounds mínimo
+  // Crear nuevo usuario con bcrypt
   create: async (data) => {
-    const { id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono, estado } = data;
     const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-    
-    const [result] = await pool.query(
-      `INSERT INTO usuarios
-       (id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, password, correo, telefono, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'Activo'))`,
-      [id_rol, id_tipo_documento, numero_documento, nombre, ciudad, usuario, passwordHash, correo, telefono, estado]
-    );
-    return result;
+    const passwordHash = await bcrypt.hash(data.password, saltRounds);
+
+    return await prisma.usuarios.create({
+      data: {
+        ...data,
+        password: passwordHash,
+        estado: data.estado || 'Activo'
+      }
+    });
   },
 
-  // Actualizar usuario — RFN-001: rehash password si se actualiza
+  // Actualizar usuario con rehash condicional
   update: async (numero_documento_id, data) => {
-    const existing = await Usuario.findByPk(numero_documento_id);
-    if (!existing) {
-      throw new Error('Usuario no encontrado');
-    }
+    const datosActualizar = { ...data };
 
-    const numero_documento = Object.prototype.hasOwnProperty.call(data, 'numero_documento') ? data.numero_documento : existing.numero_documento;
-    const id_tipo_documento = Object.prototype.hasOwnProperty.call(data, 'id_tipo_documento') ? data.id_tipo_documento : existing.id_tipo_documento;
-    const id_rol = Object.prototype.hasOwnProperty.call(data, 'id_rol') ? data.id_rol : existing.id_rol;
-    const nombre = Object.prototype.hasOwnProperty.call(data, 'nombre') ? data.nombre : existing.nombre;
-    const ciudad = Object.prototype.hasOwnProperty.call(data, 'ciudad') ? data.ciudad : existing.ciudad;
-    const usuario = Object.prototype.hasOwnProperty.call(data, 'usuario') ? data.usuario : existing.usuario;
-    const correo = Object.prototype.hasOwnProperty.call(data, 'correo') ? data.correo : existing.correo;
-    const telefono = Object.prototype.hasOwnProperty.call(data, 'telefono') ? data.telefono : existing.telefono;
-    const estado = Object.prototype.hasOwnProperty.call(data, 'estado') ? data.estado : existing.estado;
-
-    let query = `UPDATE usuarios SET numero_documento = ?, id_tipo_documento = ?, id_rol = ?, nombre = ?, ciudad = ?, usuario = ?, correo = ?, telefono = ?, estado = ?`;
-    let params = [numero_documento, id_tipo_documento, id_rol, nombre, ciudad, usuario, correo, telefono, estado];
-
+    // Si se envió una contraseña nueva, la hasheamos
     if (data.password) {
-      const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(data.password, saltRounds);
-      query += `, password = ?`;
-      params.push(passwordHash);
+      datosActualizar.password = await bcrypt.hash(data.password, 10);
     }
 
-    query += ` WHERE numero_documento = ?`;
-    params.push(numero_documento_id);
-
-    const [result] = await pool.query(query, params);
-    return result;
+    return await prisma.usuarios.update({
+      where: { numero_documento: BigInt(numero_documento_id) },
+      data: datosActualizar
+    });
   },
 
   // Eliminar usuario
   delete: async (numero_documento) => {
-    await pool.query("DELETE FROM usuarios WHERE numero_documento = ?", [numero_documento]);
-    return true;
+    return await prisma.usuarios.delete({
+      where: { numero_documento: BigInt(numero_documento) }
+    });
   },
 
   // Guardar token de recuperación de contraseña
   setResetToken: async (correo, token, expiracion) => {
-    const [result] = await pool.query(
-      "UPDATE usuarios SET reset_token = ?, reset_token_expires = ? WHERE correo = ?",
-      [token, expiracion, correo]
-    );
-    return result;
+    return await prisma.usuarios.update({
+      where: { correo: correo },
+      data: {
+        reset_token: token,
+        reset_token_expires: expiracion
+      }
+    });
   },
 
-  // Buscar usuario por token de recuperación
+  // Buscar usuario por token válido
   findByResetToken: async (token) => {
-    const [rows] = await pool.query(
-      `SELECT * FROM usuarios WHERE reset_token = ? AND reset_token_expires > NOW()`,
-      [token]
-    );
-    return rows[0];
+    return await prisma.usuarios.findFirst({
+      where: {
+        reset_token: token,
+        reset_token_expires: { gt: new Date() } // Mayor a la fecha actual (NOW)
+      }
+    });
   },
 
-  // Actualizar la contraseña de un usuario directamente
+  // Actualizar contraseña directamente (Reset Password)
   updatePassword: async (numero_documento, passwordHash) => {
-    const [result] = await pool.query(
-      "UPDATE usuarios SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE numero_documento = ?",
-      [passwordHash, numero_documento]
-    );
-    return result;
+    return await prisma.usuarios.update({
+      where: { numero_documento: BigInt(numero_documento) },
+      data: {
+        password: passwordHash,
+        reset_token: null,
+        reset_token_expires: null
+      }
+    });
   }
 };
 

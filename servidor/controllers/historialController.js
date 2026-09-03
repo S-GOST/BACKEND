@@ -6,15 +6,15 @@ import Historial from "../models/historialModel.js";
 export const obtenerHistorial = async (req, res) => {
     try {
         const historial = await Historial.findAll();
-        res.json({ 
-            success: true, 
-            data: historial 
+        res.json({
+            success: true,
+            data: historial
         });
     } catch (error) {
         console.error("Error al obtener el historial:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -27,20 +27,20 @@ export const obtenerHistorialPorId = async (req, res) => {
     try {
         const registro = await Historial.findById(id);
         if (!registro) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Registro de historial no encontrado' 
+            return res.status(404).json({
+                success: false,
+                message: 'Registro de historial no encontrado'
             });
         }
-        res.json({ 
-            success: true, 
-            data: registro 
+        res.json({
+            success: true,
+            data: registro
         });
     } catch (error) {
         console.error("Error al obtener historial por ID:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -50,16 +50,16 @@ export const obtenerHistorialPorId = async (req, res) => {
  */
 export const crearHistorial = async (req, res) => {
     try {
-        const nuevoRegistro = await Historial.create(req.body);    
-        res.json({ 
-            success: true, 
-            data: nuevoRegistro 
+        const nuevoRegistro = await Historial.create(req.body);
+        res.json({
+            success: true,
+            data: nuevoRegistro
         });
     } catch (error) {
         console.error("Error al crear registro en historial:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -70,18 +70,21 @@ export const crearHistorial = async (req, res) => {
 export const actualizarHistorial = async (req, res) => {
     const { id } = req.params;
     try {
-        const registroActualizado = await Historial.update(id, req.body);  
-        res.json({ 
-            success: true, 
-            data: registroActualizado 
+        const registroActualizado = await Historial.update(id, req.body);
+        res.json({
+            success: true,
+            data: registroActualizado
         });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Registro de historial no encontrado' });
+        }
         console.error("Error al actualizar historial:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
-    }   
+    }
 };
 
 /**
@@ -91,15 +94,18 @@ export const eliminarHistorial = async (req, res) => {
     const { id } = req.params;
     try {
         await Historial.delete(id);
-        res.json({ 
-            success: true, 
-            message: 'Registro de historial eliminado correctamente' 
+        res.json({
+            success: true,
+            message: 'Registro de historial eliminado correctamente'
         });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Registro de historial no encontrado' });
+        }
         console.error("Error al eliminar historial:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -113,17 +119,17 @@ export const obtenerMiHistorial = async (req, res) => {
         if (!idUsuario) {
             return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
         }
-        
+
         const historial = await Historial.findByUsuarioId(idUsuario);
-        res.json({ 
-            success: true, 
-            data: historial 
+        res.json({
+            success: true,
+            data: historial
         });
     } catch (error) {
         console.error("Error al obtener historial del usuario:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
-};
+};

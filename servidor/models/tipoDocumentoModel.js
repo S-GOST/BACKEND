@@ -1,19 +1,19 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js';
 
 const TipoDocumento = {
   // Obtener todos los tipos de documento
   findAll: async () => {
-    const [rows] = await pool.query("SELECT * FROM tipo_documento");
-    return rows;
+    return await prisma.tipo_documento.findMany();
   },
 
   // Buscar por ID
   findById: async (id) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM tipo_documento WHERE id_tipo_documento = ?",
-      [id]
-    );
-    return rows[0];
+    return await prisma.tipo_documento.findUnique({
+      where: {
+        // Convertimos a número por si llega como string desde req.params
+        id_tipo_documento: Number(id)
+      }
+    });
   }
 };
 

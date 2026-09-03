@@ -6,13 +6,15 @@
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage --testResultsProcessor jest-sonar-reporter",
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "prisma skills sync || exit 0"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -33,7 +35,8 @@
     "babel-jest": "^30.4.1",
     "cypress": "^15.21.0",
     "jest": "^30.4.2",
-    "jest-sonar-reporter": "^2.0.0"
+    "jest-sonar-reporter": "^2.0.0",
+    "prisma": "^5.22.0"
   },
   "jest": {
     "moduleNameMapper": {

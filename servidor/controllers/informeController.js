@@ -1,8 +1,20 @@
-import Informe from "../models/informeModel.js";
-import pool from "../config/db.js";
+import Informe from "../models/InformeModel.js";
+import prisma from "../config/prisma.js"; // REEMPLAZO de pool
 import { logHistory } from "../utils/historyLogger.js";
+import { Prisma } from '@prisma/client';
 
-
+// Helper para limpiar BigInt y Decimales que retorna Prisma en consultas Raw
+const serializeValues = (rows) => rows.map(row => {
+    const newRow = { ...row };
+    for (let key in newRow) {
+        if (typeof newRow[key] === 'bigint') {
+            newRow[key] = Number(newRow[key]);
+        } else if (newRow[key] && typeof newRow[key] === 'object' && newRow[key].constructor.name === 'Decimal') {
+            newRow[key] = Number(newRow[key]);
+        }
+    }
+    return newRow;
+});
 
 /**
  * Obtener todos los informes
@@ -26,30 +38,29 @@ export const obtenerMisInformes = async (req, res) => {
         if (!tecnicoId) {
             return res.status(401).json({ success: false, error: 'No autenticado' });
         }
-        
-        // Buscar id_usuario real desde el JWT
-        const [usuarioRows] = await pool.query(
+
+        // Buscar id_usuario real usando Raw (por si se envía número de documento)
+        const usuarioRows = await prisma.$queryRawUnsafe(
             'SELECT id_usuario FROM usuarios WHERE numero_documento = ? OR id_usuario = ?',
-            [tecnicoId, tecnicoId]
+            Number(tecnicoId), Number(tecnicoId)
         );
-        
+
         if (!usuarioRows || usuarioRows.length === 0) {
             return res.status(404).json({ success: false, error: 'Técnico no encontrado' });
         }
-        
-        const idTecnicoReal = usuarioRows[0].id_usuario;
-        const [rows] = await pool.query(
+
+        const idTecnicoReal = Number(usuarioRows[0].id_usuario);
+        const rows = await prisma.$queryRawUnsafe(
             'SELECT * FROM informe WHERE id_tecnico = ? ORDER BY fecha DESC',
-            [idTecnicoReal]
+            idTecnicoReal
         );
-        
-        res.json({ success: true, data: rows });
+
+        res.json({ success: true, data: serializeValues(rows) });
     } catch (error) {
         console.error("Error al obtener informes del técnico:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
-
 
 /**
  * Obtener un informe por su ID
@@ -88,17 +99,16 @@ export const crearInforme = async (req, res) => {
             });
         }
 
-        const resultado = await Informe.create({
-            id_orden,
-            id_tecnico,
+        const nuevoInforme = await Informe.create({
+            id_orden: Number(id_orden),
+            id_tecnico: Number(id_tecnico),
             diagnostico,
             trabajo_realizado,
             recomendaciones
         });
 
-        // El ID insertado autoincremental
-        const nuevoId = resultado.insertId;
-        const nuevoInforme = await Informe.findById(nuevoId);
+        // El ID insertado (El modelo de Prisma ya debería devolver el objeto completo)
+        const nuevoId = nuevoInforme.id_informe || nuevoInforme.ID_INFORME || 0;
 
         // Guardar en el historial
         await logHistory(
@@ -111,8 +121,7 @@ export const crearInforme = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            data: nuevoInforme,
-            insertResult: resultado,
+            data: nuevoInforme
         });
     } catch (error) {
         console.error("Error al crear informe:", error);
@@ -133,21 +142,15 @@ export const actualizarInforme = async (req, res) => {
 
         const { id_orden, id_tecnico, diagnostico, trabajo_realizado, recomendaciones } = req.body;
 
-        const resultado = await Informe.update(id, {
-            id_orden: id_orden || existe.id_orden,
-            id_tecnico: id_tecnico || existe.id_tecnico,
+        await Informe.update(id, {
+            id_orden: id_orden ? Number(id_orden) : existe.id_orden,
+            id_tecnico: id_tecnico ? Number(id_tecnico) : existe.id_tecnico,
             diagnostico: diagnostico || existe.diagnostico,
             trabajo_realizado: trabajo_realizado || existe.trabajo_realizado,
             recomendaciones: recomendaciones || existe.recomendaciones
         });
-        
-        const informeActualizado = await Informe.findById(id);
 
-        res.json({
-            success: true,
-            data: informeActualizado,
-            updateResult: resultado,
-        });
+        const informeActualizado = await Informe.findById(id);
 
         await logHistory(
             req.user?.id_usuario || existe.id_tecnico || 1,
@@ -156,7 +159,15 @@ export const actualizarInforme = async (req, res) => {
             'UPDATE',
             `Actualizó el informe de la orden ${informeActualizado.id_orden}`
         );
+
+        res.json({
+            success: true,
+            data: informeActualizado
+        });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: "Informe no encontrado" });
+        }
         console.error("Error al actualizar informe:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -185,6 +196,9 @@ export const eliminarInforme = async (req, res) => {
 
         res.json({ success: true, message: "Informe eliminado correctamente" });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: "Informe no encontrado" });
+        }
         console.error("Error al eliminar informe:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -215,7 +229,8 @@ export const generarReporte = async (req, res) => {
 
         query += ' ORDER BY fecha DESC';
 
-        const [rows] = await pool.query(query, queryParams);
+        let rows = await prisma.$queryRawUnsafe(query, ...queryParams);
+        rows = serializeValues(rows);
 
         if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Sin datos disponibles' });
@@ -257,15 +272,15 @@ export const obtenerProductividadTecnicos = async (req, res) => {
               AND DATE(os.fecha_salida) BETWEEN ? AND ?
             GROUP BY u.id_usuario
         `;
-        
-        const [ordenesCompletadas] = await pool.query(queryOrdenes, [fecha_inicio, fecha_fin]);
+
+        let ordenesCompletadas = await prisma.$queryRawUnsafe(queryOrdenes, fecha_inicio, fecha_fin);
+        ordenesCompletadas = serializeValues(ordenesCompletadas);
 
         // 2. Calcular tiempo promedio por tipo de servicio
         const queryPromedio = `
             SELECT 
                 u.id_usuario,
                 u.nombre,
-
                 s.Nombre as servicio,
                 AVG(TIMESTAMPDIFF(MINUTE, os.fecha_ingreso, os.fecha_salida)) as promedio_minutos
             FROM orden_servicio os
@@ -279,7 +294,8 @@ export const obtenerProductividadTecnicos = async (req, res) => {
             GROUP BY u.id_usuario, s.ID_SERVICIOS
         `;
 
-        const [promediosServicios] = await pool.query(queryPromedio, [fecha_inicio, fecha_fin]);
+        let promediosServicios = await prisma.$queryRawUnsafe(queryPromedio, fecha_inicio, fecha_fin);
+        promediosServicios = serializeValues(promediosServicios);
 
         if (ordenesCompletadas.length === 0 && promediosServicios.length === 0) {
             return res.status(404).json({ success: false, message: 'No hay órdenes completadas en el período' });
@@ -293,19 +309,18 @@ export const obtenerProductividadTecnicos = async (req, res) => {
             `Generó reporte de productividad desde ${fecha_inicio} hasta ${fecha_fin}`
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             data: {
                 ordenesCompletadas,
                 promediosServicios
-            } 
+            }
         });
     } catch (error) {
         console.error("Error al generar reporte de productividad:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
-
 
 /**
  * Obtener informe de inventario (RF-0035)
@@ -323,14 +338,15 @@ export const obtenerReporteInventario = async (req, res) => {
             LEFT JOIN categorias c ON p.ID_CATEGORIA = c.ID_CATEGORIA
             WHERE p.Estado = 'Activo'
         `;
-        
+
         let paramsInventario = [];
         if (categoria) {
             queryInventario += ' AND p.ID_CATEGORIA = ?';
-            paramsInventario.push(categoria);
+            paramsInventario.push(Number(categoria));
         }
 
-        const [productos] = await pool.query(queryInventario, paramsInventario);
+        let productos = await prisma.$queryRawUnsafe(queryInventario, ...paramsInventario);
+        productos = serializeValues(productos);
 
         // 2. Obtener productos mas utilizados en el rango de fechas
         let queryMasUsados = `
@@ -340,7 +356,7 @@ export const obtenerReporteInventario = async (req, res) => {
             JOIN productos p ON dos.ID_PRODUCTOS = p.ID_PRODUCTOS
             WHERE os.estado = 'Finalizada'
         `;
-        
+
         let paramsMasUsados = [];
         if (fecha_inicio && fecha_fin) {
             queryMasUsados += ' AND DATE(os.fecha_salida) BETWEEN ? AND ?';
@@ -348,14 +364,14 @@ export const obtenerReporteInventario = async (req, res) => {
         }
         if (categoria) {
             queryMasUsados += ' AND p.ID_CATEGORIA = ?';
-            paramsMasUsados.push(categoria);
+            paramsMasUsados.push(Number(categoria));
         }
-        
-        queryMasUsados += ' GROUP BY p.ID_PRODUCTOS ORDER BY total_usado DESC LIMIT 10';
-        
-        const [masUsados] = await pool.query(queryMasUsados, paramsMasUsados);
 
-        
+        queryMasUsados += ' GROUP BY p.ID_PRODUCTOS ORDER BY total_usado DESC LIMIT 10';
+
+        let masUsados = await prisma.$queryRawUnsafe(queryMasUsados, ...paramsMasUsados);
+        masUsados = serializeValues(masUsados);
+
         // 2b. Obtener servicios mas utilizados
         let queryMasUsadosServicios = `
             SELECT s.ID_SERVICIOS, s.nombre, s.Precio, SUM(dos.cantidad) as total_usado, SUM(dos.cantidad * CAST(s.Precio AS DECIMAL(10,2))) as total_generado
@@ -371,10 +387,12 @@ export const obtenerReporteInventario = async (req, res) => {
         }
         if (categoria) {
             queryMasUsadosServicios += ' AND s.id_categoria = ?';
-            paramsMasUsadosServicios.push(categoria);
+            paramsMasUsadosServicios.push(Number(categoria));
         }
         queryMasUsadosServicios += ' GROUP BY s.ID_SERVICIOS ORDER BY total_usado DESC LIMIT 10';
-        const [masUsadosServicios] = await pool.query(queryMasUsadosServicios, paramsMasUsadosServicios);
+
+        let masUsadosServicios = await prisma.$queryRawUnsafe(queryMasUsadosServicios, ...paramsMasUsadosServicios);
+        masUsadosServicios = serializeValues(masUsadosServicios);
 
         if (productos.length === 0 && masUsadosServicios.length === 0) {
             return res.status(404).json({ success: false, message: 'No hay datos registrados' });
@@ -396,7 +414,7 @@ export const obtenerReporteInventario = async (req, res) => {
             JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
             WHERE os.estado = 'Finalizada'
         `;
-        
+
         let paramVentas = [];
         if (fecha_inicio && fecha_fin) {
             queryVentasProd += ' AND DATE(os.fecha_salida) BETWEEN ? AND ?';
@@ -404,15 +422,16 @@ export const obtenerReporteInventario = async (req, res) => {
             paramVentas.push(fecha_inicio, fecha_fin);
         }
         if (categoria) {
-            // Esto solo filtrará por categoría de producto o servicio dependiendo de la query
-            // Para simplificar, si hay filtro de categoría, se aplica a ambas, si una no tiene datos, retorna null
             queryVentasProd += ' AND p.ID_CATEGORIA = ?';
             queryVentasServ += ' AND s.id_categoria = ?';
-            paramVentas.push(categoria);
+            paramVentas.push(Number(categoria));
         }
-        
-        const [ventasProd] = await pool.query(queryVentasProd, paramVentas);
-        const [ventasServ] = await pool.query(queryVentasServ, paramVentas);
+
+        let ventasProd = await prisma.$queryRawUnsafe(queryVentasProd, ...paramVentas);
+        ventasProd = serializeValues(ventasProd);
+
+        let ventasServ = await prisma.$queryRawUnsafe(queryVentasServ, ...paramVentas);
+        ventasServ = serializeValues(ventasServ);
 
         let total_venta = (Number(ventasProd[0]?.total_venta_prod) || 0) + (Number(ventasServ[0]?.total_venta_serv) || 0);
         let total_costo = Number(ventasProd[0]?.total_costo_prod) || 0;

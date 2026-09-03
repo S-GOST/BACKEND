@@ -95,7 +95,9 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarTec);
  *               - numero_documento
  *               - nombre
  *               - usuario
+ *               - correo
  *               - password
+ *               - telefono
  *             properties:
  *               numero_documento:
  *                 type: string
@@ -103,12 +105,12 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarTec);
  *                 type: string
  *               usuario:
  *                 type: string
- *               password:
- *                 type: string
- *                 format: password
  *               correo:
  *                 type: string
  *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
  *               telefono:
  *                 type: string
  *     responses:
@@ -195,11 +197,11 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarTec);
  *             type: object
  *             required:
  *               - usuario
- *               - contrasena
+ *               - password
  *             properties:
  *               usuario:
  *                 type: string
- *               contrasena:
+ *               password:
  *                 type: string
  *                 format: password
  *     responses:

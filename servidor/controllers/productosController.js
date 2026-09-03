@@ -1,4 +1,4 @@
-// Importamos el modelo Producto (asegúrate que la ruta y el export sean correctos)
+// Importamos el modelo Producto
 import Producto from "../models/productosModel.js";
 import { logHistory } from "../utils/historyLogger.js";
 
@@ -48,14 +48,14 @@ export const crearProducto = async (req, res) => {
         await logHistory(
             req.user?.id_usuario || 1,
             'productos',
-            resultado.insertId || 0,
+            resultado.ID_PRODUCTOS || 0, // Prisma devuelve directamente el objeto creado
             'INSERT',
-            `Se creó el producto ${req.body.nombre || 'N/A'}`
+            `Se creó el producto ${req.body.Nombre || req.body.nombre || 'N/A'}`
         );
 
         res.status(201).json({ success: true, data: resultado });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') { // Violación Unique Constraint en Prisma
             return res.status(400).json({ success: false, message: 'El nombre del producto ya existe' });
         }
         console.error("Error al crear producto:", error);
@@ -72,9 +72,6 @@ export const actualizarProducto = async (req, res) => {
 
     try {
         const productoActualizado = await Producto.update(id, req.body);
-        if (productoActualizado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Producto no encontrado' });
-        }
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -86,8 +83,11 @@ export const actualizarProducto = async (req, res) => {
 
         res.json({ success: true, data: productoActualizado });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') {
             return res.status(400).json({ success: false, message: 'El nombre del producto ya existe' });
+        }
+        if (error.code === 'P2025') { // Registro no encontrado
+            return res.status(404).json({ success: false, message: 'Producto no encontrado' });
         }
         console.error("Error al actualizar producto:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -110,6 +110,9 @@ export const eliminarProducto = async (req, res) => {
 
         res.json({ success: true, message: 'Producto eliminado correctamente' });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+        }
         console.error("Error al eliminar producto:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -121,10 +124,7 @@ export const eliminarProducto = async (req, res) => {
 export const habilitarProducto = async (req, res) => {
     const { id } = req.params;
     try {
-        const resultado = await Producto.restore(id);
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Producto no encontrado" });
-        }
+        await Producto.restore(id);
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -136,6 +136,9 @@ export const habilitarProducto = async (req, res) => {
 
         res.json({ success: true, message: "Producto habilitado correctamente" });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: "Producto no encontrado" });
+        }
         console.error("Error al habilitar producto:", error);
         res.status(500).json({ success: false, error: error.message });
     }

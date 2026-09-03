@@ -98,6 +98,8 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCliente);
  *               - usuario
  *               - password
  *               - correo
+ *               - telefono
+ *               - ciudad
  *             properties:
  *               numero_documento:
  *                 type: string
@@ -205,11 +207,11 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarCliente);
  *             type: object
  *             required:
  *               - usuario
- *               - contrasena
+ *               - password
  *             properties:
  *               usuario:
  *                 type: string
- *               contrasena:
+ *               password:
  *                 type: string
  *                 format: password
  *     responses:

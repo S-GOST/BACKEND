@@ -1,98 +1,95 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js';
+
+// Función ayudante para mapear los resultados al formato que espera el frontend
+const formatDetalle = (detalle) => {
+  if (!detalle) return null;
+  return {
+    ID_DETALLES_ORDEN_SERVICIO: detalle.id_detalle,
+    ID_ORDEN_SERVICIO: detalle.id_orden,
+    ID_SERVICIOS: detalle.ID_SERVICIOS,
+    ID_PRODUCTOS: detalle.ID_PRODUCTOS,
+    NombreServicio: detalle.servicios ? detalle.servicios.Nombre : null,
+    NombreProducto: detalle.productos ? detalle.productos.Nombre : null,
+    cantidad: detalle.cantidad,
+    Garantia: detalle.garantia,
+    Precio: detalle.precio_unitario,
+    subtotal: detalle.subtotal
+  };
+};
 
 const DetalleOrdenServicio = {
   // 1. Obtener todos los detalles
   findAll: async () => {
-    const [rows] = await pool.query("SELECT * FROM detalles_orden_servicio");
-    return rows;
+    const detalles = await prisma.detalles_orden_servicio.findMany({
+      include: {
+        servicios: true,
+        productos: true
+      }
+    });
+    return detalles.map(formatDetalle);
   },
 
   // 2. Buscar por ID del detalle (PK)
   findById: async (id) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM detalles_orden_servicio WHERE ID_DETALLES_ORDEN_SERVICIO = ?",
-      [id]
-    );
-    return rows[0] || null;
+    const detalle = await prisma.detalles_orden_servicio.findUnique({
+      where: { id_detalle: Number(id) },
+      include: {
+        servicios: true,
+        productos: true
+      }
+    });
+    return formatDetalle(detalle);
   },
 
+  // 3. Obtener detalles de una orden específica (con JOIN)
   findByOrderId: async (idOrden) => {
-    const query = `
-      SELECT 
-        dos.id_detalle AS ID_DETALLES_ORDEN_SERVICIO,
-        dos.id_orden AS ID_ORDEN_SERVICIO,
-        dos.ID_SERVICIOS,
-        dos.ID_PRODUCTOS,
-        s.Nombre AS NombreServicio,
-        p.Nombre AS NombreProducto,
-        dos.cantidad,
-        dos.garantia AS Garantia,
-        dos.precio_unitario AS Precio,
-        dos.subtotal
-      FROM detalles_orden_servicio dos
-      LEFT JOIN servicios s ON dos.ID_SERVICIOS = s.ID_SERVICIOS
-      LEFT JOIN productos p ON dos.ID_PRODUCTOS = p.ID_PRODUCTOS
-      WHERE dos.id_orden = ?
-    `;
-    const [rows] = await pool.query(query, [idOrden]);
-    return rows;
+    const detalles = await prisma.detalles_orden_servicio.findMany({
+      where: { id_orden: Number(idOrden) },
+      include: {
+        servicios: true, // Reemplaza LEFT JOIN servicios
+        productos: true  // Reemplaza LEFT JOIN productos
+      }
+    });
+    return detalles.map(formatDetalle);
   },
 
   // 4. Crear un solo detalle
   create: async (data) => {
-    const { id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal } = data;
-  
-    const [result] = await pool.query(
-      `INSERT INTO detalles_orden_servicio
-       (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id_orden || data.ID_ORDEN_SERVICIO, // Soporte para frontend
-        ID_SERVICIOS !== undefined && ID_SERVICIOS !== null ? ID_SERVICIOS : null,
-        ID_PRODUCTOS !== undefined && ID_PRODUCTOS !== null ? ID_PRODUCTOS : null,
-        garantia || data.Garantia || 0,
-        cantidad || 1,
-        precio_unitario || data.Precio || 0,
-        subtotal || data.Precio || 0
-      ]
-    );
+    const detalleCreado = await prisma.detalles_orden_servicio.create({
+      data: {
+        id_orden: Number(data.id_orden || data.ID_ORDEN_SERVICIO),
+        ID_SERVICIOS: (data.ID_SERVICIOS !== undefined && data.ID_SERVICIOS !== null) ? Number(data.ID_SERVICIOS) : null,
+        ID_PRODUCTOS: (data.ID_PRODUCTOS !== undefined && data.ID_PRODUCTOS !== null) ? Number(data.ID_PRODUCTOS) : null,
+        garantia: Number(data.garantia || data.Garantia || 0),
+        cantidad: Number(data.cantidad || 1),
+        precio_unitario: Number(data.precio_unitario || data.Precio || 0),
+        subtotal: Number(data.subtotal || data.Precio || 0)
+      }
+    });
 
-    // Retorna el ID generado y los datos
-    return { id_detalle: result.insertId, ...data };
+    // Retornamos el id que se acaba de crear y mezclamos con la info de entrada
+    return { id_detalle: detalleCreado.id_detalle, ...data };
   },
 
   // 5. Actualizar un detalle
   update: async (id, data) => {
-    const { ID_ORDEN_SERVICIO, ID_SERVICIOS, ID_PRODUCTOS, Garantia, Precio } = data;
-
-    const [result] = await pool.query(
-      `UPDATE detalles_orden_servicio
-       SET ID_ORDEN_SERVICIO = ?,
-           ID_SERVICIOS = ?,
-           ID_PRODUCTOS = ?,
-           Garantia = ?,
-           Precio = ?
-       WHERE ID_DETALLES_ORDEN_SERVICIO = ?`,
-      [
-        ID_ORDEN_SERVICIO,
-        ID_SERVICIOS !== undefined && ID_SERVICIOS !== null ? ID_SERVICIOS : null,
-        ID_PRODUCTOS !== undefined && ID_PRODUCTOS !== null ? ID_PRODUCTOS : null,
-        Garantia,
-        Precio,
-        id
-      ]
-    );
-
-    return result;
+    return await prisma.detalles_orden_servicio.update({
+      where: { id_detalle: Number(id) },
+      data: {
+        id_orden: data.ID_ORDEN_SERVICIO ? Number(data.ID_ORDEN_SERVICIO) : undefined,
+        ID_SERVICIOS: (data.ID_SERVICIOS !== undefined && data.ID_SERVICIOS !== null) ? Number(data.ID_SERVICIOS) : null,
+        ID_PRODUCTOS: (data.ID_PRODUCTOS !== undefined && data.ID_PRODUCTOS !== null) ? Number(data.ID_PRODUCTOS) : null,
+        garantia: data.Garantia !== undefined ? Number(data.Garantia) : undefined,
+        precio_unitario: data.Precio !== undefined ? Number(data.Precio) : undefined
+      }
+    });
   },
 
   // 6. Eliminar un detalle
   delete: async (id) => {
-    const [result] = await pool.query(
-      "DELETE FROM detalles_orden_servicio WHERE ID_DETALLES_ORDEN_SERVICIO = ?",
-      [id]
-    );
-    return result;
+    return await prisma.detalles_orden_servicio.delete({
+      where: { id_detalle: Number(id) }
+    });
   }
 };
 

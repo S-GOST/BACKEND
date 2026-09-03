@@ -7,15 +7,15 @@ import { logHistory } from "../utils/historyLogger.js";
 export const obtenerServicios = async (req, res) => {
     try {
         const servicios = await Servicio.findAll();
-        res.json({ 
-            success: true, 
-            data: servicios 
+        res.json({
+            success: true,
+            data: servicios
         });
     } catch (error) {
         console.error("Error al obtener servicios:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -26,7 +26,6 @@ export const obtenerServicios = async (req, res) => {
 export const obtenerServicioPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        // Usamos el método findByPk del modelo (debe existir en el modelo)
         const servicio = await Servicio.findByPk(id);
 
         if (!servicio) {
@@ -49,23 +48,23 @@ export const crearServicio = async (req, res) => {
         await logHistory(
             req.user?.id_usuario || 1,
             'servicios',
-            nuevoServicio.insertId || 0,
+            nuevoServicio.ID_SERVICIOS || 0, // Prisma devuelve el ID_SERVICIOS creado
             'INSERT',
-            `Se creó el servicio ${req.body.nombre || 'N/A'}`
+            `Se creó el servicio ${req.body.Nombre || req.body.nombre || 'N/A'}`
         );
 
-        res.json({ 
-            success: true, 
-            data: nuevoServicio 
+        res.json({
+            success: true,
+            data: nuevoServicio
         });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') { // Violación de Unique Constraint en Prisma
             return res.status(400).json({ success: false, message: 'El nombre del servicio ya existe' });
         }
         console.error("Error al crear servicio:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -86,20 +85,23 @@ export const actualizarServicio = async (req, res) => {
             `Se actualizó el servicio ID ${id}`
         );
 
-        res.json({ 
-            success: true, 
-            data: servicioActualizado 
+        res.json({
+            success: true,
+            data: servicioActualizado
         });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') {
             return res.status(400).json({ success: false, message: 'El nombre del servicio ya existe' });
         }
+        if (error.code === 'P2025') { // Registro no encontrado
+            return res.status(404).json({ success: false, message: 'Servicio no encontrado' });
+        }
         console.error("Error al actualizar servicio:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
-    }   
+    }
 };
 
 /**
@@ -118,15 +120,18 @@ export const eliminarServicio = async (req, res) => {
             `Se eliminó el servicio ID ${id}`
         );
 
-        res.json({ 
-            success: true, 
-            message: 'Servicio eliminado correctamente' 
+        res.json({
+            success: true,
+            message: 'Servicio eliminado correctamente'
         });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Servicio no encontrado' });
+        }
         console.error("Error al eliminar servicio:", error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 };
@@ -137,10 +142,7 @@ export const eliminarServicio = async (req, res) => {
 export const habilitarServicio = async (req, res) => {
     const { id } = req.params;
     try {
-        const resultado = await Servicio.restore(id);
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Servicio no encontrado" });
-        }
+        await Servicio.restore(id);
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -152,6 +154,9 @@ export const habilitarServicio = async (req, res) => {
 
         res.json({ success: true, message: "Servicio habilitado correctamente" });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Servicio no encontrado' });
+        }
         console.error("Error al habilitar servicio:", error);
         res.status(500).json({ success: false, error: error.message });
     }

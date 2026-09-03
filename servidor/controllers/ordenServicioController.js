@@ -1,15 +1,16 @@
 import OrdenServicio from "../models/ordenServicioModel.js";
-import pool from "../config/db.js";
+import prisma from "../config/prisma.js"; // REEMPLAZO de pool
 import { logHistory } from "../utils/historyLogger.js";
+import { Prisma } from '@prisma/client';
 
 // Obtener todas las órdenes de servicio
 export const obtenerOrdenes = async (req, res) => {
     try {
         const filas = await OrdenServicio.findAll();
-        
+
         // Cargar detalles para cada orden
         for (const orden of filas) {
-            const [detalles] = await pool.query(`
+            const detalles = await prisma.$queryRaw`
                 SELECT 
                     d.id_detalle,
                     d.ID_SERVICIOS,
@@ -23,8 +24,8 @@ export const obtenerOrdenes = async (req, res) => {
                 FROM detalles_orden_servicio d
                 LEFT JOIN servicios s ON d.ID_SERVICIOS = s.ID_SERVICIOS
                 LEFT JOIN productos p ON d.ID_PRODUCTOS = p.ID_PRODUCTOS
-                WHERE d.id_orden = ?
-            `, [orden.ID_ORDEN_SERVICIO]);
+                WHERE d.id_orden = ${orden.ID_ORDEN_SERVICIO}
+            `;
             orden.detalles = detalles;
         }
 
@@ -65,19 +66,8 @@ export const obtenerMisOrdenes = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
         }
 
-        let condicionWhere = '';
-        let parametros = [idUsuario];
-
-        if (rol === 2) {
-            // Es Técnico
-            condicionWhere = 'os.id_tecnico = ?';
-        } else {
-            // Asumir que es Cliente (rol 3) o fallback
-            condicionWhere = 'os.id_cliente = ?';
-        }
-
-        // Traer órdenes con detalles incluidos
-        const [ordenes] = await pool.query(`
+        // Consulta Raw dinámica para obtener las órdenes
+        const query = Prisma.sql`
             SELECT 
                 os.id_orden AS ID_ORDEN_SERVICIO, 
                 os.id_cliente AS ID_CLIENTES, 
@@ -93,13 +83,14 @@ export const obtenerMisOrdenes = async (req, res) => {
                 m.modelo AS ModeloMoto
             FROM orden_servicio os
             LEFT JOIN motos m ON os.id_moto = m.id_moto
-            WHERE ${condicionWhere}
+            WHERE ${rol === 2 ? Prisma.raw('os.id_tecnico') : Prisma.raw('os.id_cliente')} = ${idUsuario}
             ORDER BY os.id_orden DESC
-        `, parametros);
+        `;
+        const ordenes = await prisma.$queryRaw(query);
 
         // Traer detalles para cada orden
         for (const orden of ordenes) {
-            const [detalles] = await pool.query(`
+            const detalles = await prisma.$queryRaw`
                 SELECT 
                     d.id_detalle,
                     d.ID_SERVICIOS,
@@ -113,8 +104,8 @@ export const obtenerMisOrdenes = async (req, res) => {
                 FROM detalles_orden_servicio d
                 LEFT JOIN servicios s ON d.ID_SERVICIOS = s.ID_SERVICIOS
                 LEFT JOIN productos p ON d.ID_PRODUCTOS = p.ID_PRODUCTOS
-                WHERE d.id_orden = ?
-            `, [orden.ID_ORDEN_SERVICIO]);
+                WHERE d.id_orden = ${orden.ID_ORDEN_SERVICIO}
+            `;
             orden.detalles = detalles;
         }
 
@@ -125,161 +116,167 @@ export const obtenerMisOrdenes = async (req, res) => {
     }
 };
 
-// --- Helpers para crearOrden ---
-const obtenerClienteId = async (tokenData, connection) => {
+// --- Helpers para crearOrden usando Transacciones de Prisma (tx) ---
+const obtenerClienteId = async (tokenData, tx) => {
     const isIdUsuario = !!tokenData.id_usuario;
     const searchValue = tokenData.id_usuario || tokenData.numero_documento || tokenData.id;
-    const column = isIdUsuario ? 'id_usuario' : 'numero_documento';
 
     if (!searchValue) return { error: 'Usuario no encontrado en la base de datos', status: 401 };
 
-    const [rows] = await connection.query(`SELECT id_usuario, estado FROM usuarios WHERE ${column} = ?`, [searchValue]);
-    
-    if (!rows || rows.length === 0) {
+    const user = await tx.usuarios.findFirst({
+        where: isIdUsuario ? { id_usuario: Number(searchValue) } : { numero_documento: BigInt(searchValue) },
+        select: { id_usuario: true, estado: true }
+    });
+
+    if (!user) {
         return { error: 'Usuario no encontrado en la base de datos', status: 401 };
     }
-    
-    if (rows[0].estado !== 'Activo') {
+
+    if (user.estado !== 'Activo') {
         return { error: 'El cliente debe estar activo para crear órdenes', status: 400 };
     }
-    
-    return { clienteId: rows[0].id_usuario };
+
+    return { clienteId: user.id_usuario };
 };
 
-const obtenerIdMoto = async (body, clienteId, connection) => {
+const obtenerIdMoto = async (body, clienteId, tx) => {
     const idMotoBody = body.id_moto || body.moto?.id_moto;
-    if (idMotoBody) return { idMoto: idMotoBody };
+    if (idMotoBody) return { idMoto: Number(idMotoBody) };
 
     if (body.moto?.placa) {
         const { placa, marca, modelo, cilindraje, kilometraje } = body.moto;
-        const [res] = await connection.query(
-            `INSERT INTO motos (id_cliente, placa, marca, modelo, cilindraje, kilometraje) VALUES (?, ?, ?, ?, ?, ?)`,
-            [clienteId, placa, marca, modelo, cilindraje, kilometraje]
-        );
-        return { idMoto: res.insertId };
+        const resMoto = await tx.motos.create({
+            data: { id_cliente: clienteId, placa, marca, modelo, cilindraje, kilometraje }
+        });
+        return { idMoto: resMoto.id_moto };
     }
 
-    const [motos] = await connection.query('SELECT id_moto FROM motos WHERE id_cliente = ? ORDER BY id_moto DESC LIMIT 1', [clienteId]);
-    if (!motos || motos.length === 0) {
+    const ultimaMoto = await tx.motos.findFirst({
+        where: { id_cliente: clienteId },
+        orderBy: { id_moto: 'desc' }
+    });
+
+    if (!ultimaMoto) {
         return { error: 'No se encontró ninguna moto asociada a este cliente', status: 400 };
     }
-    return { idMoto: motos[0].id_moto };
+    return { idMoto: ultimaMoto.id_moto };
 };
 
-const procesarDetalles = async (detalles, idOrden, connection) => {
+const procesarDetalles = async (detalles, idOrden, tx) => {
     for (const detalle of detalles) {
         const { ID_SERVICIOS: idServicio, ID_PRODUCTOS: idProducto, cantidad = 1 } = detalle;
         let precioUnitario = 0;
 
         if (idServicio) {
-            const [serv] = await connection.query('SELECT Precio FROM servicios WHERE ID_SERVICIOS = ?', [idServicio]);
-            if (!serv || serv.length === 0) return { error: `El servicio con ID ${idServicio} no existe`, status: 400 };
-            precioUnitario = parseFloat(serv[0].Precio || 0);
+            const serv = await tx.servicios.findUnique({ where: { ID_SERVICIOS: Number(idServicio) } });
+            if (!serv) return { error: `El servicio con ID ${idServicio} no existe`, status: 400 };
+            precioUnitario = parseFloat(serv.Precio || 0);
         } else if (idProducto) {
-            const [prod] = await connection.query('SELECT Nombre, precio_venta AS Precio, stock FROM productos WHERE ID_PRODUCTOS = ?', [idProducto]);
-            if (!prod || prod.length === 0) return { error: `El producto con ID ${idProducto} no existe`, status: 400 };
-            if (prod[0].stock < cantidad) return { error: `Stock insuficiente para el producto ${prod[0].Nombre}. Stock actual: ${prod[0].stock}`, status: 400 };
-            precioUnitario = parseFloat(prod[0].Precio ?? prod[0].precio_venta ?? 0);
-            await connection.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, idProducto]);
+            const prod = await tx.productos.findUnique({ where: { ID_PRODUCTOS: Number(idProducto) } });
+            if (!prod) return { error: `El producto con ID ${idProducto} no existe`, status: 400 };
+            if (prod.stock < cantidad) return { error: `Stock insuficiente para el producto ${prod.Nombre}. Stock actual: ${prod.stock}`, status: 400 };
+            precioUnitario = parseFloat(prod.Precio ?? prod.precio_venta ?? 0);
+
+            await tx.productos.update({
+                where: { ID_PRODUCTOS: Number(idProducto) },
+                data: { stock: { decrement: Number(cantidad) } }
+            });
         } else {
             return { error: 'Cada detalle debe incluir un servicio o un producto válido', status: 400 };
         }
 
         const subtotal = cantidad * precioUnitario;
-        await connection.query(
-            `INSERT INTO detalles_orden_servicio (id_orden, ID_SERVICIOS, ID_PRODUCTOS, garantia, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [idOrden, idServicio || null, idProducto || null, null, cantidad, precioUnitario, subtotal]
-        );
+        await tx.detalles_orden_servicio.create({
+            data: {
+                id_orden: idOrden,
+                ID_SERVICIOS: idServicio ? Number(idServicio) : null,
+                ID_PRODUCTOS: idProducto ? Number(idProducto) : null,
+                cantidad: Number(cantidad),
+                precio_unitario: precioUnitario,
+                subtotal: subtotal
+            }
+        });
     }
     return { success: true };
 };
 
 // Crear una nueva orden de servicio
 export const crearOrden = async (req, res) => {
-    const connection = await pool.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const tokenData = req.admin;
+        const tokenData = req.admin || req.user;
         if (!tokenData) {
-            await connection.rollback();
             return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
         }
 
-        const resCliente = await obtenerClienteId(tokenData, connection);
-        if (resCliente.error) {
-            await connection.rollback();
-            return res.status(resCliente.status).json({ success: false, error: resCliente.error });
-        }
-        const clienteId = resCliente.clienteId;
+        // Iniciamos la Transacción Mágica de Prisma
+        const result = await prisma.$transaction(async (tx) => {
+            const resCliente = await obtenerClienteId(tokenData, tx);
+            if (resCliente.error) throw resCliente; // Throw hace rollback automático
+            const clienteId = resCliente.clienteId;
 
-        const resMoto = await obtenerIdMoto(req.body, clienteId, connection);
-        if (resMoto.error) {
-            await connection.rollback();
-            return res.status(resMoto.status).json({ success: false, error: resMoto.error });
-        }
-        const idMoto = resMoto.idMoto;
+            const resMoto = await obtenerIdMoto(req.body, clienteId, tx);
+            if (resMoto.error) throw resMoto;
+            const idMoto = resMoto.idMoto;
 
-        const fechaIngreso = req.body.fecha_ingreso || new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const total = req.body.total || 0;
+            const fechaIngreso = req.body.fecha_ingreso ? new Date(req.body.fecha_ingreso) : new Date();
+            const totalInicial = req.body.total || 0;
 
-        const [resultado] = await connection.query(
-            `INSERT INTO orden_servicio 
-             (id_cliente, id_tecnico, id_moto, fecha_ingreso, fecha_estimada, fecha_salida, observaciones, estado, metodo_pago, total)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                clienteId,
-                req.body.id_tecnico || 1,
-                idMoto,
-                fechaIngreso,
-                null,
-                null,
-                req.body.observaciones || '',
-                'Pendiente',
-                req.body.metodo_pago || 'efectivo',
-                total
-            ]
-        );
+            const nuevaOrden = await tx.orden_servicio.create({
+                data: {
+                    id_cliente: clienteId,
+                    id_tecnico: req.body.id_tecnico ? Number(req.body.id_tecnico) : 1,
+                    id_moto: idMoto,
+                    fecha_ingreso: fechaIngreso,
+                    estado: 'Pendiente',
+                    metodo_pago: req.body.metodo_pago || 'efectivo',
+                    total: totalInicial,
+                    observaciones: req.body.observaciones || ''
+                }
+            });
 
-        const idOrden = resultado.insertId;
-        const detalles = req.body.detalles || [];
-        
-        const resDetalles = await procesarDetalles(detalles, idOrden, connection);
-        if (resDetalles.error) {
-            await connection.rollback();
-            return res.status(resDetalles.status).json({ success: false, message: resDetalles.error });
-        }
+            const idOrden = nuevaOrden.id_orden;
+            const detalles = req.body.detalles || [];
 
-        await connection.query(
-            'UPDATE orden_servicio SET total = (SELECT COALESCE(SUM(subtotal), 0) FROM detalles_orden_servicio WHERE id_orden = ?) WHERE id_orden = ?',
-            [idOrden, idOrden]
-        );
+            const resDetalles = await procesarDetalles(detalles, idOrden, tx);
+            if (resDetalles.error) throw resDetalles;
 
-        await connection.commit();
+            // Recalcular total si hay detalles sumando los subtotales insertados
+            if (detalles.length > 0) {
+                const aggregations = await tx.detalles_orden_servicio.aggregate({
+                    _sum: { subtotal: true },
+                    where: { id_orden: idOrden }
+                });
 
+                await tx.orden_servicio.update({
+                    where: { id_orden: idOrden },
+                    data: { total: aggregations._sum.subtotal || 0 }
+                });
+            }
+
+            return { id_orden: idOrden, id_moto: idMoto, detalles_insertados: detalles.length };
+        });
+
+        // Si llegó hasta aquí, el Commit fue exitoso!
         await logHistory(
             req.user?.id_usuario || 1,
             'orden_servicio',
-            idOrden,
+            result.id_orden,
             'INSERT',
-            `Se creó la orden de servicio #${idOrden}`
+            `Se creó la orden de servicio #${result.id_orden}`
         );
 
         res.status(201).json({
             success: true,
-            data: {
-                id_orden: idOrden,
-                id_moto: idMoto,
-                detalles_insertados: detalles.length
-            }
+            data: result
         });
 
     } catch (error) {
-        await connection.rollback();
         console.error("Error al crear orden y detalles:", error);
+        // Atrapamos nuestros errores personalizados de los helpers y los devolvemos limpios
+        if (error.status) {
+            return res.status(error.status).json({ success: false, message: error.error });
+        }
         res.status(500).json({ success: false, error: error.message });
-    } finally {
-        connection.release();
     }
 };
 
@@ -316,11 +313,15 @@ export const actualizarOrden = async (req, res) => {
         if (!existe) {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
-        
+
         const estadoAnterior = existe.Estado;
         const estadoNuevo = req.body.Estado || estadoAnterior;
 
-        const errorValidacion = validarTransicionEstado(estadoAnterior, estadoNuevo, req.admin, existe, req.body.observaciones);
+        // La validación original requería req.admin, pero si el técnico la actualiza vendrá en req.user
+        // Se asume que req.user o req.admin tienen la misma estructura.
+        const authUser = req.admin || req.user || {};
+
+        const errorValidacion = validarTransicionEstado(estadoAnterior, estadoNuevo, authUser, existe, req.body.observaciones);
         if (errorValidacion) {
             return res.status(errorValidacion.status).json({ success: false, message: errorValidacion.message });
         }
@@ -340,10 +341,16 @@ export const actualizarOrden = async (req, res) => {
         await OrdenServicio.update(id, dataToUpdate);
 
         if (req.body.garantia_productos !== undefined) {
-            await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_PRODUCTOS IS NOT NULL', [req.body.garantia_productos, id]);
+            await prisma.detalles_orden_servicio.updateMany({
+                where: { id_orden: Number(id), ID_PRODUCTOS: { not: null } },
+                data: { garantia: req.body.garantia_productos }
+            });
         }
         if (req.body.garantia_servicios !== undefined) {
-            await pool.query('UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_SERVICIOS IS NOT NULL', [req.body.garantia_servicios, id]);
+            await prisma.detalles_orden_servicio.updateMany({
+                where: { id_orden: Number(id), ID_SERVICIOS: { not: null } },
+                data: { garantia: req.body.garantia_servicios }
+            });
         }
 
         const ordenActualizada = await OrdenServicio.findById(id);
@@ -372,20 +379,18 @@ export const eliminarOrden = async (req, res) => {
         return res.status(400).json({ success: false, message: 'ID_ORDEN_SERVICIO es requerido' });
     }
     try {
-        // Buscar la orden (intentar ambos nombres de columna)
-        let [rows] = await pool.query('SELECT * FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?', [id]);
-        if (!rows || rows.length === 0) {
-            [rows] = await pool.query('SELECT * FROM orden_servicio WHERE id_orden = ?', [id]);
-        }
-        if (!rows || rows.length === 0) {
+        const existe = await OrdenServicio.findById(id);
+        if (!existe) {
             return res.status(404).json({ success: false, message: 'Orden de servicio no encontrada' });
         }
 
         // Primero eliminar los detalles asociados (FK constraint)
-        await pool.query('DELETE FROM detalles_orden_servicio WHERE id_orden = ?', [id]);
-        
-        // Luego eliminar la orden
-        await pool.query('DELETE FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?', [id]);
+        await prisma.detalles_orden_servicio.deleteMany({
+            where: { id_orden: Number(id) }
+        });
+
+        // Luego eliminar la orden usando el modelo
+        await OrdenServicio.delete(id);
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -394,7 +399,7 @@ export const eliminarOrden = async (req, res) => {
             'DELETE',
             `Se eliminó la orden de servicio #${id}`
         );
-        
+
         res.json({ success: true, message: 'Orden de servicio eliminada correctamente' });
     } catch (error) {
         console.error("Error al eliminar orden de servicio:", error);

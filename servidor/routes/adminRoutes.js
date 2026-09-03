@@ -92,21 +92,27 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarAdmin);
  *           schema:
  *             type: object
  *             required:
- *               - ID_ADMINISTRADOR
- *               - Nombre
+ *               - numero_documento
+ *               - nombre
  *               - usuario
- *               - contrasena
+ *               - correo
+ *               - password
+ *               - telefono
  *             properties:
- *               id:
+ *               numero_documento:
  *                 type: string
  *               nombre:
  *                 type: string
- *               email:
+ *               usuario:
+ *                 type: string
+ *               correo:
  *                 type: string
  *                 format: email
  *               password:
  *                 type: string
  *                 format: password
+ *               telefono:
+ *                 type: string
  *               rol:
  *                 type: string
  *                 default: "admin"
@@ -142,9 +148,11 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarAdmin);
  *             properties:
  *               nombre:
  *                 type: string
- *               email:
+ *               correo:
  *                 type: string
  *               password:
+ *                 type: string
+ *               telefono:
  *                 type: string
  *               rol:
  *                 type: string
@@ -194,11 +202,11 @@ router.delete('/eliminar/:id', verificarToken, autorizar(1), eliminarAdmin);
  *             type: object
  *             required:
  *               - usuario
- *               - contrasena
+ *               - password
  *             properties:
  *               usuario:
  *                 type: string
- *               contrasena:
+ *               password:
  *                 type: string
  *                 format: password
  *     responses:

@@ -2,24 +2,13 @@
   "errores": [
     {
       "type": "field",
-      "value": "200",
-      "msg": "El año debe ser válido (>= 1900 y no futuro)",
-      "path": "modelo",
+      "msg": "La contraseña es requerida",
+      "path": "password",
       "location": "body"
     }
   ],
   "body": {
-    "ID_CLIENTES": 3,
-    "Placa": "NUE543",
-    "Marca": "KTM",
-    "Modelo": "200",
-    "Cilindraje": "2022",
-    "Kilometraje": "120000",
-    "placa": "NUE543",
-    "marca": "KTM",
-    "modelo": "200",
-    "cilindraje": "2022",
-    "kilometraje": "120000",
-    "id_cliente": 3
+    "usuario": "Admi1",
+    "contrasena": "A@dministrador1"
   }
 }

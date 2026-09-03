@@ -1,6 +1,6 @@
 import Categoria from "../models/categoriasModel.js";
 import { logHistory } from "../utils/historyLogger.js";
-import pool from "../config/db.js";
+import prisma from "../config/prisma.js"; // Importamos prisma en lugar de pool
 
 /**
  * Obtener todas las categorías
@@ -56,14 +56,14 @@ export const crearCategoria = async (req, res) => {
         await logHistory(
             req.user?.id_usuario || 1,
             'categorias',
-            nuevaCategoria.insertId || 0,
+            nuevaCategoria.ID_CATEGORIA || 0, // Prisma devuelve el ID_CATEGORIA
             'INSERT',
             `Se creó la categoría ${req.body.nombre || 'N/A'}`
         );
 
         res.status(201).json({ success: true, data: nuevaCategoria });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') { // Violación de Unique Constraint
             return res.status(400).json({ success: false, message: 'El nombre de la categoría ya existe' });
         }
         console.error("Error al crear categoría:", error);
@@ -77,10 +77,7 @@ export const crearCategoria = async (req, res) => {
 export const actualizarCategoria = async (req, res) => {
     const { id } = req.params;
     try {
-        const resultado = await Categoria.update(id, req.body);
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
-        }
+        await Categoria.update(id, req.body);
 
         await logHistory(
             req.user?.id_usuario || 1,
@@ -92,8 +89,11 @@ export const actualizarCategoria = async (req, res) => {
 
         res.json({ success: true, message: "Categoría actualizada correctamente" });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === 'P2002') {
             return res.status(400).json({ success: false, message: 'El nombre de la categoría ya existe' });
+        }
+        if (error.code === 'P2025') { // Registro no encontrado
+            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
         }
         console.error("Error al actualizar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -112,21 +112,25 @@ export const eliminarCategoria = async (req, res) => {
             const deps = await Categoria.checkDependencies(id);
             if (deps.productosCount > 0 || deps.serviciosCount > 0) {
                 return res.status(409).json({
-                    success: false, 
+                    success: false,
                     message: `La categoría tiene ${deps.productosCount} producto(s) y ${deps.serviciosCount} servicio(s) activos asociados. ¿Desea inhabilitarla junto con sus dependencias?`,
                     dependencies: deps
                 });
             }
         }
 
-        const resultado = await Categoria.delete(id);
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
-        }
-        
+        await Categoria.delete(id);
+
         if (force) {
-            await pool.query("UPDATE productos SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
-            await pool.query("UPDATE servicios SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
+            // Reemplazo de pool.query usando updateMany de Prisma
+            await prisma.productos.updateMany({
+                where: { ID_CATEGORIA: Number(id) },
+                data: { Estado: 'Inactivo' }
+            });
+            await prisma.servicios.updateMany({
+                where: { ID_CATEGORIA: Number(id) },
+                data: { Estado: 'Inactivo' }
+            });
         }
 
         await logHistory(
@@ -139,6 +143,9 @@ export const eliminarCategoria = async (req, res) => {
 
         res.json({ success: true, message: "Categoría inhabilitada correctamente" });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
+        }
         console.error("Error al inhabilitar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -150,17 +157,23 @@ export const eliminarCategoria = async (req, res) => {
 export const habilitarCategoria = async (req, res) => {
     const { id } = req.params;
     try {
-        const resultado = await Categoria.restore(id);
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
-        }
+        await Categoria.restore(id);
 
-        // Reactivar productos y servicios asociados
-        await pool.query("UPDATE productos SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
-        await pool.query("UPDATE servicios SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
+        // Reactivar productos y servicios asociados (reemplazo de pool.query)
+        await prisma.productos.updateMany({
+            where: { ID_CATEGORIA: Number(id) },
+            data: { Estado: 'Activo' }
+        });
+        await prisma.servicios.updateMany({
+            where: { ID_CATEGORIA: Number(id) },
+            data: { Estado: 'Activo' }
+        });
 
         res.json({ success: true, message: "Categoría habilitada correctamente" });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: "Categoría no encontrada" });
+        }
         console.error("Error al habilitar categoría:", error);
         res.status(500).json({ success: false, error: error.message });
     }

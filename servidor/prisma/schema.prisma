@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model categorias {
+  ID_CATEGORIA Int                @id @default(autoincrement())
+  nombre       String             @db.VarChar(100)
+  tipo         categorias_tipo
+  descripcion  String?            @db.VarChar(255)
+  estado       categorias_estado? @default(Activo)
+  productos    productos[]
+  servicios    servicios[]
+}
+
+model comprobante {
+  id_comprobante     Int                     @id @default(autoincrement())
+  id_orden           Int
+  numero_comprobante String                  @unique(map: "numero_comprobante") @db.VarChar(30)
+  fecha              DateTime?               @default(now()) @db.DateTime(0)
+  subtotal           Decimal                 @db.Decimal(10, 2)
+  total_pagar        Decimal                 @db.Decimal(10, 2)
+  metodo_pago        comprobante_metodo_pago
+  estado             comprobante_estado?     @default(Pendiente)
+  orden_servicio     orden_servicio          @relation(fields: [id_orden], references: [id_orden], onDelete: Cascade, map: "fk_comprobante_orden")
+
+  @@index([id_orden], map: "id_orden")
+}
+
+model detalles_orden_servicio {
+  id_detalle      Int            @id @default(autoincrement())
+  id_orden        Int
+  ID_PRODUCTOS    Int?
+  ID_SERVICIOS    Int?
+  cantidad        Int?           @default(1)
+  garantia        Int?
+  precio_unitario Decimal?       @db.Decimal(10, 2)
+  subtotal        Decimal?       @db.Decimal(10, 2)
+  productos       productos?     @relation(fields: [ID_PRODUCTOS], references: [ID_PRODUCTOS], onDelete: Restrict, onUpdate: Restrict, map: "detalles_orden_servicio_ibfk_2")
+  servicios       servicios?     @relation(fields: [ID_SERVICIOS], references: [ID_SERVICIOS], onDelete: Restrict, onUpdate: Restrict, map: "detalles_orden_servicio_ibfk_3")
+  orden_servicio  orden_servicio @relation(fields: [id_orden], references: [id_orden], onDelete: Cascade, map: "fk_detalle_orden")
+
+  @@index([ID_PRODUCTOS], map: "ID_PRODUCTOS")
+  @@index([ID_SERVICIOS], map: "ID_SERVICIOS")
+  @@index([id_orden], map: "id_orden")
+}
+
+model historial {
+  id_historial   Int              @id @default(autoincrement())
+  id_usuario     Int
+  tabla_afectada String           @db.VarChar(50)
+  id_registro    Int
+  accion         historial_accion
+  descripcion    String?          @db.Text
+  datos_antes    String?          @db.LongText
+  datos_despues  String?          @db.LongText
+  fecha          DateTime?        @default(now()) @db.DateTime(0)
+  usuarios       usuarios         @relation(fields: [id_usuario], references: [id_usuario], onUpdate: Restrict, map: "historial_ibfk_1")
+
+  @@index([id_usuario], map: "id_usuario")
+}
+
+model informe {
+  id_informe        Int            @id @default(autoincrement())
+  id_orden          Int
+  id_tecnico        Int
+  diagnostico       String?        @db.Text
+  trabajo_realizado String?        @db.Text
+  recomendaciones   String?        @db.Text
+  fecha             DateTime?      @default(now()) @db.DateTime(0)
+  orden_servicio    orden_servicio @relation(fields: [id_orden], references: [id_orden], onDelete: Cascade, map: "fk_informe_orden")
+  usuarios          usuarios       @relation(fields: [id_tecnico], references: [id_usuario], onUpdate: Restrict, map: "informe_ibfk_2")
+
+  @@index([id_orden], map: "id_orden")
+  @@index([id_tecnico], map: "id_tecnico")
+}
+
+model motos {
+  id_moto        Int              @id @default(autoincrement())
+  id_cliente     Int
+  placa          String           @unique(map: "placa") @db.VarChar(10)
+  marca          String           @db.VarChar(50)
+  modelo         String           @db.VarChar(50)
+  cilindraje     Int?
+  kilometraje    Int?
+  usuarios       usuarios         @relation(fields: [id_cliente], references: [id_usuario], onDelete: Cascade, map: "fk_moto_cliente")
+  orden_servicio orden_servicio[]
+
+  @@index([id_cliente], map: "id_cliente")
+}
+
+model orden_servicio {
+  id_orden                                     Int                       @id @default(autoincrement())
+  id_cliente                                   Int
+  id_tecnico                                   Int
+  id_moto                                      Int
+  fecha_ingreso                                DateTime                  @db.DateTime(0)
+  fecha_estimada                               DateTime?                 @db.DateTime(0)
+  fecha_salida                                 DateTime?                 @db.DateTime(0)
+  observaciones                                String?                   @db.Text
+  estado                                       orden_servicio_estado?
+  total                                        Decimal?                  @db.Decimal(20, 0)
+  metodo_pago                                  String?                   @default("efectivo") @db.VarChar(50)
+  comprobante                                  comprobante[]
+  detalles_orden_servicio                      detalles_orden_servicio[]
+  informe                                      informe[]
+  motos                                        motos                     @relation(fields: [id_moto], references: [id_moto], onDelete: Cascade, map: "fk_orden_moto")
+  usuarios_orden_servicio_id_clienteTousuarios usuarios                  @relation("orden_servicio_id_clienteTousuarios", fields: [id_cliente], references: [id_usuario], onUpdate: Restrict, map: "orden_servicio_ibfk_1")
+  usuarios_orden_servicio_id_tecnicoTousuarios usuarios                  @relation("orden_servicio_id_tecnicoTousuarios", fields: [id_tecnico], references: [id_usuario], onUpdate: Restrict, map: "orden_servicio_ibfk_2")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@index([id_moto], map: "id_moto")
+  @@index([id_tecnico], map: "id_tecnico")
+}
+
+model productos {
+  ID_PRODUCTOS            Int                       @id @default(autoincrement())
+  ID_CATEGORIA            Int?
+  Marca                   String                    @db.VarChar(100)
+  Nombre                  String                    @db.VarChar(100)
+  precio_costo            Decimal?                  @default(0.00) @db.Decimal(12, 2)
+  precio_venta            Decimal?                  @default(0.00) @db.Decimal(12, 2)
+  Estado                  String?                   @db.VarChar(20)
+  stock                   Int                       @default(0)
+  stock_minimo            Int?                      @default(5)
+  detalles_orden_servicio detalles_orden_servicio[]
+  categorias              categorias?               @relation(fields: [ID_CATEGORIA], references: [ID_CATEGORIA], onDelete: Restrict, onUpdate: Restrict, map: "fk_productos_categoria")
+
+  @@index([ID_CATEGORIA], map: "fk_productos_categoria")
+}
+
+model roles {
+  id_rol   Int        @id @default(autoincrement())
+  nombre   String     @unique(map: "nombre") @db.VarChar(30)
+  usuarios usuarios[]
+}
+
+model servicios {
+  ID_SERVICIOS            Int                       @id @default(autoincrement())
+  ID_CATEGORIA            Int?
+  Nombre                  String                    @db.VarChar(100)
+  Precio                  String                    @db.VarChar(20)
+  Estado                  String                    @db.VarChar(20)
+  detalles_orden_servicio detalles_orden_servicio[]
+  categorias              categorias?               @relation(fields: [ID_CATEGORIA], references: [ID_CATEGORIA], onDelete: Restrict, onUpdate: Restrict, map: "fk_servicios_categoria")
+
+  @@index([ID_CATEGORIA], map: "fk_servicios_categoria")
+}
+
+model tipo_documento {
+  id_tipo_documento Int        @id @default(autoincrement())
+  nombre            String     @db.VarChar(30)
+  usuarios          usuarios[]
+}
+
+model usuarios {
+  id_usuario                                         Int              @id @default(autoincrement())
+  id_rol                                             Int
+  id_tipo_documento                                  Int
+  numero_documento                                   BigInt           @unique(map: "numero_documento")
+  nombre                                             String           @db.VarChar(120)
+  ciudad                                             String?          @db.VarChar(100)
+  usuario                                            String           @unique(map: "usuario") @db.VarChar(50)
+  password                                           String           @db.VarChar(255)
+  correo                                             String           @unique(map: "correo") @db.VarChar(120)
+  telefono                                           String?          @db.VarChar(20)
+  estado                                             usuarios_estado? @default(Pendiente)
+  reset_token                                        String?          @db.VarChar(255)
+  reset_token_expires                                DateTime?        @db.DateTime(0)
+  historial                                          historial[]
+  informe                                            informe[]
+  motos                                              motos[]
+  orden_servicio_orden_servicio_id_clienteTousuarios orden_servicio[] @relation("orden_servicio_id_clienteTousuarios")
+  orden_servicio_orden_servicio_id_tecnicoTousuarios orden_servicio[] @relation("orden_servicio_id_tecnicoTousuarios")
+  roles                                              roles            @relation(fields: [id_rol], references: [id_rol], onUpdate: Restrict, map: "usuarios_ibfk_1")
+  tipo_documento                                     tipo_documento   @relation(fields: [id_tipo_documento], references: [id_tipo_documento], onUpdate: Restrict, map: "usuarios_ibfk_2")
+
+  @@index([id_rol], map: "id_rol")
+  @@index([id_tipo_documento], map: "id_tipo_documento")
+}
+
+enum categorias_tipo {
+  PRODUCTO
+  SERVICIO
+}
+
+enum categorias_estado {
+  Activo
+  Inactivo
+}
+
+enum historial_accion {
+  INSERT
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
+enum comprobante_metodo_pago {
+  Efectivo
+  Nequi
+  Daviplata
+  Transferencia
+  Tarjeta
+}
+
+enum comprobante_estado {
+  Pendiente
+  Pagado
+  Anulado
+}
+
+enum orden_servicio_estado {
+  Pendiente
+  En_proceso @map("En proceso")
+  Finalizada
+  Cancelada
+}
+
+enum usuarios_estado {
+  Activo
+  Inactivo
+  Pendiente
+}

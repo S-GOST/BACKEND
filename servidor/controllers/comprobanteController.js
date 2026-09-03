@@ -1,6 +1,19 @@
 import Comprobante from "../models/comprobanteModel.js";
-import pool from "../config/db.js";
+import prisma from "../config/prisma.js"; // REEMPLAZO de pool
 import { logHistory } from "../utils/historyLogger.js";
+
+// Helper para limpiar BigInt y Decimales devueltos por Prisma Raw SQL
+const serializeValues = (rows) => rows.map(row => {
+    const newRow = { ...row };
+    for (let key in newRow) {
+        if (typeof newRow[key] === 'bigint') {
+            newRow[key] = Number(newRow[key]);
+        } else if (newRow[key] && typeof newRow[key] === 'object' && newRow[key].constructor.name === 'Decimal') {
+            newRow[key] = Number(newRow[key]);
+        }
+    }
+    return newRow;
+});
 
 export const obtenerComprobantes = async (req, res) => {
     try {
@@ -29,11 +42,12 @@ export const obtenerComprobantePorId = async (req, res) => {
 export const crearComprobante = async (req, res) => {
     try {
         const nuevoComprobante = await Comprobante.create(req.body);
+        const insertId = nuevoComprobante.id_comprobante || nuevoComprobante.ID_COMPROBANTE || 0;
 
         await logHistory(
             req.user?.id_usuario || 1,
             'comprobante',
-            nuevoComprobante.insertId || 0,
+            insertId,
             'INSERT',
             `Se creó un comprobante`
         );
@@ -60,6 +74,9 @@ export const actualizarComprobante = async (req, res) => {
 
         res.json({ success: true, data: comprobanteActualizado });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Comprobante no encontrado' });
+        }
         console.error("Error al actualizar comprobante:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -80,6 +97,9 @@ export const eliminarComprobante = async (req, res) => {
 
         res.json({ success: true, message: 'Comprobante eliminado correctamente' });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Comprobante no encontrado' });
+        }
         console.error("Error al eliminar comprobante:", error);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -87,12 +107,6 @@ export const eliminarComprobante = async (req, res) => {
 
 /**
  * Generar comprobante desde un informe (HU-004.1)
- * Solo Admin (Rol 1) puede ejecutar esto.
- * Busca el informe → obtiene la orden → calcula el total desde detalles.
- * 
- * Columnas reales de la tabla `comprobante`:
- *   id_comprobante (AUTO_INCREMENT), id_orden, numero_comprobante (UNIQUE),
- *   fecha, subtotal, total_pagar, metodo_pago (ENUM), estado (ENUM)
  */
 export const generarComprobanteDesdeInforme = async (req, res) => {
     try {
@@ -101,40 +115,31 @@ export const generarComprobanteDesdeInforme = async (req, res) => {
         const idAdmin = req.user?.id_usuario || req.admin?.id_usuario;
 
         // 1. Buscar el informe
-        const [informeRows] = await pool.query(
-            'SELECT * FROM informe WHERE id_informe = ?',
-            [idInforme]
-        );
+        let informeRows = await prisma.$queryRawUnsafe('SELECT * FROM informe WHERE id_informe = ?', Number(idInforme));
+        informeRows = serializeValues(informeRows);
 
         if (!informeRows || informeRows.length === 0) {
             return res.status(404).json({ success: false, message: 'Informe no encontrado' });
         }
-
         const informeData = informeRows[0];
 
         // 2. Buscar la orden para obtener datos
-        const [ordenRows] = await pool.query(
-            'SELECT * FROM orden_servicio WHERE id_orden = ?',
-            [informeData.id_orden]
-        );
+        let ordenRows = await prisma.$queryRawUnsafe('SELECT * FROM orden_servicio WHERE id_orden = ?', Number(informeData.id_orden));
+        ordenRows = serializeValues(ordenRows);
 
         if (!ordenRows || ordenRows.length === 0) {
             return res.status(404).json({ success: false, message: 'Orden de servicio asociada no encontrada' });
         }
 
         // 3. Calcular el monto total desde los detalles de la orden
-        const [totalRows] = await pool.query(
-            'SELECT COALESCE(SUM(subtotal), 0) AS monto FROM detalles_orden_servicio WHERE id_orden = ?',
-            [informeData.id_orden]
-        );
+        let totalRows = await prisma.$queryRawUnsafe('SELECT COALESCE(SUM(subtotal), 0) AS monto FROM detalles_orden_servicio WHERE id_orden = ?', Number(informeData.id_orden));
+        totalRows = serializeValues(totalRows);
         const subtotal = parseFloat(totalRows[0]?.monto || 0);
         const totalPagar = subtotal; // Puedes aplicar impuestos aquí si es necesario
 
         // 4. Verificar que no exista ya un comprobante para esta orden
-        const [existente] = await pool.query(
-            'SELECT * FROM comprobante WHERE id_orden = ?',
-            [informeData.id_orden]
-        );
+        let existente = await prisma.$queryRawUnsafe('SELECT * FROM comprobante WHERE id_orden = ?', Number(informeData.id_orden));
+        existente = serializeValues(existente);
 
         if (existente && existente.length > 0) {
             return res.status(400).json({
@@ -147,24 +152,31 @@ export const generarComprobanteDesdeInforme = async (req, res) => {
         // 5. Generar número de comprobante único (COMP-YYYYMMDD-XXXX)
         const ahora = new Date();
         const fechaStr = ahora.toISOString().slice(0, 10).replace(/-/g, '');
-        const [countRows] = await pool.query('SELECT COUNT(*) AS total FROM comprobante');
+
+        let countRows = await prisma.$queryRawUnsafe('SELECT COUNT(*) AS total FROM comprobante');
+        countRows = serializeValues(countRows);
         const secuencia = String((countRows[0]?.total || 0) + 1).padStart(4, '0');
         const numeroComprobante = `COMP-${fechaStr}-${secuencia}`;
 
-        // 6. Insertar el comprobante con las columnas reales
-        const metodoPagoFinal = metodo_pago || 'Efectivo'; 
-        
-        const [result] = await pool.query(
+        // 6. Insertar el comprobante
+        const metodoPagoFinal = metodo_pago || 'Efectivo';
+
+        await prisma.$executeRawUnsafe(
             `INSERT INTO comprobante (id_orden, numero_comprobante, fecha, subtotal, total_pagar, metodo_pago, estado)
              VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')`,
-            [informeData.id_orden, numeroComprobante, ahora, subtotal, totalPagar, metodoPagoFinal]
+            Number(informeData.id_orden), numeroComprobante, ahora, subtotal, totalPagar, metodoPagoFinal
         );
+
+        // Buscar el ID recién insertado ya que $executeRawUnsafe no devuelve insertId
+        let resultInsert = await prisma.$queryRawUnsafe('SELECT id_comprobante FROM comprobante WHERE numero_comprobante = ?', numeroComprobante);
+        resultInsert = serializeValues(resultInsert);
+        const insertId = resultInsert[0]?.id_comprobante || 0;
 
         // 7. Auditoría
         await logHistory(
             idAdmin || 1,
             'comprobante',
-            result.insertId || 0,
+            insertId,
             'INSERT',
             `Admin generó comprobante ${numeroComprobante} para informe #${idInforme}, orden #${informeData.id_orden}, total: ${totalPagar}`
         );
@@ -173,7 +185,7 @@ export const generarComprobanteDesdeInforme = async (req, res) => {
             success: true,
             message: 'Comprobante generado exitosamente',
             data: {
-                id_comprobante: result.insertId,
+                id_comprobante: insertId,
                 id_orden: informeData.id_orden,
                 numero_comprobante: numeroComprobante,
                 subtotal,
@@ -189,10 +201,6 @@ export const generarComprobanteDesdeInforme = async (req, res) => {
 
 /**
  * Obtener comprobantes del cliente autenticado (HU-004.1)
- * El cliente (Rol 3) ve solo sus comprobantes.
- * 
- * Columnas reales: id_comprobante, id_orden, numero_comprobante, fecha,
- *                  subtotal, total_pagar, metodo_pago, estado
  */
 export const obtenerMisComprobantes = async (req, res) => {
     try {
@@ -202,7 +210,7 @@ export const obtenerMisComprobantes = async (req, res) => {
             return res.status(401).json({ success: false, message: 'No autenticado' });
         }
 
-        const [rows] = await pool.query(
+        let rows = await prisma.$queryRawUnsafe(
             `SELECT c.id_comprobante, c.id_orden, c.numero_comprobante,
                     c.fecha, c.subtotal, c.total_pagar, c.metodo_pago, c.estado,
                     i.diagnostico, i.trabajo_realizado, i.recomendaciones,
@@ -212,8 +220,9 @@ export const obtenerMisComprobantes = async (req, res) => {
              LEFT JOIN informe i ON i.id_orden = os.id_orden
              WHERE os.id_cliente = ?
              ORDER BY c.fecha DESC`,
-            [idUsuario]
+            Number(idUsuario)
         );
+        rows = serializeValues(rows);
 
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -224,7 +233,6 @@ export const obtenerMisComprobantes = async (req, res) => {
 
 /**
  * Cliente paga su comprobante
- * Cambia el estado a "Pagado" y registra en historial
  */
 export const pagarComprobante = async (req, res) => {
     try {
@@ -232,11 +240,8 @@ export const pagarComprobante = async (req, res) => {
         const { metodo_pago } = req.body;
         const idUsuario = req.user?.id_usuario;
 
-        // Verificar que el comprobante exista y esté pendiente
-        const [comprobante] = await pool.query(
-            'SELECT * FROM comprobante WHERE id_comprobante = ?',
-            [id]
-        );
+        let comprobante = await prisma.$queryRawUnsafe('SELECT * FROM comprobante WHERE id_comprobante = ?', Number(id));
+        comprobante = serializeValues(comprobante);
 
         if (!comprobante || comprobante.length === 0) {
             return res.status(404).json({ success: false, message: 'Comprobante no encontrado' });
@@ -246,15 +251,13 @@ export const pagarComprobante = async (req, res) => {
             return res.status(400).json({ success: false, message: 'El comprobante ya no está pendiente' });
         }
 
-        // Actualizar estado a Pagado
-        await pool.query(
+        await prisma.$executeRawUnsafe(
             'UPDATE comprobante SET estado = "Pagado", metodo_pago = COALESCE(?, metodo_pago) WHERE id_comprobante = ?',
-            [metodo_pago || null, id]
+            metodo_pago || null, Number(id)
         );
 
-        // Registrar en historial para que el Admin lo vea
         await logHistory(
-            idUsuario || 1, 
+            idUsuario || 1,
             'comprobante',
             id,
             'UPDATE',
@@ -268,11 +271,14 @@ export const pagarComprobante = async (req, res) => {
     }
 };
 
+/**
+ * Búsqueda con filtros
+ */
 export const buscarComprobantesFiltro = async (req, res) => {
     try {
         const idRol = req.user?.id_rol || req.admin?.id_rol;
         const idUsuario = req.user?.id_usuario || req.admin?.id_usuario;
-        
+
         if (!idUsuario) {
             return res.status(401).json({ success: false, message: 'No autenticado' });
         }
@@ -290,26 +296,22 @@ export const buscarComprobantesFiltro = async (req, res) => {
             INNER JOIN usuarios u ON os.id_cliente = u.id_usuario
             WHERE 1=1
         `;
-        
+
         const params = [];
 
-        // Filtro de rol
         if (idRol === 2) {
-            // Tcnico solo ve los comprobantes de sus rdenes
             query += ' AND os.id_tecnico = ?';
-            params.push(idUsuario);
+            params.push(Number(idUsuario));
         } else if (idRol === 3) {
-            // Cliente solo ve sus motos
             query += ' AND os.id_cliente = ?';
-            params.push(idUsuario);
+            params.push(Number(idUsuario));
         }
 
-        // Filtros adicionales
         if (numero) {
             query += ' AND c.numero_comprobante LIKE ?';
             params.push(`%${numero}%`);
         }
-        if (cliente && idRol !== 3) { // Cliente no necesita buscar por cliente
+        if (cliente && idRol !== 3) {
             query += ' AND (u.nombre LIKE ? OR u.documento LIKE ?)';
             params.push(`%${cliente}%`, `%${cliente}%`);
         }
@@ -320,7 +322,9 @@ export const buscarComprobantesFiltro = async (req, res) => {
 
         query += ' ORDER BY c.fecha DESC';
 
-        const [rows] = await pool.query(query, params);
+        let rows = await prisma.$queryRawUnsafe(query, ...params);
+        rows = serializeValues(rows);
+
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error("Error en buscarComprobantesFiltro:", error);

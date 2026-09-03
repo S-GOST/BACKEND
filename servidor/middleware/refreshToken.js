@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 export const generarTokens = (usuario) => {
     const payload = {
         id_usuario: usuario.id_usuario,
-        numero_documento: usuario.numero_documento,
+        numero_documento: usuario.numero_documento ? usuario.numero_documento.toString() : null,
         rol: usuario.id_rol
     };
 

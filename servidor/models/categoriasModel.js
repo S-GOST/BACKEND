@@ -1,78 +1,87 @@
-import pool from "../config/db.js";
+import prisma from '../config/prisma.js';
 
 const Categoria = {
+    // Obtener todas las categorías
     findAll: async () => {
-        const [rows] = await pool.query("SELECT * FROM categorias");
-        return rows;
+        return await prisma.categorias.findMany();
     },
 
     // Buscar una categoría por su ID
     findById: async (id) => {
-        const [rows] = await pool.query(
-            "SELECT * FROM categorias WHERE ID_CATEGORIA = ?",
-            [id]
-        );
-        return rows[0];
+        return await prisma.categorias.findUnique({
+            where: { ID_CATEGORIA: Number(id) }
+        });
     },
 
     // Buscar categorías por tipo (PRODUCTO o SERVICIO)
     findByTipo: async (tipo) => {
-        const [rows] = await pool.query(
-            "SELECT * FROM categorias WHERE tipo = ?",
-            [tipo]
-        );
-        return rows;
+        return await prisma.categorias.findMany({
+            where: { tipo: tipo }
+        });
     },
 
     // Crear una nueva categoría
     create: async (data) => {
-        const { nombre, tipo, descripcion } = data;
-        const [result] = await pool.query(
-            `INSERT INTO categorias (nombre, tipo, descripcion) VALUES (?, ?, ?)`,
-            [nombre, tipo, descripcion]
-        );
-        return { ID_CATEGORIA: result.insertId, nombre, tipo, descripcion };
+        return await prisma.categorias.create({
+            data: {
+                nombre: data.nombre,
+                tipo: data.tipo, // Prisma ya sabe que debe ser un Enum (PRODUCTO, SERVICIO)
+                descripcion: data.descripcion,
+                estado: data.estado || 'Activo'
+            }
+        });
     },
 
     // Actualizar una categoría existente
     update: async (id, data) => {
-        const { nombre, tipo, descripcion } = data;
-        const [result] = await pool.query(
-            `UPDATE categorias 
-             SET nombre = ?, tipo = ?, descripcion = ?
-             WHERE ID_CATEGORIA = ?`,
-            [nombre, tipo, descripcion, id]
-        );
-        return result;
+        return await prisma.categorias.update({
+            where: { ID_CATEGORIA: Number(id) },
+            data: {
+                nombre: data.nombre,
+                tipo: data.tipo,
+                descripcion: data.descripcion,
+                estado: data.estado
+            }
+        });
     },
 
-    // Eliminar (Inhabilitar) una categoría
+    // Eliminar (Inhabilitar) una categoría - Soft Delete
     delete: async (id) => {
-        const [result] = await pool.query(
-            "UPDATE categorias SET estado = 'Inactivo' WHERE ID_CATEGORIA = ?",
-            [id]
-        );
-        return result;
+        return await prisma.categorias.update({
+            where: { ID_CATEGORIA: Number(id) },
+            data: { estado: 'Inactivo' }
+        });
     },
 
     // Restaurar (Habilitar) una categoría
     restore: async (id) => {
-        const [result] = await pool.query(
-            "UPDATE categorias SET estado = 'Activo' WHERE ID_CATEGORIA = ?",
-            [id]
-        );
-        return result;
+        return await prisma.categorias.update({
+            where: { ID_CATEGORIA: Number(id) },
+            data: { estado: 'Activo' }
+        });
     },
 
-    // Verificar dependencias
+    // Verificar dependencias usando la función .count() de Prisma
     checkDependencies: async (id) => {
-        const [productos] = await pool.query("SELECT COUNT(*) AS count FROM productos WHERE ID_CATEGORIA = ? AND Estado = 'Activo'", [id]);
-        const [servicios] = await pool.query("SELECT COUNT(*) AS count FROM servicios WHERE ID_CATEGORIA = ? AND Estado = 'Activo'", [id]);
+        const productosCount = await prisma.productos.count({
+            where: {
+                ID_CATEGORIA: Number(id),
+                Estado: 'Activo'
+            }
+        });
+
+        const serviciosCount = await prisma.servicios.count({
+            where: {
+                ID_CATEGORIA: Number(id),
+                Estado: 'Activo'
+            }
+        });
+
         return {
-            productosCount: productos[0].count,
-            serviciosCount: servicios[0].count
+            productosCount,
+            serviciosCount
         };
-    },
+    }
 };
 
 export default Categoria;

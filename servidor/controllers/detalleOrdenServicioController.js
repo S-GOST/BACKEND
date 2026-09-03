@@ -1,6 +1,8 @@
 import DetalleOrdenServicio from "../models/detalleOrdenServicioModel.js";
 import { logHistory } from "../utils/historyLogger.js";
-import pool from "../config/db.js";
+import prisma from "../config/prisma.js"; // REEMPLAZO de pool
+import Servicio from "../models/serviciosModel.js";
+import Producto from "../models/productosModel.js";
 
 // 1. Obtener TODOS los detalles
 export const obtenerDetallesOrden = async (req, res) => {
@@ -19,7 +21,7 @@ export const obtenerDetalleOrdenPorId = async (req, res) => {
   try {
     const detalle = await DetalleOrdenServicio.findById(id);
 
-    if (!detalle || detalle.length === 0) {
+    if (!detalle) {
       return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
     }
 
@@ -45,42 +47,39 @@ export const obtenerDetallesPorId = async (req, res) => {
     console.error("Error en obtenerDetallesPorId:", error);
     res.status(500).json({ success: false, message: error.message });
   }
-}
-
-import Servicio from "../models/serviciosModel.js";
-import Producto from "../models/productosModel.js";
+};
 
 // 4. Crear un nuevo detalle (CORREGIDO: Sanea campos opcionales y toma precio del catálogo)
 export const crearDetalleOrden = async (req, res) => {
   try {
-    // ✅ SANEAMIENTO: Asegurar que los campos relacionales sean null si no existen
+    // SANEAMIENTO: Asegurar que los campos relacionales sean null si no existen
     const body = { ...req.body };
     if (body.ID_SERVICIOS === undefined || body.ID_SERVICIOS === null || body.ID_SERVICIOS === "") body.ID_SERVICIOS = null;
     if (body.ID_PRODUCTOS === undefined || body.ID_PRODUCTOS === null || body.ID_PRODUCTOS === "") body.ID_PRODUCTOS = null;
 
     let precioUnitario = 0;
-    
+
     // CA-010: RN-0010 Los precios se toman del catálogo al momento de crear el detalle
     const cantidad = body.cantidad || 1;
 
     if (body.ID_SERVICIOS) {
-        const servicio = await Servicio.findById(body.ID_SERVICIOS);
-        if (!servicio) {
-            return res.status(400).json({ success: false, message: `El servicio con ID ${body.ID_SERVICIOS} no existe` });
-        }
-        precioUnitario = parseFloat(servicio.Precio || 0);
+      const servicio = await Servicio.findById(body.ID_SERVICIOS);
+      if (!servicio) {
+        return res.status(400).json({ success: false, message: `El servicio con ID ${body.ID_SERVICIOS} no existe` });
+      }
+      precioUnitario = parseFloat(servicio.Precio || 0);
     } else if (body.ID_PRODUCTOS) {
-        const producto = await Producto.findById(body.ID_PRODUCTOS);
-        if (!producto) {
-            return res.status(400).json({ success: false, message: `El producto con ID ${body.ID_PRODUCTOS} no existe` });
-        }
-        // RN-008: Verificar stock
-        if (producto.stock < cantidad) {
-            return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${producto.Nombre}. Stock actual: ${producto.stock}` });
-        }
-        precioUnitario = parseFloat(producto.precio_venta ?? producto.Precio ?? 0);
+      const producto = await Producto.findById(body.ID_PRODUCTOS);
+      if (!producto) {
+        return res.status(400).json({ success: false, message: `El producto con ID ${body.ID_PRODUCTOS} no existe` });
+      }
+      // RN-008: Verificar stock
+      if (producto.stock < cantidad) {
+        return res.status(400).json({ success: false, message: `Stock insuficiente para el producto ${producto.Nombre}. Stock actual: ${producto.stock}` });
+      }
+      precioUnitario = parseFloat(producto.precio_venta ?? producto.Precio ?? 0);
     } else {
-        return res.status(400).json({ success: false, message: 'Cada detalle debe incluir un servicio o un producto válido' });
+      return res.status(400).json({ success: false, message: 'Cada detalle debe incluir un servicio o un producto válido' });
     }
 
     body.cantidad = cantidad;
@@ -91,17 +90,20 @@ export const crearDetalleOrden = async (req, res) => {
 
     const nuevoDetalle = await DetalleOrdenServicio.create(body);
 
-    // RN-009: Descontar stock
+    // RN-009: Descontar stock usando Prisma
     if (body.ID_PRODUCTOS) {
-        await pool.query('UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?', [cantidad, body.ID_PRODUCTOS]);
+      await prisma.productos.update({
+        where: { ID_PRODUCTOS: Number(body.ID_PRODUCTOS) },
+        data: { stock: { decrement: Number(cantidad) } }
+      });
     }
 
     await logHistory(
-        req.user?.id_usuario || 1,
-        'detalles_orden_servicio',
-        nuevoDetalle.id_detalle || nuevoDetalle.insertId || 0,
-        'INSERT',
-        `Se agregó detalle a la orden ${body.ID_ORDEN_SERVICIO || body.id_orden || 'N/A'}`
+      req.user?.id_usuario || 1,
+      'detalles_orden_servicio',
+      nuevoDetalle.id_detalle || nuevoDetalle.ID_DETALLES_ORDEN_SERVICIO || 0, // Fallback a los posibles nombres de PK
+      'INSERT',
+      `Se agregó detalle a la orden ${body.ID_ORDEN_SERVICIO || body.id_orden || 'N/A'}`
     );
 
     res.json({ success: true, data: nuevoDetalle });
@@ -122,22 +124,21 @@ export const actualizarDetalleOrden = async (req, res) => {
     }
 
     const { ID_DETALLES_ORDEN_SERVICIO, ...datosParaActualizar } = req.body;
-    const resultado = await DetalleOrdenServicio.update(idActual, datosParaActualizar);
-
-    if (resultado.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
-    }
+    await DetalleOrdenServicio.update(idActual, datosParaActualizar);
 
     await logHistory(
-        req.user?.id_usuario || 1,
-        'detalles_orden_servicio',
-        idActual,
-        'UPDATE',
-        `Se actualizó el detalle ID ${idActual}`
+      req.user?.id_usuario || 1,
+      'detalles_orden_servicio',
+      idActual,
+      'UPDATE',
+      `Se actualizó el detalle ID ${idActual}`
     );
 
     res.json({ success: true, message: 'Detalle actualizado correctamente' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
+    }
     console.error("Error al actualizar:", error);
     res.status(500).json({ success: false, error: error.message });
   }
@@ -153,22 +154,21 @@ export const eliminarDetalleOrden = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID requerido para eliminar' });
     }
 
-    const eliminados = await DetalleOrdenServicio.delete(idEliminar);
-
-    if (eliminados.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
-    }
+    await DetalleOrdenServicio.delete(idEliminar);
 
     await logHistory(
-        req.user?.id_usuario || 1,
-        'detalles_orden_servicio',
-        idEliminar,
-        'DELETE',
-        `Se eliminó el detalle ID ${idEliminar}`
+      req.user?.id_usuario || 1,
+      'detalles_orden_servicio',
+      idEliminar,
+      'DELETE',
+      `Se eliminó el detalle ID ${idEliminar}`
     );
 
     res.json({ success: true, message: 'Detalle eliminado correctamente' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Detalle no encontrado' });
+    }
     console.error("Error al eliminar:", error);
     res.status(500).json({ success: false, error: error.message });
   }
