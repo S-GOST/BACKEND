@@ -6,8 +6,8 @@ import { enviarCorreoAprobacion, enviarCorreoRegistroPendiente } from "../utils/
 
 const mapToUsuario = (c) => {
   const obj = {};
-  if (c.numero_documento !== undefined) obj.numero_documento = c.numero_documento;
-  if (c.id_tipo_documento !== undefined) obj.id_tipo_documento = c.id_tipo_documento;
+  if (c.numero_documento !== undefined) obj.numero_documento = BigInt(c.numero_documento);
+  if (c.id_tipo_documento !== undefined) obj.id_tipo_documento = parseInt(c.id_tipo_documento, 10);
   if (c.nombre !== undefined) obj.nombre = c.nombre;
   if (c.usuario !== undefined) obj.usuario = c.usuario;
   if (c.password !== undefined) obj.password = c.password;

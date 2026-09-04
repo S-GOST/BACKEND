@@ -5,8 +5,8 @@ import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken
 
 const mapToUsuario = (t) => {
     const obj = {};
-    if (t.numero_documento !== undefined) obj.numero_documento = t.numero_documento;
-    if (t.id_tipo_documento !== undefined) obj.id_tipo_documento = t.id_tipo_documento;
+    if (t.numero_documento !== undefined) obj.numero_documento = BigInt(t.numero_documento);
+    if (t.id_tipo_documento !== undefined) obj.id_tipo_documento = parseInt(t.id_tipo_documento, 10);
     if (t.nombre !== undefined) obj.nombre = t.nombre;
     if (t.usuario !== undefined) obj.usuario = t.usuario;
     if (t.password !== undefined) obj.password = t.password;
