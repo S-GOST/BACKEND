@@ -2,6 +2,7 @@ import OrdenServicio from "../models/ordenServicioModel.js";
 import prisma from "../config/prisma.js"; // REEMPLAZO de pool
 import { logHistory } from "../utils/historyLogger.js";
 import { Prisma } from '@prisma/client';
+import fs from 'fs';
 
 // Obtener todas las órdenes de servicio
 export const obtenerOrdenes = async (req, res) => {
@@ -287,13 +288,13 @@ const validarTransicionEstado = (estadoAnterior, estadoNuevo, usuarioAutenticado
     if (usuarioAutenticado.rol !== 1 && (existe.ID_TECNICOS && existe.ID_TECNICOS !== usuarioAutenticado.id_usuario)) {
         return { message: 'Solo el administrador o el técnico asignado pueden cambiar el estado', status: 403 };
     }
-    if (estadoAnterior === 'Completada' || estadoAnterior === 'Cancelada') {
+    if (estadoAnterior === 'Finalizada' || estadoAnterior === 'Cancelada') {
         return { message: `La orden está ${estadoAnterior} y no se puede modificar.`, status: 400 };
     }
-    if (estadoNuevo === 'En Proceso' && estadoAnterior !== 'Pendiente') {
+    if (estadoNuevo === 'En_proceso' && estadoAnterior !== 'Pendiente') {
         return { message: 'Solo se puede cambiar a En Proceso si está Pendiente.', status: 400 };
     }
-    if (estadoNuevo === 'Completada' && estadoAnterior !== 'En Proceso') {
+    if (estadoNuevo === 'Finalizada' && estadoAnterior !== 'En_proceso') {
         return { message: 'Solo se puede Completar si está En Proceso.', status: 400 };
     }
     if (estadoNuevo === 'Cancelada' && !observaciones) {
@@ -315,7 +316,25 @@ export const actualizarOrden = async (req, res) => {
         }
 
         const estadoAnterior = existe.Estado;
-        const estadoNuevo = req.body.Estado || estadoAnterior;
+        let estadoNuevo = req.body.Estado || estadoAnterior;
+
+        // Normalizar estadoNuevo para que coincida con el enum de Prisma
+        const stateMap = {
+            'pendiente': 'Pendiente',
+            'Pendiente': 'Pendiente',
+            'en_proceso': 'En_proceso',
+            'En_proceso': 'En_proceso',
+            'En Proceso': 'En_proceso',
+            'En proceso': 'En_proceso',
+            'en proceso': 'En_proceso',
+            'completada': 'Finalizada',
+            'Completada': 'Finalizada',
+            'finalizada': 'Finalizada',
+            'Finalizada': 'Finalizada',
+            'cancelada': 'Cancelada',
+            'Cancelada': 'Cancelada'
+        };
+        estadoNuevo = stateMap[estadoNuevo] || estadoNuevo;
 
         // La validación original requería req.admin, pero si el técnico la actualiza vendrá en req.user
         // Se asume que req.user o req.admin tienen la misma estructura.
@@ -333,9 +352,9 @@ export const actualizarOrden = async (req, res) => {
             Fecha_inicio: existe.Fecha_inicio,
             Fecha_estimada: existe.Fecha_estimada,
             Fecha_fin: existe.Fecha_fin,
-            Estado: estadoNuevo,
             observaciones: req.body.observaciones !== undefined ? req.body.observaciones : existe.observaciones,
-            ...req.body
+            ...req.body,
+            Estado: estadoNuevo
         };
 
         await OrdenServicio.update(id, dataToUpdate);
@@ -368,7 +387,8 @@ export const actualizarOrden = async (req, res) => {
         res.json({ success: true, data: ordenActualizada });
     } catch (error) {
         console.error("Error al actualizar orden de servicio:", error);
-        res.status(500).json({ success: false, error: error.message });
+        fs.writeFileSync('C:\\\\Users\\\\duvan\\\\error_log_v2.txt', error.stack || error.message);
+        res.status(500).json({ success: false, error: error.message, stack: error.stack });
     }
 };
 
