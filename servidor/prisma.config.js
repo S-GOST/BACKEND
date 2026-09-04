@@ -5,3 +5,4 @@ export default definePrismaConfig({
     agents: ["claude", "cursor", "agents", "devin"],
   },
 });
+//
