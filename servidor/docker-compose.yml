@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  # Como tu BD está en Aiven (la nube), solo necesitamos levantar tu Backend
+  backend:
+    build: .
+    container_name: sgost-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    # Le decimos a Docker que inyecte todas las variables de tu archivo .env
+    env_file:
+      - .env
