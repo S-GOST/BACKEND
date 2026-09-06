@@ -1,5 +1,6 @@
 # Usar la imagen oficial de Node.js (versión 20 ligera)
-FROM node:20-alpine
+FROM node:20-slim
+RUN apt-get update -y && apt-get install -y openssl
 
 # Directorio de trabajo dentro del contenedor
 WORKDIR /usr/src/app
