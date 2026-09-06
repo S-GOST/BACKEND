@@ -252,7 +252,7 @@ export const pagarComprobante = async (req, res) => {
         }
 
         await prisma.$executeRawUnsafe(
-            'UPDATE comprobante SET estado = "Pagado", metodo_pago = COALESCE(?, metodo_pago) WHERE id_comprobante = ?',
+            'UPDATE comprobante SET estado = \'Pagado\', metodo_pago = COALESCE(?, metodo_pago) WHERE id_comprobante = ?',
             metodo_pago || null, Number(id)
         );
 
