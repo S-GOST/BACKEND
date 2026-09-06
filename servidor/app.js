@@ -78,9 +78,12 @@ app.use(generarCsrfToken);
 // Validar CSRF en peticiones POST/PUT/DELETE
 app.use(validarCsrf);
 
-app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.status(200).json({
+    estado: "activo",
+    mensaje: "API Backend en funcionamiento",
+    documentacion: "/api-docs"
+  });
 });
 
 // ============================================================
