@@ -10,7 +10,7 @@ import swaggerSpec from "./swagger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middlewares de seguridad
+// Middlewares de seguridad 
 import { limiterGeneral } from "./middleware/rateLimiter.js";
 import { generarCsrfToken, validarCsrf } from "./middleware/csrf.js";
 
@@ -42,20 +42,20 @@ app.use(helmet());
 // RFN-004: Redirección HTTP → HTTPS (en producción detrás de proxy)
 // ============================================================
 app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
-        return res.redirect(301, `https://${req.headers.host}${req.url}`);
-    }
-    next();
+  if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
 });
 
 // ============================================================
 // CORS Restrictivo (RFN-004)
 // ============================================================
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true,  // Necesario para cookies (refreshToken + CSRF)
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token']
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,  // Necesario para cookies (refreshToken + CSRF)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token']
 }));
 
 // ============================================================
