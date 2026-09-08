@@ -10,8 +10,13 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: "https://backend-nube-gzq9.onrender.com",
+        description: "Servidor Producción (Render)"
       },
+      {
+        url: "http://localhost:3000",
+        description: "Servidor Local"
+      }
     ],
     // --- ESTE ES EL COMPONENTE DE SEGURIDAD ---
     components: {
