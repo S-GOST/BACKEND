@@ -36,8 +36,13 @@ export const validarCsrf = (req, res, next) => {
         return next();
     }
 
+    // 👇 Excepción para Swagger: Si la petición viene de /api-docs, la dejamos pasar
+    if (req.headers.referer && req.headers.referer.includes('/api-docs')) {
+        return next();
+    }
+
     // Rutas excluidas de validación CSRF (Login, Refresh, Registro de Cliente)
-    const rutasExcluidas = ['/api/auth/login', '/api/auth/refresh', '/api/clientes/insertar'];
+    const rutasExcluidas = ['/api/auth/login', '/api/admins/login', '/api/auth/refresh', '/api/clientes/insertar'];
     if (rutasExcluidas.includes(req.path)) {
         return next();
     }
