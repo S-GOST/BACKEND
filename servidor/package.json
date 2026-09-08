@@ -33,7 +33,6 @@
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",
     "babel-jest": "^30.4.1",
-    "cypress": "^15.21.0",
     "jest": "^30.4.2",
     "jest-sonar-reporter": "^2.0.0",
     "prisma": "^5.22.0"
