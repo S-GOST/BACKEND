@@ -51,8 +51,18 @@ app.use((req, res, next) => {
 // ============================================================
 // CORS Restrictivo (RFN-004)
 // ============================================================
+const origenesPermitidos = [
+  'http://localhost:5173',
+  'https://frontend-fronten-nube.vercel.app' // ← Tu dominio oficial de Vercel
+];
+
+// Si tienes una variable de entorno configurada en Render, también la añade
+if (process.env.CORS_ORIGIN) {
+  origenesPermitidos.push(process.env.CORS_ORIGIN);
+}
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: origenesPermitidos,
   credentials: true,  // Necesario para cookies (refreshToken + CSRF)
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token']
@@ -127,5 +137,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-
-export default app; 
+export default app;
