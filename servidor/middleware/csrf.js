@@ -23,7 +23,7 @@ export const generarCsrfToken = (req, res, next) => {
     res.cookie('XSRF-TOKEN', token, {
         httpOnly: false,   // El frontend JS necesita leerlo para enviarlo como header
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // <-- CORRECCIÓN CROSS-ORIGIN
         maxAge: 24 * 60 * 60 * 1000 // 24 horas
     });
     next();
@@ -80,7 +80,7 @@ export const obtenerCsrfToken = (req, res) => {
     res.cookie('XSRF-TOKEN', token, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // <-- CORRECCIÓN CROSS-ORIGIN
         maxAge: 24 * 60 * 60 * 1000
     });
     res.json({ success: true, csrfToken: token });

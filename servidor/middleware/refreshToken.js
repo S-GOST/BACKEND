@@ -42,7 +42,7 @@ export const setRefreshTokenCookie = (res, refreshToken) => {
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,     // No accesible desde JavaScript del cliente
         secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
-        sameSite: 'Lax', // Prevenir envío en requests cross-site (Lax para desarrollo local)
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // <-- CORRECCIÓN CROSS-ORIGIN
         maxAge: 24 * 60 * 60 * 1000, // 24 horas en milisegundos
         path: '/api/auth'   // Solo enviar en rutas de auth
     });
@@ -91,8 +91,12 @@ export const renovarToken = async (req, res) => {
         });
 
     } catch (error) {
-        // Limpiar cookie inválida
-        res.clearCookie('refreshToken', { path: '/api/auth' });
+        // Limpiar cookie inválida (agregamos las mismas reglas de seguridad)
+        res.clearCookie('refreshToken', {
+            path: '/api/auth',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
+        });
 
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({
@@ -112,6 +116,10 @@ export const renovarToken = async (req, res) => {
  * Endpoint para cerrar sesión (invalida el refresh token)
  */
 export const logout = (req, res) => {
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', {
+        path: '/api/auth',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
+    });
     res.json({ success: true, message: 'Sesión cerrada exitosamente' });
 };
