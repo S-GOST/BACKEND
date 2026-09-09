@@ -150,7 +150,7 @@ export const crearCliente = async (req, res) => {
       }
     }
 
-    await enviarCorreoRegistroPendiente(userPayload.correo, userPayload.nombre);
+    enviarCorreoRegistroPendiente(userPayload.correo, userPayload.nombre);
 
     newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
     res.json({
