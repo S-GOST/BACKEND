@@ -1,12 +1,53 @@
-import { Resend } from 'resend';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Inicializamos Resend con la API Key
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Obtén tu API Key de Brevo en: https://app.brevo.com/settings/keys/api
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
 
-// En el caso de no tener dominio propio, usar el predeterminado de prueba de Resend
-const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+// IMPORTANTE: Este correo DEBE estar verificado en Brevo en la sección de "Remitentes".
+// Si verificaste tu Gmail en Brevo, debes poner tu Gmail aquí.
+const fromEmail = process.env.EMAIL_FROM || 'duvan2002pinto@gmail.com'; 
+
+/**
+ * Helper to send email using Brevo HTTP API
+ */
+const sendBrevoEmail = async (to, subject, htmlContent) => {
+  if (!BREVO_API_KEY) {
+    console.error('Error: BREVO_API_KEY no está configurada en las variables de entorno.');
+    return false;
+  }
+
+  const url = 'https://api.brevo.com/v3/smtp/email';
+  const options = {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'api-key': BREVO_API_KEY
+    },
+    body: JSON.stringify({
+      sender: { name: "Soporte KTM", email: fromEmail },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: htmlContent
+    })
+  };
+
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error enviando correo con Brevo:', errorData);
+      return false;
+    }
+    const data = await response.json();
+    console.log('Correo enviado con éxito (Brevo), messageId:', data.messageId);
+    return true;
+  } catch (error) {
+    console.error('Excepción al enviar correo con Brevo:', error);
+    return false;
+  }
+};
 
 /**
  * Send password recovery email
@@ -17,40 +58,25 @@ export const enviarCorreoRecuperacion = async (destinatario, token) => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
   const enlaceRecuperacion = `${FRONTEND_URL}/reset-password/${token}`;
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: `"Soporte KTM" <${fromEmail}>`,
-      to: destinatario,
-      subject: 'Recuperación de contraseña',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #ff6600;">Recuperación de contraseña</h2>
-          <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:</p>
-          <p style="margin: 30px 0;">
-            <a href="${enlaceRecuperacion}" style="background-color: #ff6600; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              Restablecer Contraseña
-            </a>
-          </p>
-          <p>Este enlace expirará en 24 horas.</p>
-          <p>Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
-          <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
-          <p style="font-size: 12px; color: #777;">Si tienes problemas con el botón, copia y pega esta URL en tu navegador:</p>
-          <p style="font-size: 12px; word-break: break-all; color: #0066cc;">${enlaceRecuperacion}</p>
-        </div>
-      `,
-    });
+  const subject = 'Recuperación de contraseña';
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #ff6600;">Recuperación de contraseña</h2>
+      <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva:</p>
+      <p style="margin: 30px 0;">
+        <a href="${enlaceRecuperacion}" style="background-color: #ff6600; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+          Restablecer Contraseña
+        </a>
+      </p>
+      <p>Este enlace expirará en 24 horas.</p>
+      <p>Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+      <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
+      <p style="font-size: 12px; color: #777;">Si tienes problemas con el botón, copia y pega esta URL en tu navegador:</p>
+      <p style="font-size: 12px; word-break: break-all; color: #0066cc;">${enlaceRecuperacion}</p>
+    </div>
+  `;
 
-    if (error) {
-      console.error('Error enviando correo:', error);
-      return false;
-    }
-
-    console.log('Correo enviado:', data?.id);
-    return true;
-  } catch (error) {
-    console.error('Excepción al enviar correo:', error);
-    return false;
-  }
+  return await sendBrevoEmail(destinatario, subject, html);
 };
 
 /**
@@ -59,34 +85,19 @@ export const enviarCorreoRecuperacion = async (destinatario, token) => {
  * @param {string} nombre Name of the user
  */
 export const enviarCorreoRegistroPendiente = async (destinatario, nombre) => {
-  try {
-    const { data, error } = await resend.emails.send({
-      from: `"Soporte KTM" <${fromEmail}>`,
-      to: destinatario,
-      subject: 'Registro Exitoso - Cuenta Pendiente de Aprobación',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #ff6600;">¡Hola, ${nombre}!</h2>
-          <p>Tu registro y el de tu motocicleta se han completado exitosamente en nuestra plataforma.</p>
-          <p>Actualmente, tu cuenta se encuentra en estado <strong>Pendiente de Aprobación</strong>.</p>
-          <p>Un administrador revisará tus datos pronto. Te notificaremos por este medio tan pronto como tu cuenta sea aprobada para que puedas iniciar sesión y acceder a todos nuestros servicios.</p>
-          <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
-          <p style="font-size: 12px; color: #777;">Gracias por unirte a nosotros.</p>
-        </div>
-      `,
-    });
+  const subject = 'Registro Exitoso - Cuenta Pendiente de Aprobación';
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #ff6600;">¡Hola, ${nombre}!</h2>
+      <p>Tu registro y el de tu motocicleta se han completado exitosamente en nuestra plataforma.</p>
+      <p>Actualmente, tu cuenta se encuentra en estado <strong>Pendiente de Aprobación</strong>.</p>
+      <p>Un administrador revisará tus datos pronto. Te notificaremos por este medio tan pronto como tu cuenta sea aprobada para que puedas iniciar sesión y acceder a todos nuestros servicios.</p>
+      <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
+      <p style="font-size: 12px; color: #777;">Gracias por unirte a nosotros.</p>
+    </div>
+  `;
 
-    if (error) {
-      console.error('Error enviando correo de registro pendiente:', error);
-      return false;
-    }
-
-    console.log('Correo de registro pendiente enviado:', data?.id);
-    return true;
-  } catch (error) {
-    console.error('Excepción al enviar correo de registro pendiente:', error);
-    return false;
-  }
+  return await sendBrevoEmail(destinatario, subject, html);
 };
 
 /**
@@ -128,23 +139,5 @@ export const enviarCorreoAprobacion = async (destinatario, estado, justificacion
 
   mensajeHtml += `</div>`;
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: `"Soporte KTM" <${fromEmail}>`,
-      to: destinatario,
-      subject: `Actualización de estado de tu cuenta: ${titulo}`,
-      html: mensajeHtml,
-    });
-
-    if (error) {
-      console.error('Error enviando correo de aprobación/rechazo:', error);
-      return false;
-    }
-
-    console.log('Correo de aprobación/rechazo enviado:', data?.id);
-    return true;
-  } catch (error) {
-    console.error('Excepción al enviar correo de aprobación/rechazo:', error);
-    return false;
-  }
+  return await sendBrevoEmail(destinatario, `Actualización de estado de tu cuenta: ${titulo}`, mensajeHtml);
 };
