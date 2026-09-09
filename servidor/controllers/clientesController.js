@@ -87,7 +87,18 @@ export const obtenerClientes = async (req, res) => {
 export const obtenerClientePorId = async (req, res) => {
   const { id } = req.params;
   try {
-    const user = await Usuario.findByPk(id);
+    let user = null;
+    
+    // Primero intentamos buscar por id_usuario si el id es un número
+    if (!isNaN(id)) {
+      user = await Usuario.findOne({ where: { id_usuario: parseInt(id, 10) } });
+    }
+
+    // Si no se encontró por id_usuario, intentamos por numero_documento
+    if (!user) {
+      user = await Usuario.findByPk(id);
+    }
+
     if (!user || user.id_rol !== 3) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
@@ -167,11 +178,19 @@ export const crearCliente = async (req, res) => {
 };
 
 export const actualizarCliente = async (req, res) => {
-  const id = req.params.id || req.body.numero_documento;
+  let id = req.params.id || req.body.numero_documento;
   if (!id) {
-    return res.status(400).json({ success: false, message: 'ID (numero_documento) es requerido' });
+    return res.status(400).json({ success: false, message: 'ID (numero_documento o id_usuario) es requerido' });
   }
   try {
+    // Si el ID es numérico, podría ser id_usuario. Busquemos si existe.
+    if (!isNaN(id)) {
+      const userCheck = await Usuario.findOne({ where: { id_usuario: parseInt(id, 10) } });
+      if (userCheck && userCheck.numero_documento) {
+        id = userCheck.numero_documento.toString();
+      }
+    }
+
     const userPayload = mapToUsuario(req.body);
     await Usuario.update(id, userPayload);
     const userActualizado = await Usuario.findByPk(userPayload.numero_documento || id);
@@ -198,16 +217,24 @@ export const actualizarCliente = async (req, res) => {
 };
 
 export const eliminarCliente = async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   if (!id) {
-    return res.status(400).json({ success: false, message: 'ID (numero_documento) es requerido' });
+    return res.status(400).json({ success: false, message: 'ID (numero_documento o id_usuario) es requerido' });
   }
   try {
-    const user = await Usuario.findByPk(id);
+    let user = null;
+    if (!isNaN(id)) {
+      user = await Usuario.findOne({ where: { id_usuario: parseInt(id, 10) } });
+    }
+    if (!user) {
+      user = await Usuario.findByPk(id);
+    }
+    
     if (!user || user.id_rol !== 3) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
-    await Usuario.update(id, { estado: 'Inactivo' });
+    
+    await Usuario.update(user.numero_documento.toString(), { estado: 'Inactivo' });
 
     await logHistory(
       req.user?.id_usuario || 1,
