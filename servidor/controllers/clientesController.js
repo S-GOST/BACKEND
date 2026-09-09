@@ -276,7 +276,7 @@ export const procesarAprobacionCliente = async (req, res) => {
     );
 
     // Enviar correo
-    await enviarCorreoAprobacion(user.correo, nuevoEstado, justificacion);
+    enviarCorreoAprobacion(user.correo, nuevoEstado, justificacion);
 
     res.json({
       success: true,

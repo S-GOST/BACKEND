@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { registrarHistorial } from '../helpers/logger.js';
 import bcrypt from 'bcrypt';
 import Usuario from '../models/usuarioModel.js';
@@ -96,7 +96,7 @@ router.post('/forgot-password', async (req, res) => {
       const expiracion = new Date(Date.now() + 24 * 60 * 60 * 1000);
       
       await Usuario.setResetToken(correo, token, expiracion);
-      await enviarCorreoRecuperacion(correo, token);
+      enviarCorreoRecuperacion(correo, token);
     }
 
     return res.json({ success: true, mensaje: 'Si el correo está registrado, recibirá un enlace de recuperación' });
