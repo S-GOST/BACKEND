@@ -226,4 +226,5 @@ enum usuarios_estado {
   Activo
   Inactivo
   Pendiente
+  Rechazado
 }
