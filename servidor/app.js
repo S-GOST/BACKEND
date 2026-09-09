@@ -31,7 +31,7 @@ import Categorias from "./routes/categoriasRoutes.js";
 import TipoDocumento from "./routes/tipoDocumentoRoutes.js";
 
 const app = express();
-
+app.set('trust proxy', 1);
 // ============================================================
 // RFN-004: HTTPS — Headers de seguridad con Helmet
 // ============================================================

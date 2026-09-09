@@ -5,11 +5,11 @@ dotenv.config();
 // Create transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, // true for 465, false for other ports
+  port: process.env.EMAIL_PORT || 465, // <-- PUERTO CAMBIADO A 465 PARA EVITAR BLOQUEOS
+  secure: true, // <-- CAMBIADO A true (Obligatorio para el puerto 465)
   auth: {
-    user: process.env.EMAIL_USER || 'test@example.com', 
-    pass: process.env.EMAIL_PASS || 'password', 
+    user: process.env.EMAIL_USER || 'test@example.com',
+    pass: process.env.EMAIL_PASS || 'password',
   },
 });
 
@@ -95,11 +95,11 @@ export const enviarCorreoRegistroPendiente = async (destinatario, nombre) => {
 export const enviarCorreoAprobacion = async (destinatario, estado, justificacion = '') => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
   const loginUrl = `${FRONTEND_URL}/login`;
-  
+
   const esAprobado = estado === 'Activo';
   const titulo = esAprobado ? 'Cuenta Aprobada' : 'Cuenta Rechazada';
   const color = esAprobado ? '#4CAF50' : '#F44336';
-  
+
   let mensajeHtml = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
       <h2 style="color: ${color};">${titulo}</h2>
