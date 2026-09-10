@@ -135,7 +135,7 @@ export const validarCategoria = [
     body('descripcion')
         .optional({ nullable: true, checkFalsy: true })
         .trim()
-        .isLength({ max: 100 }).withMessage('La descripción no puede exceder 100 caracteres')
+        .isLength({ max: 255 }).withMessage('La descripción no puede exceder 255 caracteres')
         .escape(),
     manejarErrores
 ];
