@@ -2,6 +2,7 @@ import Usuario from "../models/usuarioModel.js";
 import bcrypt from "bcrypt";
 import { logHistory } from "../utils/historyLogger.js";
 import { generarTokens, setRefreshTokenCookie } from "../middleware/refreshToken.js";
+import { enviarCorreoBienvenidaTecnico } from "../utils/mailer.js";
 
 const mapToUsuario = (t) => {
     const obj = {};
@@ -95,8 +96,12 @@ export const crearTec = async (req, res) => {
             `Se creó el técnico ${newUser.nombre}`
         );
 
+        if (newUser.correo) {
+            enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario);
+        }
+
         newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
-        res.json({ success: true, data: newUser });
+        res.json({ success: true, data: newUser, message: "Técnico creado exitosamente. Se ha enviado un correo de notificación." });
     } catch (error) {
         // En Prisma P2002 indica que falló una regla de Unique Constraint
         if (error.code === 'P2002') {

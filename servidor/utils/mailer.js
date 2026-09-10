@@ -141,3 +141,33 @@ export const enviarCorreoAprobacion = async (destinatario, estado, justificacion
 
   return await sendBrevoEmail(destinatario, `Actualización de estado de tu cuenta: ${titulo}`, mensajeHtml);
 };
+
+/**
+ * Send welcome email to technician upon account creation by Admin
+ * @param {string} destinatario Email of the technician
+ * @param {string} nombre Name of the technician
+ * @param {string} usuario Username of the technician
+ */
+export const enviarCorreoBienvenidaTecnico = async (destinatario, nombre, usuario) => {
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const loginUrl = `${FRONTEND_URL}/login`;
+
+  const subject = 'Bienvenido al equipo - Cuenta de Técnico Creada';
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #ff6600;">¡Hola, ${nombre}!</h2>
+      <p>Te informamos que un administrador ha creado tu cuenta de <strong>Técnico</strong> en nuestro sistema.</p>
+      <p>Ya puedes acceder a la plataforma para gestionar las órdenes de servicio.</p>
+      <p><strong>Tu usuario de acceso es:</strong> ${usuario}</p>
+      <p style="margin: 30px 0;">
+        <a href="${loginUrl}" style="background-color: #ff6600; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+          Iniciar Sesión
+        </a>
+      </p>
+      <hr style="border: none; border-top: 1px solid #ccc; margin-top: 30px;" />
+      <p style="font-size: 12px; color: #777;">Gracias por ser parte de nuestro equipo. Si tienes problemas para ingresar, contacta al administrador.</p>
+    </div>
+  `;
+
+  return await sendBrevoEmail(destinatario, subject, html);
+};
