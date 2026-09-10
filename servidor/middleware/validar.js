@@ -133,8 +133,8 @@ export const validarCategoria = [
         .notEmpty().withMessage('El tipo es requerido')
         .isIn(['PRODUCTO', 'SERVICIO']).withMessage('El tipo debe ser PRODUCTO o SERVICIO'),
     body('descripcion')
+        .optional({ nullable: true, checkFalsy: true })
         .trim()
-        .notEmpty().withMessage('La descripción es requerida')
         .isLength({ max: 100 }).withMessage('La descripción no puede exceder 100 caracteres')
         .escape(),
     manejarErrores
