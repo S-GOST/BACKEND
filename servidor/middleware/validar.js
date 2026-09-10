@@ -1,5 +1,4 @@
 import { body, validationResult } from 'express-validator';
-import fs from 'fs';
 
 // ============================================================
 // RFN-003: Validación y Sanitización de Datos
@@ -7,8 +6,9 @@ import fs from 'fs';
 
 // Middleware que procesa los errores de validación
 const manejarErrores = (req, res, next) => {
-    const errores = validationResult(req); if (!errores.isEmpty()) fs.writeFileSync('validation_error.json', JSON.stringify({errores: errores.array(), body: req.body}, null, 2));
+    const errores = validationResult(req); 
     if (!errores.isEmpty()) {
+        console.error("❌ Errores de validación detectados:", JSON.stringify({errores: errores.array(), body: req.body}, null, 2));
         return res.status(400).json({
             success: false,
             message: 'Errores de validación',

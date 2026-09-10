@@ -24,7 +24,9 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
-    rejectUnauthorized: false
+    // Si estás en producción, se recomienda rejectUnauthorized: true.
+    // Para entornos locales o desarrollo, false.
+    rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : false
   }
 });
 
