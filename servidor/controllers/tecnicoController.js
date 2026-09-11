@@ -97,7 +97,7 @@ export const crearTec = async (req, res) => {
         );
 
         if (newUser.correo) {
-            // Ejecutar envío de correo en segundo plano para no bloquear la respuesta
+            // Ejecutar envío de correo en segundo plano para no bloquear la respuesta..
             enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario)
                 .catch(err => console.error("Error enviando correo de bienvenida al técnico:", err));
         }
