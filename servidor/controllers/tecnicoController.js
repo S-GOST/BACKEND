@@ -97,7 +97,7 @@ export const crearTec = async (req, res) => {
         );
 
         if (newUser.correo) {
-            enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario);
+            await enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario);
         }
 
         newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
