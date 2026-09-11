@@ -1,50 +1,36 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Obtén tu API Key de Brevo en: https://app.brevo.com/settings/keys/api
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
+import nodemailer from 'nodemailer';
 
-// IMPORTANTE: Este correo DEBE estar verificado en Brevo en la sección de "Remitentes".
-// Si verificaste tu Gmail en Brevo, debes poner tu Gmail aquí.
+// IMPORTANTE: Este correo DEBE estar configurado en tu archivo .env
 const fromEmail = process.env.EMAIL_FROM || 'duvan2002pinto@gmail.com'; 
 
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: process.env.EMAIL_PORT || 587,
+  secure: false, // true para 465, false para otros puertos
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
 /**
- * Helper to send email using Brevo HTTP API
+ * Helper to send email using Nodemailer
  */
-const sendBrevoEmail = async (to, subject, htmlContent) => {
-  if (!BREVO_API_KEY) {
-    console.error('Error: BREVO_API_KEY no está configurada en las variables de entorno.');
-    return false;
-  }
-
-  const url = 'https://api.brevo.com/v3/smtp/email';
-  const options = {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'content-type': 'application/json',
-      'api-key': BREVO_API_KEY
-    },
-    body: JSON.stringify({
-      sender: { name: "Soporte KTM", email: fromEmail },
-      to: [{ email: to }],
-      subject: subject,
-      htmlContent: htmlContent
-    })
-  };
-
+const sendEmail = async (to, subject, htmlContent) => {
   try {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error enviando correo con Brevo:', errorData);
-      return false;
-    }
-    const data = await response.json();
-    console.log('Correo enviado con éxito (Brevo), messageId:', data.messageId);
+    const info = await transporter.sendMail({
+      from: `"Soporte KTM" <${fromEmail}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent,
+    });
+    console.log('Correo enviado con éxito (Nodemailer), messageId:', info.messageId);
     return true;
   } catch (error) {
-    console.error('Excepción al enviar correo con Brevo:', error);
+    console.error('Excepción al enviar correo con Nodemailer:', error);
     return false;
   }
 };
@@ -76,7 +62,7 @@ export const enviarCorreoRecuperacion = async (destinatario, token) => {
     </div>
   `;
 
-  return await sendBrevoEmail(destinatario, subject, html);
+  return await sendEmail(destinatario, subject, html);
 };
 
 /**
@@ -97,7 +83,7 @@ export const enviarCorreoRegistroPendiente = async (destinatario, nombre) => {
     </div>
   `;
 
-  return await sendBrevoEmail(destinatario, subject, html);
+  return await sendEmail(destinatario, subject, html);
 };
 
 /**
@@ -139,7 +125,7 @@ export const enviarCorreoAprobacion = async (destinatario, estado, justificacion
 
   mensajeHtml += `</div>`;
 
-  return await sendBrevoEmail(destinatario, `Actualización de estado de tu cuenta: ${titulo}`, mensajeHtml);
+  return await sendEmail(destinatario, `Actualización de estado de tu cuenta: ${titulo}`, mensajeHtml);
 };
 
 /**
@@ -169,5 +155,5 @@ export const enviarCorreoBienvenidaTecnico = async (destinatario, nombre, usuari
     </div>
   `;
 
-  return await sendBrevoEmail(destinatario, subject, html);
+  return await sendEmail(destinatario, subject, html);
 };
