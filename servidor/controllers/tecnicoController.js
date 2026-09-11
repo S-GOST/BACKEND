@@ -97,7 +97,9 @@ export const crearTec = async (req, res) => {
         );
 
         if (newUser.correo) {
-            await enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario);
+            // Ejecutar envío de correo en segundo plano para no bloquear la respuesta
+            enviarCorreoBienvenidaTecnico(newUser.correo, newUser.nombre, newUser.usuario)
+                .catch(err => console.error("Error enviando correo de bienvenida al técnico:", err));
         }
 
         newUser.numero_documento = newUser.numero_documento ? newUser.numero_documento.toString() : null;
