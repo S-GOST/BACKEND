@@ -7,6 +7,7 @@ jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -46,7 +47,7 @@ describe('actualizarTec', () => {
       const id = '10';
       const bodyMock = { nombre: 'Carlos Actualizado', correo: 'carlos@nuevo.com', numero_documento: '98765432' };
       // mapToUsuario es interna, retornará automáticamente: { ...bodyMock, id_rol: 2 }
-      const payloadEsperado = { ...bodyMock, id_rol: 2 };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('98765432'), id_rol: 2 };
       const tecActualizadoMock = { id_usuario: 10, ...payloadEsperado };
 
       Usuario.update.mockResolvedValue();
@@ -59,7 +60,7 @@ describe('actualizarTec', () => {
       await actualizarTec(req, res);
 
       expect(Usuario.update).toHaveBeenCalledWith(id, payloadEsperado);
-      expect(Usuario.findByPk).toHaveBeenCalledWith('98765432'); // Usa numero_documento del payload
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('98765432')); // Usa numero_documento del payload
       expect(logHistory).toHaveBeenCalledWith(5, 'usuarios', 10, 'UPDATE', 'Se actualizó el técnico Carlos Actualizado');
       expect(res.json).toHaveBeenCalledWith({ success: true, data: tecActualizadoMock });
       expect(res.status).not.toHaveBeenCalled();
@@ -68,7 +69,7 @@ describe('actualizarTec', () => {
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const id = '11';
       const bodyMock = { nombre: 'Luis Méndez', numero_documento: '11223344' };
-      const payloadEsperado = { ...bodyMock, id_rol: 2 };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('11223344'), id_rol: 2 };
       const tecActualizadoMock = { id_usuario: 11, ...payloadEsperado };
 
       Usuario.update.mockResolvedValue();
@@ -107,11 +108,11 @@ describe('actualizarTec', () => {
       expect(logHistory).not.toHaveBeenCalled();
     });
 
-    test('Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el documento o correo ya existe (P2002)', async () => {
       const id = '10';
       const bodyMock = { correo: 'ya@existe.com', numero_documento: '98765432' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.update.mockRejectedValue(duplicateError);
 
@@ -123,7 +124,7 @@ describe('actualizarTec', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'El documento o correo ya se encuentra registrado por otro usuario'
+        message: 'El documento o correo ya se encuentra registrado por otro usuario',
       });
       expect(logHistory).not.toHaveBeenCalled();
     });

@@ -14,7 +14,7 @@ jest.mock('../../models/motosModel.js', () => {
   return { __esModule: true, default: mock, ...mock };
 }, { virtual: true });
 
-jest.mock('../../models/usuariosModel.js', () => {
+jest.mock('../../models/usuarioModel.js', () => {
   const mock = {
     findAll: jest.fn(),
     findById: jest.fn(),
@@ -87,6 +87,9 @@ describe('crearMoto', () => {
   describe('Validación de cliente (400)', () => {
     test('Debe devolver error si el cliente no existe', async () => {
       const bodyMock = { placa: 'MNO-345', id_cliente: 999 };
+      const Usuario = require('../../models/usuarioModel.js').default;
+      Usuario.findById.mockResolvedValue(null);
+      Usuario.findByPk.mockResolvedValue(null);
 
       const req = { body: bodyMock, user: { id_usuario: 1 } };
       const res = mockRes();
@@ -128,11 +131,11 @@ describe('crearMoto', () => {
     });
   });
 
-  describe('Manejo de duplicados (ER_DUP_ENTRY)', () => {
+  describe('Manejo de duplicados (P2002)', () => {
     test('Debe devolver 400 si la placa ya existe', async () => {
       const bodyMock = { placa: 'ABC-123', marca: 'Yamaha' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Moto.create.mockRejectedValue(duplicateError);
 

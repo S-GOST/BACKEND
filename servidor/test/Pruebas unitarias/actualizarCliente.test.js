@@ -7,6 +7,7 @@ jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -66,7 +67,7 @@ describe('actualizarCliente', () => {
 
     test('Debe usar req.body.numero_documento como ID cuando req.params.id no existe', async () => {
       const reqBody = { nombre: 'Ana', numero_documento: '87654321' };
-      const payloadEsperado = { ...reqBody, id_rol: 3, estado: 'Pendiente' };
+      const payloadEsperado = { ...reqBody, numero_documento: BigInt('87654321'), id_rol: 3, estado: 'Pendiente' };
       const userActualizadoMock = { id_usuario: 2, ...reqBody, id_rol: 3, estado: 'Pendiente' };
 
       Usuario.update.mockResolvedValue();
@@ -79,7 +80,7 @@ describe('actualizarCliente', () => {
       await actualizarCliente(req, res);
 
       expect(Usuario.update).toHaveBeenCalledWith('87654321', payloadEsperado);
-      expect(Usuario.findByPk).toHaveBeenCalledWith('87654321');
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('87654321'));
       expect(res.json).toHaveBeenCalledWith({ success: true, data: userActualizadoMock });
     });
 
@@ -111,15 +112,15 @@ describe('actualizarCliente', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'ID (numero_documento) es requerido',
+        message: 'ID (numero_documento o id_usuario) es requerido',
       });
       expect(Usuario.update).not.toHaveBeenCalled();
     });
 
-    test('Debe devolver 400 si hay duplicado (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si hay duplicado (P2002)', async () => {
       const reqBody = { nombre: 'Juan', numero_documento: '12345678' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.update.mockRejectedValue(duplicateError);
 

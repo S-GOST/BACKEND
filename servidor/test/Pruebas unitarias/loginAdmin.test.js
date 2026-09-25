@@ -68,7 +68,7 @@ describe('loginAdmin', () => {
     test('Debe devolver 200, accessToken y datos del admin con credenciales válidas', async () => {
       const bodyMock = { 
         usuario: 'admin123', 
-        contrasena: 'miPassword123' 
+        password: 'miPassword123' 
       };
       const usuarioMock = {
         id_usuario: 10,
@@ -115,7 +115,7 @@ describe('loginAdmin', () => {
     });
 
     test('Debe setear cookie httpOnly con refreshToken', async () => {
-      const bodyMock = { usuario: 'admin123', contrasena: 'pass123' };
+      const bodyMock = { usuario: 'admin123', password: 'pass123' };
       const usuarioMock = {
         id_usuario: 5,
         usuario: 'admin123',
@@ -145,7 +145,7 @@ describe('loginAdmin', () => {
     test('Debe devolver 401 si el usuario no existe', async () => {
       const bodyMock = { 
         usuario: 'usuarioInexistente', 
-        contrasena: 'cualquierPassword' 
+        password: 'cualquierPassword' 
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(null);
@@ -171,7 +171,7 @@ describe('loginAdmin', () => {
     test('Debe devolver 401 si la contraseña es incorrecta', async () => {
       const bodyMock = { 
         usuario: 'admin123', 
-        contrasena: 'passwordIncorrecta' 
+        password: 'passwordIncorrecta' 
       };
       const usuarioMock = {
         id_usuario: 10,
@@ -203,7 +203,7 @@ describe('loginAdmin', () => {
     test('No debe filtrar usuarios que no sean admin (id_rol !== 1)', async () => {
       const bodyMock = { 
         usuario: 'clienteUsuario', 
-        contrasena: 'clientePass' 
+        password: 'clientePass' 
       };
 
       Usuario.findOneWithPassword.mockResolvedValue(null);
@@ -226,7 +226,7 @@ describe('loginAdmin', () => {
 
   describe('Manejo de errores', () => {
     test('Debe devolver 500 si falla la búsqueda del usuario', async () => {
-      const bodyMock = { usuario: 'admin123', contrasena: 'pass' };
+      const bodyMock = { usuario: 'admin123', password: 'pass' };
       const dbError = new Error('Error de conexión a la BD');
 
       Usuario.findOneWithPassword.mockRejectedValue(dbError);
@@ -246,7 +246,7 @@ describe('loginAdmin', () => {
     });
 
     test('Debe devolver 500 si falla bcrypt.compare', async () => {
-      const bodyMock = { usuario: 'admin123', contrasena: 'pass' };
+      const bodyMock = { usuario: 'admin123', password: 'pass' };
       const usuarioMock = {
         id_usuario: 10,
         usuario: 'admin123',
@@ -273,7 +273,7 @@ describe('loginAdmin', () => {
     });
 
     test('Debe devolver 500 si falla generarTokens', async () => {
-      const bodyMock = { usuario: 'admin123', contrasena: 'pass' };
+      const bodyMock = { usuario: 'admin123', password: 'pass' };
       const usuarioMock = {
         id_usuario: 10,
         usuario: 'admin123',
@@ -301,7 +301,7 @@ describe('loginAdmin', () => {
     });
 
     test('Debe capturar el error en console.error con el prefijo correcto', async () => {
-      const bodyMock = { usuario: 'admin123', contrasena: 'pass' };
+      const bodyMock = { usuario: 'admin123', password: 'pass' };
       const dbError = new Error('Error específico de login');
       const consoleSpy = jest.spyOn(console, 'error');
 

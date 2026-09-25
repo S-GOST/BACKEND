@@ -53,8 +53,8 @@ describe('crearCategoria', () => {
   describe('Creación exitosa', () => {
     test('Debe devolver 201 y registrar la categoría creada', async () => {
       const bodyMock = { nombre: 'Electrónica', descripcion: 'Productos electrónicos' };
-      // En mysql2, create() retorna un objeto con insertId, no los datos completos
-      const resultadoCreateMock = { insertId: 5, affectedRows: 1 };
+      // En mysql2, create() retorna un objeto con ID_CATEGORIA, no los datos completos
+      const resultadoCreateMock = { ID_CATEGORIA: 5, ID_CATEGORIAS: 5, insertId: 5, affectedRows: 1 };
 
       Categoria.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -68,7 +68,7 @@ describe('crearCategoria', () => {
       expect(logHistory).toHaveBeenCalledWith(
         3,                    // req.user.id_usuario
         'categorias',         // tabla
-        5,                    // insertId
+        5,                    // ID_CATEGORIA
         'INSERT',             // acción
         'Se creó la categoría Electrónica'
       );
@@ -78,7 +78,7 @@ describe('crearCategoria', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'Ropa', descripcion: 'Prendas de vestir' };
-      const resultadoCreateMock = { insertId: 6, affectedRows: 1 };
+      const resultadoCreateMock = { ID_CATEGORIA: 6, ID_CATEGORIAS: 6, insertId: 6, affectedRows: 1 };
 
       Categoria.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -100,7 +100,7 @@ describe('crearCategoria', () => {
 
     test('Debe usar "N/A" si el nombre no viene en el body', async () => {
       const bodyMock = { descripcion: 'Sin nombre' };
-      const resultadoCreateMock = { insertId: 7, affectedRows: 1 };
+      const resultadoCreateMock = { ID_CATEGORIA: 7, ID_CATEGORIAS: 7, insertId: 7, affectedRows: 1 };
 
       Categoria.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -119,9 +119,9 @@ describe('crearCategoria', () => {
       );
     });
 
-    test('Debe usar 0 como insertId si no está disponible', async () => {
+    test('Debe usar 0 como ID_CATEGORIA si no está disponible', async () => {
       const bodyMock = { nombre: 'Hogar' };
-      const resultadoCreateMock = { affectedRows: 1 }; // Sin insertId
+      const resultadoCreateMock = { affectedRows: 1 }; // Sin ID_CATEGORIA
 
       Categoria.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -142,10 +142,10 @@ describe('crearCategoria', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el nombre ya existe (P2002)', async () => {
       const bodyMock = { nombre: 'Existente' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Categoria.create.mockRejectedValue(duplicateError);
 

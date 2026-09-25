@@ -1,8 +1,8 @@
 //Importamos el controlador y herramientas que este usa
-import { loginCliente } from "@controllers/clientesController.js";
-import bcrypt from 'bcrypt';
-import Usuario from '@models/usuarioModel.js';
-import { generarTokens, setRefreshTokenCookie } from '@middleware/refreshToken.js';
+const { loginCliente } = require('../../controllers/clientesController.js');
+const bcrypt = require('bcrypt');
+const Usuario = require('../../models/usuarioModel.js').default;
+const { generarTokens, setRefreshTokenCookie } = require('../../middleware/refreshToken.js');
 
 
 //Creamos los simulacros esto es clave para remplazar las funciones reales
@@ -28,7 +28,7 @@ jest.mock('bcrypt', () => ({
 
 //El refres del token simulado
 
-jest.mock('@middleware/refreshToken.js', () => ({
+jest.mock('../../middleware/refreshToken.js', () => ({
   generarTokens: jest.fn(),
   setRefreshTokenCookie: jest.fn(),
 }));
@@ -67,7 +67,7 @@ describe('loginCliente', () => {
     test('Debe devolver 401 si el usuario no existe', async () => {
       Usuario.findOneWithPassword.mockResolvedValue(null);
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -98,7 +98,7 @@ describe('loginCliente', () => {
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockResolvedValue(false);
 
-      const req = { body: { usuario: 'test', contrasena: 'wrongPassword' } };
+      const req = { body: { usuario: 'test', password: 'wrongPassword' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -128,7 +128,7 @@ describe('loginCliente', () => {
         refreshToken: 'fakeRefreshToken'
       });
 
-      const req = { body: { usuario: 'test', contrasena: 'correctPassword' } };
+      const req = { body: { usuario: 'test', password: 'correctPassword' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -157,7 +157,7 @@ describe('loginCliente', () => {
   describe('Validación de datos de entrada', () => {
 
     test('Debe devolver 400 si falta el usuario', async () => {
-      const req = { body: { contrasena: '1234' } };
+      const req = { body: { password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -200,7 +200,7 @@ describe('loginCliente', () => {
     //Test 6
 
     test('Debe devolver 400 si el usuario está vacío', async () => {
-      const req = { body: { usuario: '', contrasena: '1234' } };
+      const req = { body: { usuario: '', password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -215,7 +215,7 @@ describe('loginCliente', () => {
     //Test 7
 
     test('Debe devolver 400 si la contraseña está vacía', async () => {
-      const req = { body: { usuario: 'test', contrasena: '' } };
+      const req = { body: { usuario: 'test', password: '' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -235,7 +235,7 @@ describe('loginCliente', () => {
     test('Debe devolver 500 si ocurre un error en la base de datos', async () => {
       Usuario.findOneWithPassword.mockRejectedValue(new Error('Database error'));
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -260,7 +260,7 @@ describe('loginCliente', () => {
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockRejectedValue(new Error('bcrypt error'));
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);
@@ -288,7 +288,7 @@ describe('loginCliente', () => {
         throw new Error('Token generation error');
       });
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginCliente(req, res);

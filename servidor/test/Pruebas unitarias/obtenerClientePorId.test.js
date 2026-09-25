@@ -1,12 +1,13 @@
 // test/obtenerClientePorId.test.js
 
-const { obtenerClientePorId } = require('@controllers/clientesController.js');
+const { obtenerClientePorId } = require('../../controllers/clientesController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('@models/usuarioModel.js', () => ({
+jest.mock('../../models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -15,12 +16,12 @@ jest.mock('@models/usuarioModel.js', () => ({
   },
 }));
 
-jest.mock('@utils/historyLogger.js', () => ({
+jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
 // Referencias a los módulos simulados
-const Usuario = require('@models/usuarioModel.js').default;
+const Usuario = require('../../models/usuarioModel.js').default;
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -34,6 +35,7 @@ describe('obtenerClientePorId', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => { });
+    Usuario.findOne.mockResolvedValue(null); // por defecto, que no encuentre por id_usuario
   });
 
   afterEach(() => {
@@ -92,7 +94,7 @@ describe('obtenerClientePorId', () => {
 
     test('Debe devolver 500 si falla la consulta a la base de datos', async () => {
       const dbError = new Error('Error de conexión a la BD');
-      Usuario.findByPk.mockRejectedValue(dbError);
+      Usuario.findOne.mockRejectedValue(dbError);
 
       const req = { params: { id: '12345678' } };
       const res = mockRes();

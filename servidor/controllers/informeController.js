@@ -1,4 +1,4 @@
-import Informe from "../models/InformeModel.js";
+import Informe from "../models/informeModel.js";
 import prisma from "../config/prisma.js"; // REEMPLAZO de pool
 import { logHistory } from "../utils/historyLogger.js";
 import { Prisma } from '@prisma/client';

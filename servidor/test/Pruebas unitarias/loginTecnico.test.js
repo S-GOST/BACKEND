@@ -1,15 +1,11 @@
 // Importamos el controlador y herramientas que este usa
-import { loginTecnico } from "../controllers/tecnicoController";
-import bcrypt from 'bcrypt';
-import Usuario from '@models/usuarioModel.js';
-import { generarTokens, setRefreshTokenCookie } from '@middleware/refreshToken.js';
+const { loginTecnico } = require('../../controllers/tecnicoController.js');
+const bcrypt = require('bcrypt');
+const Usuario = require('../../models/usuarioModel.js').default;
+const { generarTokens, setRefreshTokenCookie } = require('../../middleware/refreshToken.js');
 
 // Mocks (Jest los hoistea automáticamente al inicio, antes de evaluar los imports)
-jest.mock('@config/db.js', () => ({
-  query: jest.fn().mockResolvedValue([]),
-  getConnection: jest.fn(),
-  end: jest.fn(),
-}));
+
 
 jest.mock('@models/historialModel.js', () => ({
   __esModule: true,
@@ -36,7 +32,7 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-jest.mock('@middleware/refreshToken.js', () => ({
+jest.mock('../../middleware/refreshToken.js', () => ({
   generarTokens: jest.fn(),
   setRefreshTokenCookie: jest.fn(),
 }));
@@ -64,7 +60,7 @@ describe('loginTecnico', () => {
     test('Debe devolver 401 si el usuario no existe', async () => {
       Usuario.findOneWithPassword.mockResolvedValue(null);
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginTecnico(req, res);
@@ -84,7 +80,7 @@ describe('loginTecnico', () => {
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockResolvedValue(false);
 
-      const req = { body: { usuario: 'test', contrasena: 'wrongPassword' } };
+      const req = { body: { usuario: 'test', password: 'wrongPassword' } };
       const res = mockRes();
 
       await loginTecnico(req, res);
@@ -106,7 +102,7 @@ describe('loginTecnico', () => {
         refreshToken: 'fakeRefreshToken'
       });
 
-      const req = { body: { usuario: 'test', contrasena: 'correctPassword' } };
+      const req = { body: { usuario: 'test', password: 'correctPassword' } };
       const res = mockRes();
 
       await loginTecnico(req, res);
@@ -130,7 +126,7 @@ describe('loginTecnico', () => {
   describe('Manejo de errores', () => {
     test('Debe devolver 500 si ocurre un error en la base de datos', async () => {
       Usuario.findOneWithPassword.mockRejectedValue(new Error('Database error'));
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginTecnico(req, res);
@@ -147,7 +143,7 @@ describe('loginTecnico', () => {
       Usuario.findOneWithPassword.mockResolvedValue(fakeUser);
       bcrypt.compare.mockRejectedValue(new Error('bcrypt error'));
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginTecnico(req, res);
@@ -167,7 +163,7 @@ describe('loginTecnico', () => {
         throw new Error('Token generation error');
       });
 
-      const req = { body: { usuario: 'test', contrasena: '1234' } };
+      const req = { body: { usuario: 'test', password: '1234' } };
       const res = mockRes();
 
       await loginTecnico(req, res);

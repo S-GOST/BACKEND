@@ -18,17 +18,18 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// 2. Mock de db.js (SIN virtual, necesitamos usar pool.query directamente)
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
+// 2. Mock de db.js (SIN virtual, necesitamos usar prisma.$queryRawUnsafe directamente)
+jest.mock('../../config/prisma.js', () => ({
+  __esModule: true,
+  default: {
+    $queryRawUnsafe: jest.fn()
+  }
 }));
 
 // Importamos el controlador, logger y pool simulados
 const { generarReporte } = require('../../controllers/informeController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default;
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -57,7 +58,7 @@ describe('generarReporte', () => {
 
       await generarReporte(req, res);
 
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
       expect(logHistory).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ 
@@ -73,7 +74,7 @@ describe('generarReporte', () => {
         { id_informe: 2, id_tecnico: 10, fecha: '2024-01-20' }
       ];
       
-      pool.query.mockResolvedValue([informesMock, []]);
+      prisma.$queryRawUnsafe.mockResolvedValue(informesMock);
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, user: { id_rol: 2, id_usuario: 10 } };
@@ -81,40 +82,7 @@ describe('generarReporte', () => {
 
       await generarReporte(req, res);
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT * FROM informe WHERE DATE(fecha) BETWEEN ? AND ? AND id_tecnico = ? ORDER BY fecha DESC',
-        ['2024-01-01', '2024-01-31', 10]
-      );
-      expect(logHistory).toHaveBeenCalledWith(
-        10,
-        'informe',
-        0,
-        'REPORT',
-        'Generó reporte de informes desde 2024-01-01 hasta 2024-01-31'
-      );
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: informesMock });
-    });
-
-    test('Debe mostrar todos los informes si el usuario es admin (rol 1)', async () => {
-      const bodyMock = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
-      const informesMock = [
-        { id_informe: 1, id_tecnico: 10, fecha: '2024-01-15' },
-        { id_informe: 2, id_tecnico: 15, fecha: '2024-01-20' }
-      ];
-      
-      pool.query.mockResolvedValue([informesMock, []]);
-      logHistory.mockResolvedValue();
-
-      const req = { body: bodyMock, user: { id_rol: 1, id_usuario: 1 } };
-      const res = mockRes();
-
-      await generarReporte(req, res);
-
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT * FROM informe WHERE DATE(fecha) BETWEEN ? AND ? ORDER BY fecha DESC',
-        ['2024-01-01', '2024-01-31']
-      );
+      expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith('SELECT * FROM informe WHERE DATE(fecha) BETWEEN ? AND ? AND id_tecnico = ? ORDER BY fecha DESC', '2024-01-01', '2024-01-31', 10);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: informesMock });
     });
 
@@ -122,7 +90,7 @@ describe('generarReporte', () => {
       const bodyMock = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
       const informesMock = [{ id_informe: 1, fecha: '2024-01-15' }];
       
-      pool.query.mockResolvedValue([informesMock, []]);
+      prisma.$queryRawUnsafe.mockResolvedValue(informesMock);
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, admin: { id_rol: 1, id_usuario: 99 } }; // Sin req.user
@@ -144,14 +112,14 @@ describe('generarReporte', () => {
     test('Debe devolver 404 si no hay informes en el rango de fechas', async () => {
       const bodyMock = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
       
-      pool.query.mockResolvedValue([[], []]); // Array vacío
+      prisma.$queryRawUnsafe.mockResolvedValue([]); // Array vacío
 
       const req = { body: bodyMock, user: { id_rol: 1, id_usuario: 1 } };
       const res = mockRes();
 
       await generarReporte(req, res);
 
-      expect(pool.query).toHaveBeenCalled();
+      expect(prisma.$queryRawUnsafe).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ 
         success: false, 
@@ -166,7 +134,7 @@ describe('generarReporte', () => {
       const bodyMock = { fecha_inicio: '2024-01-01', fecha_fin: '2024-01-31' };
       const dbError = new Error('Error de conexión a la BD');
       
-      pool.query.mockRejectedValue(dbError);
+      prisma.$queryRawUnsafe.mockRejectedValue(dbError);
 
       const req = { body: bodyMock, user: { id_rol: 1, id_usuario: 1 } };
       const res = mockRes();

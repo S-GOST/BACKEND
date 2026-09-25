@@ -14,22 +14,15 @@ jest.mock('../../models/categoriasModel.js', () => ({
     checkDependencies: jest.fn(),
     restore: jest.fn(), 
   },
-}));
+}), { virtual: true });
 
 jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// Mock de db.js con pool.query para las actualizaciones en cascada
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
-}), { virtual: true });
-
-// Importamos el controlador y pool simulados
+// Importamos el controlador y prisma real
 const { habilitarCategoria } = require('../../controllers/categoriasController.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 // Referencia al modelo simulado
 const Categoria = require('../../models/categoriasModel.js').default;
@@ -43,9 +36,19 @@ const mockRes = () => {
 };
 
 describe('habilitarCategoria', () => {
+  let updateProductosSpy;
+  let updateServiciosSpy;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Mocks seguros para Prisma (ya que puede que no existan si no se generó el cliente)
+    if (!prisma.productos) prisma.productos = {};
+    if (!prisma.servicios) prisma.servicios = {};
+    
+    updateProductosSpy = jest.spyOn(prisma.productos, 'updateMany').mockResolvedValue({});
+    updateServiciosSpy = jest.spyOn(prisma.servicios, 'updateMany').mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -55,10 +58,9 @@ describe('habilitarCategoria', () => {
   describe('Habilitación exitosa', () => {
     test('Debe devolver 200 y ejecutar queries en cascada para reactivar dependencias', async () => {
       const id = '5';
-      const resultadoRestoreMock = { affectedRows: 1 };
-
-      Categoria.restore.mockResolvedValue(resultadoRestoreMock);
-      pool.query.mockResolvedValue();
+      
+      // Simulamos que Categoria.restore no lanza error
+      Categoria.restore.mockResolvedValue();
 
       const req = { params: { id }, user: { id_usuario: 3 } };
       const res = mockRes();
@@ -66,20 +68,32 @@ describe('habilitarCategoria', () => {
       await habilitarCategoria(req, res);
 
       expect(Categoria.restore).toHaveBeenCalledWith(id);
-      expect(pool.query).toHaveBeenCalledTimes(2);
-      expect(pool.query).toHaveBeenCalledWith("UPDATE productos SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
-      expect(pool.query).toHaveBeenCalledWith("UPDATE servicios SET Estado = 'Activo' WHERE ID_CATEGORIA = ?", [id]);
+      
+      expect(updateProductosSpy).toHaveBeenCalledTimes(1);
+      expect(updateProductosSpy).toHaveBeenCalledWith({
+        where: { ID_CATEGORIA: 5 },
+        data: { Estado: 'Activo' }
+      });
+
+      expect(updateServiciosSpy).toHaveBeenCalledTimes(1);
+      expect(updateServiciosSpy).toHaveBeenCalledWith({
+        where: { ID_CATEGORIA: 5 },
+        data: { Estado: 'Activo' }
+      });
+
       expect(res.status).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ success: true, message: "Categoría habilitada correctamente" });
     });
   });
 
   describe('Casos no encontrados (404)', () => {
-    test('Debe devolver 404 si la categoría no existe (affectedRows === 0)', async () => {
+    test('Debe devolver 404 si la categoría no existe (Prisma lanza P2025)', async () => {
       const id = '999';
-      const resultadoRestoreMock = { affectedRows: 0 };
-
-      Categoria.restore.mockResolvedValue(resultadoRestoreMock);
+      
+      // Simulamos que el modelo lanza P2025 al no encontrarlo
+      const notFoundError = new Error('No encontrado');
+      notFoundError.code = 'P2025';
+      Categoria.restore.mockRejectedValue(notFoundError);
 
       const req = { params: { id } };
       const res = mockRes();
@@ -89,7 +103,9 @@ describe('habilitarCategoria', () => {
       expect(Categoria.restore).toHaveBeenCalledWith(id);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ success: false, message: "Categoría no encontrada" });
-      expect(pool.query).not.toHaveBeenCalled();
+      
+      expect(updateProductosSpy).not.toHaveBeenCalled();
+      expect(updateServiciosSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -111,16 +127,17 @@ describe('habilitarCategoria', () => {
         success: false,
         error: 'Error al restaurar categoría'
       });
-      expect(pool.query).not.toHaveBeenCalled();
+      
+      expect(updateProductosSpy).not.toHaveBeenCalled();
+      expect(updateServiciosSpy).not.toHaveBeenCalled();
     });
 
-    test('Debe devolver 500 si fallan las queries en cascada', async () => {
+    test('Debe devolver 500 si fallan las queries en cascada de prisma', async () => {
       const id = '5';
-      const resultadoRestoreMock = { affectedRows: 1 };
       const dbError = new Error('Error al reactivar dependencias');
 
-      Categoria.restore.mockResolvedValue(resultadoRestoreMock);
-      pool.query.mockRejectedValue(dbError);
+      Categoria.restore.mockResolvedValue();
+      updateProductosSpy.mockRejectedValue(dbError);
 
       const req = { params: { id } };
       const res = mockRes();
@@ -128,7 +145,7 @@ describe('habilitarCategoria', () => {
       await habilitarCategoria(req, res);
 
       expect(Categoria.restore).toHaveBeenCalledWith(id);
-      expect(pool.query).toHaveBeenCalled();
+      expect(updateProductosSpy).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,

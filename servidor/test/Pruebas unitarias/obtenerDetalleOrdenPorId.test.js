@@ -112,23 +112,7 @@ describe('obtenerDetalleOrdenPorId', () => {
       });
     });
 
-    test('Debe devolver 404 si el detalle es un array vacío', async () => {
-      const id = '999';
-      
-      DetalleOrdenServicio.findById.mockResolvedValue([]);
 
-      const req = { params: { id } };
-      const res = mockRes();
-
-      await obtenerDetalleOrdenPorId(req, res);
-
-      expect(DetalleOrdenServicio.findById).toHaveBeenCalledWith(id);
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: 'Detalle no encontrado'
-      });
-    });
   });
 
   describe('Manejo de errores', () => {

@@ -121,12 +121,13 @@ describe('actualizarProducto', () => {
   });
 
   describe('Casos no encontrados (404)', () => {
-    test('Debe devolver 404 si el producto no existe (affectedRows === 0)', async () => {
+    test('Debe devolver 404 si el producto no existe (P2025)', async () => {
       const id = '999';
       const bodyMock = { nombre: 'Inexistente' };
-      const resultadoUpdateMock = { affectedRows: 0 };
+      const notFoundError = new Error('Not found');
+      notFoundError.code = 'P2025';
 
-      Producto.update.mockResolvedValue(resultadoUpdateMock);
+      Producto.update.mockRejectedValue(notFoundError);
 
       const req = { params: { id }, body: bodyMock };
       const res = mockRes();
@@ -144,11 +145,11 @@ describe('actualizarProducto', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el nombre ya existe (P2002)', async () => {
       const id = '5';
       const bodyMock = { nombre: 'Existente' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Producto.update.mockRejectedValue(duplicateError);
 

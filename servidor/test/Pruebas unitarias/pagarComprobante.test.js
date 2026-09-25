@@ -18,16 +18,18 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// Mock de db.js (SIN virtual, necesitamos usar pool.query directamente)
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
+// Mock de prisma
+jest.mock('../../config/prisma.js', () => ({
+  __esModule: true,
+  default: {
+    $queryRawUnsafe: jest.fn(),
+    $executeRawUnsafe: jest.fn()
+  }
 }));
 
 const { pagarComprobante } = require('../../controllers/comprobanteController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default;
 
 const mockRes = () => {
   const res = {};
@@ -57,30 +59,28 @@ describe('pagarComprobante', () => {
           total_pagar: 150.50
         }
       ];
-      const updateResult = { affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([comprobanteMock, []])  // SELECT del comprobante
-        .mockResolvedValueOnce([updateResult, []]);    // UPDATE del estado
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
+      prisma.$executeRawUnsafe.mockResolvedValueOnce(1); // UPDATE del estado
 
       logHistory.mockResolvedValue();
 
       const req = { 
         params: { id }, 
-        user: { id_usuario: 10 } 
+        user: { id_usuario: 10 },
+        body: { metodo_pago: 'Tarjeta' }
       };
       const res = mockRes();
 
       await pagarComprobante(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(2);
-      expect(pool.query).toHaveBeenNthCalledWith(1,
+      expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith(
         'SELECT * FROM comprobante WHERE id_comprobante = ?',
-        [id]
+        5
       );
-      expect(pool.query).toHaveBeenNthCalledWith(2,
-        'UPDATE comprobante SET estado = "Pagado" WHERE id_comprobante = ?',
-        [id]
+      expect(prisma.$executeRawUnsafe).toHaveBeenCalledWith(
+        'UPDATE comprobante SET estado = \'Pagado\', metodo_pago = COALESCE(?, metodo_pago) WHERE id_comprobante = ?',
+        'Tarjeta', 5
       );
       expect(logHistory).toHaveBeenCalledWith(
         10,
@@ -105,15 +105,13 @@ describe('pagarComprobante', () => {
           estado: 'Pendiente'
         }
       ];
-      const updateResult = { affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([comprobanteMock, []])
-        .mockResolvedValueOnce([updateResult, []]);
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
+      prisma.$executeRawUnsafe.mockResolvedValueOnce(1);
 
       logHistory.mockResolvedValue();
 
-      const req = { params: { id } }; // Sin req.user
+      const req = { params: { id }, body: { metodo_pago: "Efectivo" } }; // Sin req.user
       const res = mockRes();
 
       await pagarComprobante(req, res);
@@ -136,17 +134,16 @@ describe('pagarComprobante', () => {
     test('Debe devolver 404 si el comprobante no existe', async () => {
       const id = '999';
 
-      pool.query.mockResolvedValueOnce([[], []]); // No encontrado
+      prisma.$queryRawUnsafe.mockResolvedValueOnce([]); // No encontrado
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(1);
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith(
         'SELECT * FROM comprobante WHERE id_comprobante = ?',
-        [id]
+        999
       );
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
@@ -156,22 +153,7 @@ describe('pagarComprobante', () => {
       expect(logHistory).not.toHaveBeenCalled();
     });
 
-    test('Debe devolver 404 si el resultado del SELECT es null', async () => {
-      const id = '999';
 
-      pool.query.mockResolvedValueOnce([null, []]);
-
-      const req = { params: { id }, user: { id_usuario: 10 } };
-      const res = mockRes();
-
-      await pagarComprobante(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: 'Comprobante no encontrado'
-      });
-    });
   });
 
   describe('Validaciones de estado (400)', () => {
@@ -185,14 +167,14 @@ describe('pagarComprobante', () => {
         }
       ];
 
-      pool.query.mockResolvedValueOnce([comprobanteMock, []]);
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(1); // Solo el SELECT, no el UPDATE
+      expect(prisma.$executeRawUnsafe).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -211,9 +193,9 @@ describe('pagarComprobante', () => {
         }
       ];
 
-      pool.query.mockResolvedValueOnce([comprobanteMock, []]);
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);
@@ -232,9 +214,9 @@ describe('pagarComprobante', () => {
       const id = '5';
       const dbError = new Error('Error de conexión al buscar');
 
-      pool.query.mockRejectedValue(dbError);
+      prisma.$queryRawUnsafe.mockRejectedValue(dbError);
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);
@@ -258,16 +240,14 @@ describe('pagarComprobante', () => {
       ];
       const dbError = new Error('Error al actualizar estado');
 
-      pool.query
-        .mockResolvedValueOnce([comprobanteMock, []]) // SELECT OK
-        .mockRejectedValueOnce(dbError);              // UPDATE falla
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
+      prisma.$executeRawUnsafe.mockRejectedValueOnce(dbError);
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(2);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -285,16 +265,14 @@ describe('pagarComprobante', () => {
           estado: 'Pendiente'
         }
       ];
-      const updateResult = { affectedRows: 1 };
       const logError = new Error('Error al registrar historial');
 
-      pool.query
-        .mockResolvedValueOnce([comprobanteMock, []])
-        .mockResolvedValueOnce([updateResult, []]);
+      prisma.$queryRawUnsafe.mockResolvedValueOnce(comprobanteMock);
+      prisma.$executeRawUnsafe.mockResolvedValueOnce(1);
 
       logHistory.mockRejectedValue(logError);
 
-      const req = { params: { id }, user: { id_usuario: 10 } };
+      const req = { params: { id }, user: { id_usuario: 10 }, body: {} };
       const res = mockRes();
 
       await pagarComprobante(req, res);

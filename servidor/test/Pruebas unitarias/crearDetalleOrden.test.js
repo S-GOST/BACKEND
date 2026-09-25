@@ -46,7 +46,7 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// 2. Mock de db.js (SIN virtual, necesitamos pool.query para UPDATE de stock)
+// 2. Mock de db.js (SIN virtual, necesitamos queryRawUnsafeSpy para UPDATE de stock)
 jest.mock('../../config/db.js', () => ({
   query: jest.fn(),
   getConnection: jest.fn(),
@@ -58,7 +58,7 @@ const { logHistory } = require('../../utils/historyLogger.js');
 const DetalleOrdenServicio = require('../../models/detalleOrdenServicioModel.js').default;
 const Servicio = require('../../models/serviciosModel.js').default;
 const Producto = require('../../models/productosModel.js').default;
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 const mockRes = () => {
   const res = {};
@@ -68,7 +68,14 @@ const mockRes = () => {
 };
 
 describe('crearDetalleOrden', () => {
+  let queryRawUnsafeSpy;
+  let prismaProductosUpdateSpy;
+
   beforeEach(() => {
+    queryRawUnsafeSpy = jest.spyOn(prisma, '$queryRawUnsafe');
+    if (!prisma.productos) prisma.productos = {};
+    prismaProductosUpdateSpy = jest.fn().mockResolvedValue({});
+    prisma.productos.update = prismaProductosUpdateSpy;
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -99,7 +106,7 @@ describe('crearDetalleOrden', () => {
 
       expect(Servicio.findById).toHaveBeenCalledWith(5);
       expect(Producto.findById).not.toHaveBeenCalled();
-      expect(pool.query).not.toHaveBeenCalled(); // No descuenta stock para servicios
+      expect(queryRawUnsafeSpy).not.toHaveBeenCalled(); // No descuenta stock para servicios
       expect(DetalleOrdenServicio.create).toHaveBeenCalledWith(
         expect.objectContaining({
           ID_SERVICIOS: 5,
@@ -159,7 +166,7 @@ describe('crearDetalleOrden', () => {
 
       Producto.findById.mockResolvedValue(productoMock);
       DetalleOrdenServicio.create.mockResolvedValue(nuevoDetalleMock);
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      prismaProductosUpdateSpy.mockResolvedValue({ id: 3 });
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, user: { id_usuario: 5 } };
@@ -178,10 +185,7 @@ describe('crearDetalleOrden', () => {
         })
       );
       // Validar que descontó stock
-      expect(pool.query).toHaveBeenCalledWith(
-        'UPDATE productos SET stock = stock - ? WHERE ID_PRODUCTOS = ?',
-        [2, 3]
-      );
+      expect(prismaProductosUpdateSpy).toHaveBeenCalledWith({ where: { ID_PRODUCTOS: 3 }, data: { stock: { decrement: 2 } } });
       expect(logHistory).toHaveBeenCalledWith(
         5,
         'detalles_orden_servicio',
@@ -213,7 +217,7 @@ describe('crearDetalleOrden', () => {
         message: 'Stock insuficiente para el producto Filtro. Stock actual: 2'
       });
       expect(DetalleOrdenServicio.create).not.toHaveBeenCalled();
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(queryRawUnsafeSpy).not.toHaveBeenCalled();
       expect(logHistory).not.toHaveBeenCalled();
     });
 
@@ -224,7 +228,7 @@ describe('crearDetalleOrden', () => {
 
       Producto.findById.mockResolvedValue(productoMock);
       DetalleOrdenServicio.create.mockResolvedValue(nuevoDetalleMock);
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      prismaProductosUpdateSpy.mockResolvedValue({ id: 3 });
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, user: { id_usuario: 1 } };
@@ -245,7 +249,7 @@ describe('crearDetalleOrden', () => {
 
       Producto.findById.mockResolvedValue(productoMock);
       DetalleOrdenServicio.create.mockResolvedValue(nuevoDetalleMock);
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      prismaProductosUpdateSpy.mockResolvedValue({ id: 3 });
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, user: { id_usuario: 1 } };
@@ -376,7 +380,7 @@ describe('crearDetalleOrden', () => {
     test('Debe usar insertId si id_detalle no está presente en la respuesta', async () => {
       const bodyMock = { ID_SERVICIOS: 5, cantidad: 1 };
       const servicioMock = { ID_SERVICIOS: 5, Precio: '20' };
-      const resultadoCreateMock = { insertId: 110, affectedRows: 1 }; // Sin id_detalle
+      const resultadoCreateMock = { ID_DETALLES_ORDEN_SERVICIO: 110, affectedRows: 1 }; // Sin id_detalle
 
       Servicio.findById.mockResolvedValue(servicioMock);
       DetalleOrdenServicio.create.mockResolvedValue(resultadoCreateMock);
@@ -490,7 +494,7 @@ describe('crearDetalleOrden', () => {
 
       Producto.findById.mockResolvedValue(productoMock);
       DetalleOrdenServicio.create.mockResolvedValue(nuevoDetalleMock);
-      pool.query.mockRejectedValue(dbError);
+      prismaProductosUpdateSpy.mockRejectedValue(dbError);
 
       const req = { body: bodyMock, user: { id_usuario: 1 } };
       const res = mockRes();

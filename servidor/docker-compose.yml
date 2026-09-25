@@ -9,6 +9,9 @@ services:
     # Le decimos a Docker que inyecte todas las variables de tu archivo .env
     env_file:
       - .env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
 
   frontend:
     build:

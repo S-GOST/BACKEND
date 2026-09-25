@@ -3,10 +3,16 @@
 const { crearCliente } = require('@controllers/clientesController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
+// Mock de mailer para evitar warnings de test no esperado
+jest.mock('../../utils/mailer.js', () => ({
+  enviarCorreoRegistroPendiente: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -35,6 +41,7 @@ describe('crearCliente', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => { });
+    Usuario.findOne.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -45,11 +52,11 @@ describe('crearCliente', () => {
     test('Debe devolver el cliente creado correctamente', async () => {
       const bodyMock = { nombre: 'Juan Pérez', numero_documento: '12345678', correo: 'juan@test.com' };
       // mapToUsuario es interna, retornará automáticamente: { ...bodyMock, id_rol: 3, estado: 'Pendiente' }
-      const payloadEsperado = { ...bodyMock, id_rol: 3, estado: 'Pendiente' };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('12345678'), id_rol: 3, estado: 'Pendiente' };
       const nuevoClienteMock = { id_usuario: 1, nombre: 'Juan Pérez', numero_documento: '12345678', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.create.mockResolvedValue();
-      Usuario.findByPk.mockResolvedValue(nuevoClienteMock);
+      Usuario.findByPk.mockResolvedValueOnce(null).mockResolvedValueOnce(nuevoClienteMock);
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock, user: { id_usuario: 5 } };
@@ -58,19 +65,19 @@ describe('crearCliente', () => {
       await crearCliente(req, res);
 
       expect(Usuario.create).toHaveBeenCalledWith(payloadEsperado);
-      expect(Usuario.findByPk).toHaveBeenCalledWith('12345678');
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('12345678'));
       expect(logHistory).toHaveBeenCalledWith(5, 'usuarios', 1, 'INSERT', 'Se creó el cliente Juan Pérez');
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoClienteMock });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: nuevoClienteMock }));
       expect(res.status).not.toHaveBeenCalled();
     });
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'María López', numero_documento: '87654321' };
-      const payloadEsperado = { ...bodyMock, id_rol: 3, estado: 'Pendiente' };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('87654321'), id_rol: 3, estado: 'Pendiente' };
       const nuevoClienteMock = { id_usuario: 2, nombre: 'María López', numero_documento: '87654321', id_rol: 3, estado: 'Pendiente' };
 
       Usuario.create.mockResolvedValue();
-      Usuario.findByPk.mockResolvedValue(nuevoClienteMock);
+      Usuario.findByPk.mockResolvedValueOnce(null).mockResolvedValueOnce(nuevoClienteMock);
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock }; // Sin req.user
@@ -79,15 +86,15 @@ describe('crearCliente', () => {
       await crearCliente(req, res);
 
       expect(logHistory).toHaveBeenCalledWith(1, 'usuarios', 2, 'INSERT', 'Se creó el cliente María López');
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoClienteMock });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: nuevoClienteMock }));
     });
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el documento o correo ya existe (P2002)', async () => {
       const bodyMock = { nombre: 'Juan Pérez', numero_documento: '12345678' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.create.mockRejectedValue(duplicateError);
 
@@ -99,7 +106,7 @@ describe('crearCliente', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'El documento o correo ya se encuentra registrado',
+        message: 'Un dato ingresado (documento, correo o usuario) ya se encuentra registrado.',
       });
       expect(logHistory).not.toHaveBeenCalled();
     });
@@ -108,6 +115,7 @@ describe('crearCliente', () => {
       const bodyMock = { nombre: 'Juan Pérez', numero_documento: '12345678' };
       const dbError = new Error('Error de conexión a la BD');
 
+      Usuario.findByPk.mockResolvedValue(null);
       Usuario.create.mockRejectedValue(dbError);
 
       const req = { body: bodyMock, user: { id_usuario: 1 } };

@@ -59,9 +59,6 @@ describe('crearInforme', () => {
         trabajo_realizado: 'Reemplazo de fuente',
         recomendaciones: 'Revisar en 6 meses'
       };
-      
-      // mysql2 create retorna { insertId, affectedRows }
-      const resultadoCreateMock = { insertId: 25, affectedRows: 1 };
       const nuevoInformeMock = { 
         id_informe: 25, 
         id_orden: '100',
@@ -70,9 +67,7 @@ describe('crearInforme', () => {
         trabajo_realizado: 'Reemplazo de fuente',
         recomendaciones: 'Revisar en 6 meses'
       };
-
-      Informe.create.mockResolvedValue(resultadoCreateMock);
-      Informe.findById.mockResolvedValue(nuevoInformeMock);
+      Informe.create.mockResolvedValue(nuevoInformeMock);
       logHistory.mockResolvedValue();
 
       const req = { body: bodyMock };
@@ -81,13 +76,13 @@ describe('crearInforme', () => {
       await crearInforme(req, res);
 
       expect(Informe.create).toHaveBeenCalledWith({
-        id_orden: '100',
-        id_tecnico: '10',
+        id_orden: 100,
+        id_tecnico: 10,
         diagnostico: 'Equipo con falla en fuente',
         trabajo_realizado: 'Reemplazo de fuente',
         recomendaciones: 'Revisar en 6 meses'
       });
-      expect(Informe.findById).toHaveBeenCalledWith(25);
+
       expect(logHistory).toHaveBeenCalledWith(
         '10',           // id_tecnico directamente (no req.user)
         'informe',      // tabla en singular
@@ -98,8 +93,7 @@ describe('crearInforme', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        data: nuevoInformeMock,
-        insertResult: resultadoCreateMock
+        data: nuevoInformeMock
       });
     });
   });
@@ -185,33 +179,6 @@ describe('crearInforme', () => {
         error: 'Error al insertar en BD'
       });
       expect(Informe.findById).not.toHaveBeenCalled();
-      expect(logHistory).not.toHaveBeenCalled();
-    });
-
-    test('Debe devolver 500 si falla la búsqueda del informe recién creado', async () => {
-      const bodyMock = { 
-        id_orden: '100', 
-        id_tecnico: '10',
-        diagnostico: 'Test' 
-      };
-      const resultadoCreateMock = { insertId: 25, affectedRows: 1 };
-      const dbError = new Error('Error al recuperar el informe');
-
-      Informe.create.mockResolvedValue(resultadoCreateMock);
-      Informe.findById.mockRejectedValue(dbError);
-
-      const req = { body: bodyMock };
-      const res = mockRes();
-
-      await crearInforme(req, res);
-
-      expect(Informe.create).toHaveBeenCalled();
-      expect(Informe.findById).toHaveBeenCalledWith(25);
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Error al recuperar el informe'
-      });
       expect(logHistory).not.toHaveBeenCalled();
     });
   });

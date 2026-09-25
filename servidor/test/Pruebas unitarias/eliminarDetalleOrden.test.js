@@ -174,9 +174,10 @@ describe('eliminarDetalleOrden', () => {
   describe('Casos no encontrados (404)', () => {
     test('Debe devolver 404 si affectedRows es 0', async () => {
       const id = '999';
-      const eliminadosMock = { affectedRows: 0 };
+      const notFoundError = new Error('Record not found');
+      notFoundError.code = 'P2025';
 
-      DetalleOrdenServicio.delete.mockResolvedValue(eliminadosMock);
+      DetalleOrdenServicio.delete.mockRejectedValue(notFoundError);
 
       const req = { 
         params: { id }, 

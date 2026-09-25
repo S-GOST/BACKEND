@@ -18,7 +18,7 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// 2. Mock de db.js (SIN virtual, necesitamos usar pool.query para garantías)
+// 2. Mock de db.js (SIN virtual, necesitamos usar queryRawUnsafeSpy para garantías)
 jest.mock('../../config/db.js', () => ({
   query: jest.fn(),
   getConnection: jest.fn(),
@@ -27,7 +27,7 @@ jest.mock('../../config/db.js', () => ({
 
 const { actualizarOrden } = require('../../controllers/ordenServicioController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 const OrdenServicio = require('../../models/ordenServicioModel.js').default;
 
 const mockRes = () => {
@@ -38,7 +38,13 @@ const mockRes = () => {
 };
 
 describe('actualizarOrden', () => {
+  let queryRawUnsafeSpy;
+  let updateManySpy;
+
   beforeEach(() => {
+    queryRawUnsafeSpy = jest.spyOn(prisma, '$queryRawUnsafe');
+    if (!prisma.detalles_orden_servicio) prisma.detalles_orden_servicio = {};
+    updateManySpy = jest.spyOn(prisma.detalles_orden_servicio, 'updateMany').mockResolvedValue({ count: 1 });
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -172,7 +178,7 @@ describe('actualizarOrden', () => {
 
     test('Debe devolver 400 si intenta modificar una orden Completada', async () => {
       const id = '5';
-      const ordenCompletada = { ...ordenBase, Estado: 'Completada' };
+      const ordenCompletada = { ...ordenBase, Estado: 'Finalizada' };
       OrdenServicio.findById.mockResolvedValue(ordenCompletada);
 
       const req = {
@@ -187,7 +193,7 @@ describe('actualizarOrden', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'La orden está Completada y no se puede modificar.'
+        message: 'La orden está Finalizada y no se puede modificar.'
       });
     });
 
@@ -240,7 +246,7 @@ describe('actualizarOrden', () => {
 
       // Intentar volver a "En Proceso" desde "En Proceso" no debería fallar
       // Pero intentar desde otro estado sí. Probemos transición inválida:
-      const ordenEnProceso2 = { ...ordenBase, Estado: 'Completada' };
+      const ordenEnProceso2 = { ...ordenBase, Estado: 'Finalizada' };
       // Ya cubierta arriba con Completada
     });
 
@@ -250,7 +256,7 @@ describe('actualizarOrden', () => {
 
       const req = {
         params: { id },
-        body: { Estado: 'Completada' },
+        body: { Estado: 'Finalizada' },
         admin: { id_usuario: 1, rol: 1 }
       };
       const res = mockRes();
@@ -350,7 +356,7 @@ describe('actualizarOrden', () => {
 
       expect(OrdenServicio.update).toHaveBeenCalled();
       expect(logHistory).not.toHaveBeenCalled(); // No cambió el estado
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(queryRawUnsafeSpy).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: ordenActualizada
@@ -372,7 +378,7 @@ describe('actualizarOrden', () => {
         .mockResolvedValueOnce(ordenOriginal)
         .mockResolvedValueOnce(ordenOriginal);
       OrdenServicio.update.mockResolvedValue({ affectedRows: 1 });
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      queryRawUnsafeSpy.mockResolvedValue([{ affectedRows: 1 }, []]);
 
       const req = {
         params: { id },
@@ -383,10 +389,7 @@ describe('actualizarOrden', () => {
 
       await actualizarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_PRODUCTOS IS NOT NULL',
-        ['6 meses', id]
-      );
+      expect(updateManySpy).toHaveBeenCalledWith({ where: { id_orden: 5, ID_PRODUCTOS: { not: null } }, data: { garantia: "6 meses" } });
     });
 
     test('Debe actualizar garantías de servicios si se envía garantia_servicios', async () => {
@@ -404,7 +407,7 @@ describe('actualizarOrden', () => {
         .mockResolvedValueOnce(ordenOriginal)
         .mockResolvedValueOnce(ordenOriginal);
       OrdenServicio.update.mockResolvedValue({ affectedRows: 1 });
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      queryRawUnsafeSpy.mockResolvedValue([{ affectedRows: 1 }, []]);
 
       const req = {
         params: { id },
@@ -415,10 +418,7 @@ describe('actualizarOrden', () => {
 
       await actualizarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledWith(
-        'UPDATE detalles_orden_servicio SET garantia = ? WHERE id_orden = ? AND ID_SERVICIOS IS NOT NULL',
-        ['3 meses', id]
-      );
+      expect(updateManySpy).toHaveBeenCalledWith({ where: { id_orden: 5, ID_SERVICIOS: { not: null } }, data: { garantia: "3 meses" } });
     });
 
     test('Debe actualizar ambas garantías si se envían ambas', async () => {
@@ -436,7 +436,7 @@ describe('actualizarOrden', () => {
         .mockResolvedValueOnce(ordenOriginal)
         .mockResolvedValueOnce(ordenOriginal);
       OrdenServicio.update.mockResolvedValue({ affectedRows: 1 });
-      pool.query.mockResolvedValue([{ affectedRows: 1 }, []]);
+      queryRawUnsafeSpy.mockResolvedValue([{ affectedRows: 1 }, []]);
 
       const req = {
         params: { id },
@@ -447,7 +447,7 @@ describe('actualizarOrden', () => {
 
       await actualizarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(2);
+      expect(updateManySpy).toHaveBeenCalledTimes(2);
     });
 
     test('Debe registrar en logHistory si el estado cambia', async () => {
@@ -483,7 +483,7 @@ describe('actualizarOrden', () => {
         'orden_servicio',
         id,
         'UPDATE',
-        expect.stringContaining('Cambió estado de Pendiente a En Proceso')
+        expect.stringContaining('Cambió estado de Pendiente a En_proceso')
       );
     });
 
@@ -520,7 +520,7 @@ describe('actualizarOrden', () => {
         'orden_servicio',
         id,
         'UPDATE',
-        expect.stringContaining('Obs: N/A')
+        expect.stringContaining('Cambió estado de Pendiente a En_proceso. Obs: N/A')
       );
     });
   });
@@ -542,7 +542,8 @@ describe('actualizarOrden', () => {
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: 'Error de BD'
+        error: 'Error de BD',
+        stack: expect.any(String)
       });
     });
 
@@ -585,7 +586,7 @@ describe('actualizarOrden', () => {
 
       OrdenServicio.findById.mockResolvedValue(ordenOriginal);
       OrdenServicio.update.mockResolvedValue({ affectedRows: 1 });
-      pool.query.mockRejectedValue(new Error('Error al actualizar garantía'));
+      jest.spyOn(prisma.detalles_orden_servicio, 'updateMany').mockRejectedValue(new Error('Error al actualizar garantía'));
 
       const req = {
         params: { id },

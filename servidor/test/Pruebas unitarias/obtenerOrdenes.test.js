@@ -14,7 +14,7 @@ jest.mock('../../models/ordenServicioModel.js', () => ({
   },
 }), { virtual: true });
 
-// 2. Mock de db.js (SIN virtual, necesitamos usar pool.query directamente)
+// 2. Mock de db.js (SIN virtual, necesitamos usar queryRawSpy directamente)
 jest.mock('../../config/db.js', () => ({
   query: jest.fn(),
   getConnection: jest.fn(),
@@ -23,7 +23,7 @@ jest.mock('../../config/db.js', () => ({
 
 // Importamos el controlador y pool simulado
 const { obtenerOrdenes } = require('../../controllers/ordenServicioController.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 // Referencia al modelo simulado
 const OrdenServicio = require('../../models/ordenServicioModel.js').default;
@@ -37,7 +37,10 @@ const mockRes = () => {
 };
 
 describe('obtenerOrdenes', () => {
+  let queryRawSpy;
+
   beforeEach(() => {
+    queryRawSpy = jest.spyOn(prisma, '$queryRaw');
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -87,10 +90,10 @@ describe('obtenerOrdenes', () => {
       ];
 
       OrdenServicio.findAll.mockResolvedValue(ordenesMock);
-      // pool.query se llama una vez por cada orden
-      pool.query
-        .mockResolvedValueOnce([detallesOrden1, []]) // Detalles de orden 1
-        .mockResolvedValueOnce([detallesOrden2, []]); // Detalles de orden 2
+      // queryRawSpy se llama una vez por cada orden
+      queryRawSpy
+        .mockResolvedValueOnce(detallesOrden1) // Detalles de orden 1
+        .mockResolvedValueOnce(detallesOrden2); // Detalles de orden 2
 
       const req = {};
       const res = mockRes();
@@ -98,17 +101,11 @@ describe('obtenerOrdenes', () => {
       await obtenerOrdenes(req, res);
 
       expect(OrdenServicio.findAll).toHaveBeenCalled();
-      expect(pool.query).toHaveBeenCalledTimes(2);
+      expect(queryRawSpy).toHaveBeenCalledTimes(2);
       
       // Validar que la query se ejecutó con los IDs correctos
-      expect(pool.query).toHaveBeenNthCalledWith(1, 
-        expect.stringContaining('SELECT'), 
-        [1] // ID_ORDEN_SERVICIO de la primera orden
-      );
-      expect(pool.query).toHaveBeenNthCalledWith(2, 
-        expect.stringContaining('SELECT'), 
-        [2] // ID_ORDEN_SERVICIO de la segunda orden
-      );
+      expect(queryRawSpy).toHaveBeenNthCalledWith(1, expect.any(Array), 1);
+      expect(queryRawSpy).toHaveBeenNthCalledWith(2, expect.any(Array), 2);
       
       // Validar que las órdenes tienen sus detalles adjuntos
       expect(res.status).not.toHaveBeenCalled();
@@ -127,14 +124,14 @@ describe('obtenerOrdenes', () => {
       ];
 
       OrdenServicio.findAll.mockResolvedValue(ordenesMock);
-      pool.query.mockResolvedValueOnce([[], []]); // Sin detalles
+      queryRawSpy.mockResolvedValueOnce([]); // Sin detalles
 
       const req = {};
       const res = mockRes();
 
       await obtenerOrdenes(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(1);
+      expect(queryRawSpy).toHaveBeenCalledTimes(1);
       expect(res.json).toHaveBeenCalledWith({ 
         success: true, 
         data: [
@@ -145,8 +142,8 @@ describe('obtenerOrdenes', () => {
 
     test('Debe devolver 200 y arreglo vacío si no hay órdenes', async () => {
       OrdenServicio.findAll.mockResolvedValue([]);
-      // pool.query no debería llamarse si no hay órdenes
-      pool.query.mockResolvedValue([[], []]);
+      // queryRawSpy no debería llamarse si no hay órdenes
+      queryRawSpy.mockResolvedValue([[], []]);
 
       const req = {};
       const res = mockRes();
@@ -154,7 +151,7 @@ describe('obtenerOrdenes', () => {
       await obtenerOrdenes(req, res);
 
       expect(OrdenServicio.findAll).toHaveBeenCalled();
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(queryRawSpy).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ success: true, data: [] });
     });
   });
@@ -174,7 +171,7 @@ describe('obtenerOrdenes', () => {
         success: false,
         error: 'Error al obtener órdenes'
       });
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(queryRawSpy).not.toHaveBeenCalled();
     });
 
     test('Debe devolver 500 si falla la carga de detalles', async () => {
@@ -184,7 +181,7 @@ describe('obtenerOrdenes', () => {
       const dbError = new Error('Error al cargar detalles');
 
       OrdenServicio.findAll.mockResolvedValue(ordenesMock);
-      pool.query.mockRejectedValue(dbError);
+      queryRawSpy.mockRejectedValue(dbError);
 
       const req = {};
       const res = mockRes();
@@ -192,7 +189,7 @@ describe('obtenerOrdenes', () => {
       await obtenerOrdenes(req, res);
 
       expect(OrdenServicio.findAll).toHaveBeenCalled();
-      expect(pool.query).toHaveBeenCalled();
+      expect(queryRawSpy).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,

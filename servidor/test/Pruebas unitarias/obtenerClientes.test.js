@@ -43,8 +43,8 @@ describe('obtenerClientes', () => {
   describe('Consulta exitosa', () => {
     test('Debe devolver 200 y la lista de clientes (id_rol=3)', async () => {
       const clientesMock = [
-        { id_usuario: 1, nombre: 'Juan', id_rol: 3 },
-        { id_usuario: 2, nombre: 'Ana', id_rol: 3 },
+        { id_usuario: 1, nombre: 'Juan', id_rol: 3, numero_documento: null },
+        { id_usuario: 2, nombre: 'Ana', id_rol: 3, numero_documento: null },
       ];
       Usuario.findAll.mockResolvedValue(clientesMock);
 

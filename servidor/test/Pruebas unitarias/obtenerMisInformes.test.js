@@ -14,16 +14,9 @@ jest.mock('../../models/informeModel.js', () => ({
   },
 }), { virtual: true });
 
-// 2. Mock de db.js (SIN virtual, porque necesitamos usar pool.query directamente)
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
-}));
-
-// Importamos el controlador y el pool simulado
+// Importamos el controlador y el prisma real
 const { obtenerMisInformes } = require('../../controllers/informeController.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -34,9 +27,13 @@ const mockRes = () => {
 };
 
 describe('obtenerMisInformes', () => {
+  let queryRawUnsafeSpy;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    // Usamos spyOn para mockear el método de Prisma
+    queryRawUnsafeSpy = jest.spyOn(prisma, '$queryRawUnsafe');
   });
 
   afterEach(() => {
@@ -50,7 +47,7 @@ describe('obtenerMisInformes', () => {
 
       await obtenerMisInformes(req, res);
 
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(queryRawUnsafeSpy).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ 
         success: false, 
@@ -60,18 +57,17 @@ describe('obtenerMisInformes', () => {
 
     test('Debe usar req.admin si req.user no está presente', async () => {
       const usuarioRows = [{ id_usuario: 20 }];
-      // mysql2 devuelve [rows, fields]
-      pool.query.mockResolvedValueOnce([usuarioRows, []]) 
-                .mockResolvedValueOnce([[], []]);
+      queryRawUnsafeSpy.mockResolvedValueOnce(usuarioRows) 
+                       .mockResolvedValueOnce([]);
               
-      const req = { admin: { id_usuario: 'admin1' } };
+      const req = { admin: { id_usuario: 1 } };
       const res = mockRes();
       
       await obtenerMisInformes(req, res);
       
-      expect(pool.query).toHaveBeenNthCalledWith(1,
+      expect(queryRawUnsafeSpy).toHaveBeenNthCalledWith(1,
         'SELECT id_usuario FROM usuarios WHERE numero_documento = ? OR id_usuario = ?',
-        ['admin1', 'admin1']
+        1, 1
       );
     });
   });
@@ -79,17 +75,17 @@ describe('obtenerMisInformes', () => {
   describe('Casos no encontrados (404)', () => {
     test('Debe devolver 404 si el técnico no existe en la base de datos', async () => {
       // Simulamos que la primera query no encuentra al usuario (array vacío)
-      pool.query.mockResolvedValueOnce([[], []]); 
+      queryRawUnsafeSpy.mockResolvedValueOnce([]); 
       
-      const req = { user: { id_usuario: '999' } };
+      const req = { user: { id_usuario: 999 } };
       const res = mockRes();
 
       await obtenerMisInformes(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(1);
-      expect(pool.query).toHaveBeenCalledWith(
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(1);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledWith(
         'SELECT id_usuario FROM usuarios WHERE numero_documento = ? OR id_usuario = ?',
-        ['999', '999']
+        999, 999
       );
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ 
@@ -108,26 +104,26 @@ describe('obtenerMisInformes', () => {
       ];
       
       // Secuencia de queries: 1ra busca usuario, 2da busca informes
-      pool.query.mockResolvedValueOnce([usuarioRows, []]) 
-                .mockResolvedValueOnce([informesRows, []]); 
+      queryRawUnsafeSpy.mockResolvedValueOnce(usuarioRows) 
+                       .mockResolvedValueOnce(informesRows); 
               
-      const req = { user: { id_usuario: '12345' } };
+      const req = { user: { id_usuario: 12345 } };
       const res = mockRes();
       
       await obtenerMisInformes(req, res);
       
-      expect(pool.query).toHaveBeenCalledTimes(2);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(2);
       
       // Validamos la primera query (búsqueda de usuario)
-      expect(pool.query).toHaveBeenNthCalledWith(1, 
+      expect(queryRawUnsafeSpy).toHaveBeenNthCalledWith(1, 
         'SELECT id_usuario FROM usuarios WHERE numero_documento = ? OR id_usuario = ?',
-        ['12345', '12345']
+        12345, 12345
       );
       
       // Validamos la segunda query (búsqueda de informes usando el id real)
-      expect(pool.query).toHaveBeenNthCalledWith(2,
+      expect(queryRawUnsafeSpy).toHaveBeenNthCalledWith(2,
         'SELECT * FROM informe WHERE id_tecnico = ? ORDER BY fecha DESC',
-        [10] // idTecnicoReal extraído de usuarioRows[0].id_usuario
+        10 // idTecnicoReal extraído de usuarioRows[0].id_usuario
       );
       
       expect(res.status).not.toHaveBeenCalled();
@@ -137,7 +133,7 @@ describe('obtenerMisInformes', () => {
 
   describe('Manejo de errores', () => {
     test('Debe devolver 500 si falla la primera consulta (búsqueda de usuario)', async () => {
-      pool.query.mockRejectedValueOnce(new Error('Error de conexión'));
+      queryRawUnsafeSpy.mockRejectedValueOnce(new Error('Error de conexión'));
       
       const req = { user: { id_usuario: '1' } };
       const res = mockRes();
@@ -153,8 +149,8 @@ describe('obtenerMisInformes', () => {
 
     test('Debe devolver 500 si falla la segunda consulta (búsqueda de informes)', async () => {
       const usuarioRows = [{ id_usuario: 10 }];
-      pool.query.mockResolvedValueOnce([usuarioRows, []])
-                .mockRejectedValueOnce(new Error('Timeout en query de informes'));
+      queryRawUnsafeSpy.mockResolvedValueOnce(usuarioRows)
+                       .mockRejectedValueOnce(new Error('Timeout en query de informes'));
       
       const req = { user: { id_usuario: '1' } };
       const res = mockRes();

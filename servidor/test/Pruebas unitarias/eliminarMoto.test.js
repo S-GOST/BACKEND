@@ -103,11 +103,12 @@ describe('eliminarMoto', () => {
       });
     });
 
-    test('Debe responder éxito incluso si affectedRows es 0 (ID inexistente)', async () => {
+    test('Debe responder con 500 si la moto no existe (P2025)', async () => {
       const id = '999';
 
-      // Aunque el registro no exista, el controlador no valida affectedRows
-      Moto.delete.mockResolvedValue({ affectedRows: 0 });
+      const error = new Error('Not found');
+      error.code = 'P2025';
+      Moto.delete.mockRejectedValue(error);
       logHistory.mockResolvedValue();
 
       const req = { params: { id }, user: { id_usuario: 10 } };
@@ -116,10 +117,10 @@ describe('eliminarMoto', () => {
       await eliminarMoto(req, res);
 
       expect(Moto.delete).toHaveBeenCalledWith(id);
-      // El controlador responde éxito de todas formas (comportamiento actual)
+      expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: 'Moto eliminada correctamente'
+        success: false,
+        error: 'Not found'
       });
     });
   });
@@ -128,7 +129,7 @@ describe('eliminarMoto', () => {
     test('Debe devolver 400 si la moto tiene órdenes de servicio asociadas', async () => {
       const id = '5';
       const fkError = new Error('Cannot delete or update a parent row: a foreign key constraint fails');
-      fkError.code = 'ER_ROW_IS_REFERENCED_2';
+      fkError.code = 'P2003';
 
       Moto.delete.mockRejectedValue(fkError);
 

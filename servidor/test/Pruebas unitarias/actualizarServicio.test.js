@@ -103,11 +103,11 @@ describe('actualizarServicio', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el nombre ya existe (P2002)', async () => {
       const id = '5';
       const bodyMock = { nombre: 'Existente' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Servicio.update.mockRejectedValue(duplicateError);
 

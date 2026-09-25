@@ -95,15 +95,14 @@ describe('actualizarAdmin', () => {
       expect(Usuario.update).toHaveBeenCalledWith(
         id,
         expect.objectContaining({
-          numero_documento: '12345678',
+          numero_documento: BigInt('12345678'),
           nombre: 'Admin Actualizado',
           id_rol: 1,
           estado: 'Activo'
         })
       );
 
-      // Validar que se buscó por numero_documento (prioridad sobre id)
-      expect(Usuario.findByPk).toHaveBeenCalledWith('12345678');
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('12345678'));
 
       // Validar logHistory
       expect(logHistory).toHaveBeenCalledWith(
@@ -200,7 +199,7 @@ describe('actualizarAdmin', () => {
         nombre: 'Admin Inexistente'
       };
 
-      Usuario.update.mockResolvedValue({ affectedRows: 0 });
+      Usuario.update.mockResolvedValue({});
       Usuario.findByPk.mockResolvedValue(null);
 
       const req = { 
@@ -258,7 +257,7 @@ describe('actualizarAdmin', () => {
     });
   });
 
-  describe('Manejo de duplicados (ER_DUP_ENTRY)', () => {
+  describe('Manejo de duplicados (P2002)', () => {
     test('Debe devolver 400 si el documento o correo ya está registrado', async () => {
       const id = '5';
       const bodyMock = {
@@ -267,7 +266,7 @@ describe('actualizarAdmin', () => {
       };
       
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.update.mockRejectedValue(duplicateError);
 

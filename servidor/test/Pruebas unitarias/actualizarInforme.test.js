@@ -91,8 +91,8 @@ describe('actualizarInforme', () => {
 
       expect(Informe.findById).toHaveBeenNthCalledWith(1, id);
       expect(Informe.update).toHaveBeenCalledWith(id, {
-        id_orden: '200',
-        id_tecnico: '15',
+        id_orden: 200,
+        id_tecnico: 15,
         diagnostico: 'Nuevo diagnóstico',
         trabajo_realizado: 'Nuevo trabajo',
         recomendaciones: 'Nuevas recomendaciones'
@@ -107,8 +107,7 @@ describe('actualizarInforme', () => {
       );
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        data: informeActualizadoMock,
-        updateResult: resultadoUpdateMock
+        data: informeActualizadoMock
       });
     });
 

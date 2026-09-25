@@ -142,12 +142,12 @@ describe('actualizarMoto', () => {
     });
   });
 
-  describe('Manejo de duplicados (ER_DUP_ENTRY)', () => {
+  describe('Manejo de duplicados (P2002)', () => {
     test('Debe devolver 400 si la placa ya está registrada por otra moto', async () => {
       const id = '5';
       const bodyMock = { placa: 'ABC-123' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Moto.update.mockRejectedValue(duplicateError);
 

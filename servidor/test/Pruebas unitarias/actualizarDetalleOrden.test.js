@@ -195,9 +195,10 @@ describe('actualizarDetalleOrden', () => {
     test('Debe devolver 404 si affectedRows es 0', async () => {
       const id = '999';
       const bodyMock = { cantidad: 2 };
-      const resultadoMock = { affectedRows: 0 };
+      const notFoundError = new Error('Record not found');
+      notFoundError.code = 'P2025';
 
-      DetalleOrdenServicio.update.mockResolvedValue(resultadoMock);
+      DetalleOrdenServicio.update.mockRejectedValue(notFoundError);
 
       const req = { 
         params: { id }, 

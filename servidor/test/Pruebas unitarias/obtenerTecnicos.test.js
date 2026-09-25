@@ -53,8 +53,13 @@ describe('obtenerTec', () => {
 
       await obtenerTec(req, res);
 
+      const expectedData = [
+        { id_usuario: 1, nombre: 'Carlos', id_rol: 2, numero_documento: null },
+        { id_usuario: 2, nombre: 'Miguel', id_rol: 2, numero_documento: null },
+      ];
+
       expect(Usuario.findAll).toHaveBeenCalledWith({ where: { id_rol: 2 } });
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: tecnicosMock });
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: expectedData });
       expect(res.status).not.toHaveBeenCalled();
     });
 

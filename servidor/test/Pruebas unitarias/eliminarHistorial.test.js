@@ -64,11 +64,11 @@ describe('eliminarHistorial', () => {
       });
     });
 
-    test('Debe ejecutarse sin error incluso si affectedRows es 0 (ID inexistente)', async () => {
+    test('Debe devolver 404 si el registro no existe (P2025)', async () => {
       const id = '999';
 
       // Aunque el registro no exista, el controlador no valida affectedRows
-      Historial.delete.mockResolvedValue({ affectedRows: 0 });
+      Historial.delete.mockRejectedValue({ code: 'P2025' });
 
       const req = { params: { id } };
       const res = mockRes();
@@ -76,10 +76,10 @@ describe('eliminarHistorial', () => {
       await eliminarHistorial(req, res);
 
       expect(Historial.delete).toHaveBeenCalledWith(id);
-      // El controlador responde éxito de todas formas (comportamiento actual)
+      expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: 'Registro de historial eliminado correctamente'
+        success: false,
+        message: 'Registro de historial no encontrado'
       });
     });
   });

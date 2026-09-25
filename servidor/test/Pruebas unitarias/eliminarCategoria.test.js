@@ -13,23 +13,16 @@ jest.mock('../../models/categoriasModel.js', () => ({
     delete: jest.fn(),
     checkDependencies: jest.fn(), // 🔧 Añadido para esta función
   },
-}));
+}), { virtual: true });
 
 jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// Mock de db.js con pool.query para las actualizaciones en cascada
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
-}), { virtual: true });
-
-// Importamos el controlador, logger y pool simulados
+// Importamos el controlador, logger y prisma
 const { eliminarCategoria } = require('../../controllers/categoriasController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 // Referencia al modelo simulado
 const Categoria = require('../../models/categoriasModel.js').default;
@@ -43,9 +36,19 @@ const mockRes = () => {
 };
 
 describe('eliminarCategoria', () => {
+  let updateProductosSpy;
+  let updateServiciosSpy;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Mocks seguros para Prisma
+    if (!prisma.productos) prisma.productos = {};
+    if (!prisma.servicios) prisma.servicios = {};
+    
+    updateProductosSpy = jest.spyOn(prisma.productos, 'updateMany').mockResolvedValue({});
+    updateServiciosSpy = jest.spyOn(prisma.servicios, 'updateMany').mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -56,10 +59,9 @@ describe('eliminarCategoria', () => {
     test('Debe devolver 200 y eliminar correctamente cuando no hay dependencias y force=false', async () => {
       const id = '5';
       const depsMock = { productosCount: 0, serviciosCount: 0 };
-      const resultadoDeleteMock = { affectedRows: 1 };
 
       Categoria.checkDependencies.mockResolvedValue(depsMock);
-      Categoria.delete.mockResolvedValue(resultadoDeleteMock);
+      Categoria.delete.mockResolvedValue(); // Prisma no devuelve affectedRows de la misma forma en métodos envueltos usualmente, simulamos éxito
       logHistory.mockResolvedValue();
 
       const req = { params: { id }, query: {}, user: { id_usuario: 3 } };
@@ -69,7 +71,7 @@ describe('eliminarCategoria', () => {
 
       expect(Categoria.checkDependencies).toHaveBeenCalledWith(id);
       expect(Categoria.delete).toHaveBeenCalledWith(id);
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(updateProductosSpy).not.toHaveBeenCalled();
       expect(logHistory).toHaveBeenCalledWith(
         3,
         'categorias',
@@ -83,10 +85,8 @@ describe('eliminarCategoria', () => {
 
     test('Debe devolver 200 y ejecutar queries en cascada cuando force=true', async () => {
       const id = '5';
-      const resultadoDeleteMock = { affectedRows: 1 };
 
-      Categoria.delete.mockResolvedValue(resultadoDeleteMock);
-      pool.query.mockResolvedValue();
+      Categoria.delete.mockResolvedValue();
       logHistory.mockResolvedValue();
 
       const req = { params: { id }, query: { force: 'true' }, user: { id_usuario: 3 } };
@@ -96,9 +96,16 @@ describe('eliminarCategoria', () => {
 
       expect(Categoria.checkDependencies).not.toHaveBeenCalled();
       expect(Categoria.delete).toHaveBeenCalledWith(id);
-      expect(pool.query).toHaveBeenCalledTimes(2);
-      expect(pool.query).toHaveBeenCalledWith("UPDATE productos SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
-      expect(pool.query).toHaveBeenCalledWith("UPDATE servicios SET Estado = 'Inactivo' WHERE ID_CATEGORIA = ?", [id]);
+      expect(updateProductosSpy).toHaveBeenCalledTimes(1);
+      expect(updateProductosSpy).toHaveBeenCalledWith({
+        where: { ID_CATEGORIA: 5 },
+        data: { Estado: 'Inactivo' }
+      });
+      expect(updateServiciosSpy).toHaveBeenCalledTimes(1);
+      expect(updateServiciosSpy).toHaveBeenCalledWith({
+        where: { ID_CATEGORIA: 5 },
+        data: { Estado: 'Inactivo' }
+      });
       expect(logHistory).toHaveBeenCalledWith(
         3,
         'categorias',
@@ -112,10 +119,9 @@ describe('eliminarCategoria', () => {
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const id = '6';
       const depsMock = { productosCount: 0, serviciosCount: 0 };
-      const resultadoDeleteMock = { affectedRows: 1 };
 
       Categoria.checkDependencies.mockResolvedValue(depsMock);
-      Categoria.delete.mockResolvedValue(resultadoDeleteMock);
+      Categoria.delete.mockResolvedValue();
       logHistory.mockResolvedValue();
 
       const req = { params: { id }, query: {} }; // Sin req.user
@@ -195,13 +201,15 @@ describe('eliminarCategoria', () => {
   });
 
   describe('Casos no encontrados (404)', () => {
-    test('Debe devolver 404 si la categoría no existe (affectedRows === 0)', async () => {
+    test('Debe devolver 404 si la categoría no existe (Prisma lanza P2025)', async () => {
       const id = '999';
       const depsMock = { productosCount: 0, serviciosCount: 0 };
-      const resultadoDeleteMock = { affectedRows: 0 };
+      
+      const notFoundError = new Error('No encontrado');
+      notFoundError.code = 'P2025';
 
       Categoria.checkDependencies.mockResolvedValue(depsMock);
-      Categoria.delete.mockResolvedValue(resultadoDeleteMock);
+      Categoria.delete.mockRejectedValue(notFoundError);
 
       const req = { params: { id }, query: {} };
       const res = mockRes();
@@ -258,11 +266,10 @@ describe('eliminarCategoria', () => {
 
     test('Debe devolver 500 si fallan las queries en cascada (force=true)', async () => {
       const id = '5';
-      const resultadoDeleteMock = { affectedRows: 1 };
       const dbError = new Error('Error al actualizar dependencias');
 
-      Categoria.delete.mockResolvedValue(resultadoDeleteMock);
-      pool.query.mockRejectedValue(dbError);
+      Categoria.delete.mockResolvedValue();
+      updateProductosSpy.mockRejectedValue(dbError);
 
       const req = { params: { id }, query: { force: 'true' } };
       const res = mockRes();

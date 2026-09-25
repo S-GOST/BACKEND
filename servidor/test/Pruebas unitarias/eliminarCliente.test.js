@@ -1,27 +1,38 @@
-// test/eliminarCliente.test.js
+// test/Pruebas unitarias/eliminarCliente.test.js
 
-const { eliminarCliente } = require('@controllers/clientesController.js');
+const { eliminarCliente } = require('../../controllers/clientesController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
-jest.mock('@models/usuarioModel.js', () => ({
+jest.mock('../../models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   },
-}));
+}), { virtual: true });
 
-jest.mock('@utils/historyLogger.js', () => ({
+jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
+jest.mock('../../middleware/refreshToken.js', () => ({
+  generarTokens: jest.fn(),
+  setRefreshTokenCookie: jest.fn(),
+}));
+
+jest.mock('../../utils/mailer.js', () => ({
+  enviarCorreoAprobacion: jest.fn(),
+  enviarCorreoRegistroPendiente: jest.fn(),
+}));
+
 // Referencias a los módulos simulados
-const Usuario = require('@models/usuarioModel.js').default;
-const { logHistory } = require('@utils/historyLogger.js');
+const Usuario = require('../../models/usuarioModel.js').default;
+const { logHistory } = require('../../utils/historyLogger.js');
 
 // Helper para simular la respuesta de Express
 const mockRes = () => {
@@ -42,12 +53,12 @@ describe('eliminarCliente', () => {
   });
 
   describe('Eliminación exitosa', () => {
-    test('Debe eliminar y devolver mensaje de éxito correctamente', async () => {
+    test('Debe inhabilitar y devolver mensaje de éxito correctamente', async () => {
       const idMock = '12345678';
-      const userMock = { id_usuario: 1, nombre: 'Juan Pérez', id_rol: 3 };
+      const userMock = { id_usuario: 1, nombre: 'Juan Pérez', id_rol: 3, numero_documento: '12345678' };
 
-      Usuario.findByPk.mockResolvedValue(userMock);
-      Usuario.delete.mockResolvedValue();
+      Usuario.findOne.mockResolvedValue(userMock);
+      Usuario.update.mockResolvedValue();
       logHistory.mockResolvedValue();
 
       const req = { params: { id: idMock }, user: { id_usuario: 5 } };
@@ -55,19 +66,19 @@ describe('eliminarCliente', () => {
 
       await eliminarCliente(req, res);
 
-      expect(Usuario.findByPk).toHaveBeenCalledWith(idMock);
-      expect(Usuario.delete).toHaveBeenCalledWith(idMock);
-      expect(logHistory).toHaveBeenCalledWith(5, 'usuarios', 1, 'DELETE', 'Se eliminó el cliente Juan Pérez');
-      expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Cliente eliminado' });
+      expect(Usuario.findOne).toHaveBeenCalledWith({ where: { id_usuario: parseInt(idMock, 10) } });
+      expect(Usuario.update).toHaveBeenCalledWith('12345678', { estado: 'Inactivo' });
+      expect(logHistory).toHaveBeenCalledWith(5, 'usuarios', 1, 'UPDATE', 'Se inhabilitó el cliente Juan Pérez');
+      expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Cliente inhabilitado' });
       expect(res.status).not.toHaveBeenCalled();
     });
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const idMock = '87654321';
-      const userMock = { id_usuario: 2, nombre: 'María López', id_rol: 3 };
+      const userMock = { id_usuario: 2, nombre: 'María López', id_rol: 3, numero_documento: '87654321' };
 
-      Usuario.findByPk.mockResolvedValue(userMock);
-      Usuario.delete.mockResolvedValue();
+      Usuario.findOne.mockResolvedValue(userMock);
+      Usuario.update.mockResolvedValue();
       logHistory.mockResolvedValue();
 
       const req = { params: { id: idMock } }; // Sin req.user
@@ -75,8 +86,8 @@ describe('eliminarCliente', () => {
 
       await eliminarCliente(req, res);
 
-      expect(logHistory).toHaveBeenCalledWith(1, 'usuarios', 2, 'DELETE', 'Se eliminó el cliente María López');
-      expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Cliente eliminado' });
+      expect(logHistory).toHaveBeenCalledWith(1, 'usuarios', 2, 'UPDATE', 'Se inhabilitó el cliente María López');
+      expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Cliente inhabilitado' });
     });
   });
 
@@ -90,12 +101,13 @@ describe('eliminarCliente', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'ID (numero_documento) es requerido',
+        message: 'ID (numero_documento o id_usuario) es requerido',
       });
       expect(Usuario.findByPk).not.toHaveBeenCalled();
     });
 
     test('Debe devolver 404 si el cliente no se encuentra', async () => {
+      Usuario.findOne.mockResolvedValue(null);
       Usuario.findByPk.mockResolvedValue(null);
 
       const req = { params: { id: '12345678' }, user: { id_usuario: 1 } };
@@ -108,12 +120,12 @@ describe('eliminarCliente', () => {
         success: false,
         message: 'Cliente no encontrado',
       });
-      expect(Usuario.delete).not.toHaveBeenCalled();
+      expect(Usuario.update).not.toHaveBeenCalled();
     });
 
     test('Debe devolver 404 si el usuario encontrado no es rol 3', async () => {
       const userMock = { id_usuario: 5, nombre: 'Admin', id_rol: 1 };
-      Usuario.findByPk.mockResolvedValue(userMock);
+      Usuario.findOne.mockResolvedValue(userMock);
 
       const req = { params: { id: '12345678' }, user: { id_usuario: 1 } };
       const res = mockRes();
@@ -125,12 +137,12 @@ describe('eliminarCliente', () => {
         success: false,
         message: 'Cliente no encontrado',
       });
-      expect(Usuario.delete).not.toHaveBeenCalled();
+      expect(Usuario.update).not.toHaveBeenCalled();
     });
 
     test('Debe devolver 500 si falla la consulta a la base de datos', async () => {
       const dbError = new Error('Error de conexión a la BD');
-      Usuario.findByPk.mockRejectedValue(dbError);
+      Usuario.findOne.mockRejectedValue(dbError);
 
       const req = { params: { id: '12345678' }, user: { id_usuario: 1 } };
       const res = mockRes();

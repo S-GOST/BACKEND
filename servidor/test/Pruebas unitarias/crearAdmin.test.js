@@ -91,7 +91,7 @@ describe('crearAdmin', () => {
       // Validar que se llamó create con el payload mapeado (con id_rol: 1 y estado: 'Activo')
       expect(Usuario.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          numero_documento: '12345678',
+          numero_documento: BigInt('12345678'),
           id_tipo_documento: 1,
           nombre: 'Admin Nuevo',
           usuario: 'adminnuevo',
@@ -103,8 +103,8 @@ describe('crearAdmin', () => {
         })
       );
 
-      // Validar que se buscó el usuario por numero_documento (no por id)
-      expect(Usuario.findByPk).toHaveBeenCalledWith('12345678');
+      // Validar que se buscó el usuario por numero_documento
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('12345678'));
 
       // Validar que se registró en el historial
       expect(logHistory).toHaveBeenCalledWith(
@@ -196,7 +196,7 @@ describe('crearAdmin', () => {
     });
   });
 
-  describe('Manejo de duplicados (ER_DUP_ENTRY)', () => {
+  describe('Manejo de duplicados (P2002)', () => {
     test('Debe devolver 400 si el documento ya está registrado', async () => {
       const bodyMock = {
         numero_documento: '12345678',
@@ -207,7 +207,7 @@ describe('crearAdmin', () => {
       };
       
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.create.mockRejectedValue(duplicateError);
 
@@ -236,7 +236,7 @@ describe('crearAdmin', () => {
       };
       
       const duplicateError = new Error('Duplicate entry for correo');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.create.mockRejectedValue(duplicateError);
 
@@ -301,7 +301,7 @@ describe('crearAdmin', () => {
       await crearAdmin(req, res);
 
       expect(Usuario.create).toHaveBeenCalled();
-      expect(Usuario.findByPk).toHaveBeenCalledWith('12345678');
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('12345678'));
       expect(logHistory).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({

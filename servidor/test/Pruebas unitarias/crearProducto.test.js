@@ -54,8 +54,8 @@ describe('crearProducto', () => {
   describe('Creación exitosa', () => {
     test('Debe devolver 201 y registrar el producto creado', async () => {
       const bodyMock = { nombre: 'Laptop HP', precio: 1200, stock: 10, id_categoria: 3 };
-      // En mysql2, create() retorna un objeto con insertId, no los datos completos
-      const resultadoCreateMock = { insertId: 5, affectedRows: 1 };
+      // En mysql2, create() retorna un objeto con ID_PRODUCTOS, no los datos completos
+      const resultadoCreateMock = { ID_PRODUCTOS: 5, ID_PRODUCTO: 5, insertId: 5, affectedRows: 1 };
 
       Producto.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -69,7 +69,7 @@ describe('crearProducto', () => {
       expect(logHistory).toHaveBeenCalledWith(
         3,                    // req.user.id_usuario
         'productos',          // tabla
-        5,                    // insertId
+        5,                    // ID_PRODUCTOS
         'INSERT',             // acción
         'Se creó el producto Laptop HP'
       );
@@ -79,7 +79,7 @@ describe('crearProducto', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'Mouse Logitech', precio: 25, stock: 50 };
-      const resultadoCreateMock = { insertId: 6, affectedRows: 1 };
+      const resultadoCreateMock = { ID_PRODUCTOS: 6, ID_PRODUCTO: 6, insertId: 6, affectedRows: 1 };
 
       Producto.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -101,7 +101,7 @@ describe('crearProducto', () => {
 
     test('Debe usar "N/A" si el nombre no viene en el body', async () => {
       const bodyMock = { precio: 100, stock: 5 };
-      const resultadoCreateMock = { insertId: 7, affectedRows: 1 };
+      const resultadoCreateMock = { ID_PRODUCTOS: 7, ID_PRODUCTO: 7, insertId: 7, affectedRows: 1 };
 
       Producto.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -120,9 +120,9 @@ describe('crearProducto', () => {
       );
     });
 
-    test('Debe usar 0 como insertId si no está disponible', async () => {
+    test('Debe usar 0 como ID_PRODUCTOS si no está disponible', async () => {
       const bodyMock = { nombre: 'Teclado' };
-      const resultadoCreateMock = { affectedRows: 1 }; // Sin insertId
+      const resultadoCreateMock = { affectedRows: 1 }; // Sin ID_PRODUCTOS
 
       Producto.create.mockResolvedValue(resultadoCreateMock);
       logHistory.mockResolvedValue();
@@ -143,10 +143,10 @@ describe('crearProducto', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el nombre ya existe (P2002)', async () => {
       const bodyMock = { nombre: 'Existente' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Producto.create.mockRejectedValue(duplicateError);
 

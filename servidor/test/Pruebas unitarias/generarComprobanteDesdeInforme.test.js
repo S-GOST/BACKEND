@@ -18,7 +18,7 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// Mock de db.js (SIN virtual, necesitamos usar pool.query)
+// Mock de db.js (SIN virtual, necesitamos usar queryRawUnsafeSpy)
 jest.mock('../../config/db.js', () => ({
   query: jest.fn(),
   getConnection: jest.fn(),
@@ -27,7 +27,7 @@ jest.mock('../../config/db.js', () => ({
 
 const { generarComprobanteDesdeInforme } = require('../../controllers/comprobanteController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const prisma = require('../../config/prisma.js').default || require('../../config/prisma.js');
 
 const mockRes = () => {
   const res = {};
@@ -37,7 +37,12 @@ const mockRes = () => {
 };
 
 describe('generarComprobanteDesdeInforme', () => {
+  let queryRawUnsafeSpy;
+  let executeRawUnsafeSpy;
+
   beforeEach(() => {
+    queryRawUnsafeSpy = jest.spyOn(prisma, '$queryRawUnsafe');
+    executeRawUnsafeSpy = jest.spyOn(prisma, '$executeRawUnsafe').mockResolvedValue(1);
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.useFakeTimers();
@@ -59,13 +64,13 @@ describe('generarComprobanteDesdeInforme', () => {
       const countData = { total: 5 };
       const resultInsert = { insertId: 25, affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])  // Buscar informe
-        .mockResolvedValueOnce([[ordenData], []])     // Buscar orden
-        .mockResolvedValueOnce([[totalData], []])     // Calcular total
-        .mockResolvedValueOnce([existenteVacio, []])  // Verificar existente
-        .mockResolvedValueOnce([[countData], []])     // Contar comprobantes
-        .mockResolvedValueOnce([resultInsert, []]);   // Insertar comprobante
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])  // Buscar informe
+        .mockResolvedValueOnce([ordenData])     // Buscar orden
+        .mockResolvedValueOnce([totalData])     // Calcular total
+        .mockResolvedValueOnce(existenteVacio)  // Verificar existente
+        .mockResolvedValueOnce([countData])     // Contar comprobantes
+        .mockResolvedValueOnce([{ id_comprobante: 25 }]);   // Insertar comprobante
 
       logHistory.mockResolvedValue();
 
@@ -78,7 +83,8 @@ describe('generarComprobanteDesdeInforme', () => {
 
       await generarComprobanteDesdeInforme(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(6);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(6);
+      expect(executeRawUnsafeSpy).toHaveBeenCalledTimes(1);
       expect(logHistory).toHaveBeenCalledWith(
         1,
         'comprobante',
@@ -110,13 +116,13 @@ describe('generarComprobanteDesdeInforme', () => {
       const countData = { total: 0 };
       const resultInsert = { insertId: 1, affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])
-        .mockResolvedValueOnce([[ordenData], []])
-        .mockResolvedValueOnce([[totalData], []])
-        .mockResolvedValueOnce([existenteVacio, []])
-        .mockResolvedValueOnce([[countData], []])
-        .mockResolvedValueOnce([resultInsert, []]);
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])
+        .mockResolvedValueOnce([ordenData])
+        .mockResolvedValueOnce([totalData])
+        .mockResolvedValueOnce(existenteVacio)
+        .mockResolvedValueOnce([countData])
+        .mockResolvedValueOnce([{ id_comprobante: 25 }]);
 
       const req = { 
         params: { idInforme }, 
@@ -128,10 +134,7 @@ describe('generarComprobanteDesdeInforme', () => {
       await generarComprobanteDesdeInforme(req, res);
 
       // Validar que el INSERT usó 'Efectivo'
-      expect(pool.query).toHaveBeenNthCalledWith(6,
-        expect.stringContaining('INSERT INTO comprobante'),
-        expect.arrayContaining(['Efectivo'])
-      );
+      expect(executeRawUnsafeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO comprobante'), expect.any(Number), expect.any(String), expect.any(Date), expect.any(Number), expect.any(Number), 'Efectivo');
     });
 
     test('Debe usar req.admin si req.user no está presente', async () => {
@@ -143,13 +146,13 @@ describe('generarComprobanteDesdeInforme', () => {
       const countData = { total: 0 };
       const resultInsert = { insertId: 1, affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])
-        .mockResolvedValueOnce([[ordenData], []])
-        .mockResolvedValueOnce([[totalData], []])
-        .mockResolvedValueOnce([existenteVacio, []])
-        .mockResolvedValueOnce([[countData], []])
-        .mockResolvedValueOnce([resultInsert, []]);
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])
+        .mockResolvedValueOnce([ordenData])
+        .mockResolvedValueOnce([totalData])
+        .mockResolvedValueOnce(existenteVacio)
+        .mockResolvedValueOnce([countData])
+        .mockResolvedValueOnce([{ id_comprobante: 25 }]);
 
       logHistory.mockResolvedValue();
 
@@ -165,7 +168,7 @@ describe('generarComprobanteDesdeInforme', () => {
       expect(logHistory).toHaveBeenCalledWith(
         99, // req.admin.id_usuario
         'comprobante',
-        1,
+        25,
         'INSERT',
         expect.any(String)
       );
@@ -180,13 +183,13 @@ describe('generarComprobanteDesdeInforme', () => {
       const countData = { total: 0 };
       const resultInsert = { insertId: 1, affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])
-        .mockResolvedValueOnce([[ordenData], []])
-        .mockResolvedValueOnce([[totalData], []])
-        .mockResolvedValueOnce([existenteVacio, []])
-        .mockResolvedValueOnce([[countData], []])
-        .mockResolvedValueOnce([resultInsert, []]);
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])
+        .mockResolvedValueOnce([ordenData])
+        .mockResolvedValueOnce([totalData])
+        .mockResolvedValueOnce(existenteVacio)
+        .mockResolvedValueOnce([countData])
+        .mockResolvedValueOnce([{ id_comprobante: 25 }]);
 
       logHistory.mockResolvedValue();
 
@@ -201,7 +204,7 @@ describe('generarComprobanteDesdeInforme', () => {
       expect(logHistory).toHaveBeenCalledWith(
         1, // Fallback
         'comprobante',
-        1,
+        25,
         'INSERT',
         expect.any(String)
       );
@@ -216,13 +219,13 @@ describe('generarComprobanteDesdeInforme', () => {
       const countData = { total: 0 };
       const resultInsert = { insertId: 1, affectedRows: 1 };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])
-        .mockResolvedValueOnce([[ordenData], []])
-        .mockResolvedValueOnce([[totalData], []])
-        .mockResolvedValueOnce([existenteVacio, []])
-        .mockResolvedValueOnce([[countData], []])
-        .mockResolvedValueOnce([resultInsert, []]);
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])
+        .mockResolvedValueOnce([ordenData])
+        .mockResolvedValueOnce([totalData])
+        .mockResolvedValueOnce(existenteVacio)
+        .mockResolvedValueOnce([countData])
+        .mockResolvedValueOnce([{ id_comprobante: 25 }]);
 
       const req = { 
         params: { idInforme }, 
@@ -248,7 +251,7 @@ describe('generarComprobanteDesdeInforme', () => {
     test('Debe devolver 404 si el informe no existe', async () => {
       const idInforme = '999';
 
-      pool.query.mockResolvedValueOnce([[], []]); // Informe no encontrado
+      queryRawUnsafeSpy.mockResolvedValueOnce([]); // Informe no encontrado
 
       const req = { 
         params: { idInforme }, 
@@ -264,16 +267,16 @@ describe('generarComprobanteDesdeInforme', () => {
         success: false,
         message: 'Informe no encontrado'
       });
-      expect(pool.query).toHaveBeenCalledTimes(1);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(1);
     });
 
     test('Debe devolver 404 si la orden asociada no existe', async () => {
       const idInforme = '10';
       const informeData = { id_informe: 10, id_orden: '999' };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []]) // Informe encontrado
-        .mockResolvedValueOnce([[], []]);            // Orden no encontrada
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData]) // Informe encontrado
+        .mockResolvedValueOnce([]);            // Orden no encontrada
 
       const req = { 
         params: { idInforme }, 
@@ -289,7 +292,7 @@ describe('generarComprobanteDesdeInforme', () => {
         success: false,
         message: 'Orden de servicio asociada no encontrada'
       });
-      expect(pool.query).toHaveBeenCalledTimes(2);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -301,11 +304,11 @@ describe('generarComprobanteDesdeInforme', () => {
       const totalData = { monto: 150 };
       const comprobanteExistente = { id_comprobante: 5, id_orden: '100' };
 
-      pool.query
-        .mockResolvedValueOnce([[informeData], []])
-        .mockResolvedValueOnce([[ordenData], []])
-        .mockResolvedValueOnce([[totalData], []])
-        .mockResolvedValueOnce([[comprobanteExistente], []]); // Ya existe
+      queryRawUnsafeSpy
+        .mockResolvedValueOnce([informeData])
+        .mockResolvedValueOnce([ordenData])
+        .mockResolvedValueOnce([totalData])
+        .mockResolvedValueOnce([comprobanteExistente]); // Ya existe
 
       const req = { 
         params: { idInforme }, 
@@ -322,7 +325,7 @@ describe('generarComprobanteDesdeInforme', () => {
         message: 'Ya existe un comprobante para esta orden',
         data: comprobanteExistente
       });
-      expect(pool.query).toHaveBeenCalledTimes(4);
+      expect(queryRawUnsafeSpy).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -331,7 +334,7 @@ describe('generarComprobanteDesdeInforme', () => {
       const idInforme = '10';
       const dbError = new Error('Error de conexión');
 
-      pool.query.mockRejectedValue(dbError);
+      queryRawUnsafeSpy.mockRejectedValue(dbError);
 
       const req = { 
         params: { idInforme }, 

@@ -53,8 +53,8 @@ describe('crearComprobante', () => {
   describe('Creación exitosa', () => {
     test('Debe devolver 200 y registrar el comprobante creado', async () => {
       const bodyMock = { tipo: 'Factura', numero: 'F001-001', fecha: '2024-02-15' };
-      // mysql2 create retorna { insertId, affectedRows }
-      const nuevoComprobanteMock = { insertId: 5, affectedRows: 1 };
+      // mysql2 create retorna { id_comprobante, affectedRows }
+      const nuevoComprobanteMock = { id_comprobante: 5, ID_COMPROBANTE: 5, insertId: 5, affectedRows: 1 };
 
       Comprobante.create.mockResolvedValue(nuevoComprobanteMock);
       logHistory.mockResolvedValue();
@@ -68,7 +68,7 @@ describe('crearComprobante', () => {
       expect(logHistory).toHaveBeenCalledWith(
         3,                    // req.user.id_usuario
         'comprobante',        // tabla en singular
-        5,                    // insertId
+        5,                    // id_comprobante
         'INSERT',             // acción
         'Se creó un comprobante' // mensaje fijo (sin datos del body)
       );
@@ -81,7 +81,7 @@ describe('crearComprobante', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { tipo: 'Boleta', numero: 'B001-001' };
-      const nuevoComprobanteMock = { insertId: 6, affectedRows: 1 };
+      const nuevoComprobanteMock = { id_comprobante: 6, ID_COMPROBANTE: 6, insertId: 6, affectedRows: 1 };
 
       Comprobante.create.mockResolvedValue(nuevoComprobanteMock);
       logHistory.mockResolvedValue();
@@ -104,9 +104,9 @@ describe('crearComprobante', () => {
       });
     });
 
-    test('Debe usar 0 como insertId si no está disponible', async () => {
+    test('Debe usar 0 como id_comprobante si no está disponible', async () => {
       const bodyMock = { tipo: 'Nota de Venta' };
-      const nuevoComprobanteMock = { affectedRows: 1 }; // Sin insertId
+      const nuevoComprobanteMock = { affectedRows: 1 }; // Sin id_comprobante
 
       Comprobante.create.mockResolvedValue(nuevoComprobanteMock);
       logHistory.mockResolvedValue();

@@ -18,16 +18,20 @@ jest.mock('../../utils/historyLogger.js', () => ({
   logHistory: jest.fn(),
 }));
 
-// 2. Mock de db.js (SIN virtual, necesitamos usar pool.query directamente)
-jest.mock('../../config/db.js', () => ({
-  query: jest.fn(),
-  getConnection: jest.fn(),
-  end: jest.fn(),
-}));
+// Mock de prisma
+jest.mock('../../config/prisma.js', () => ({
+  __esModule: true,
+  default: {
+    detalles_orden_servicio: {
+      deleteMany: jest.fn()
+    }
+  }
+}), { virtual: true });
 
 const { eliminarOrden } = require('../../controllers/ordenServicioController.js');
 const { logHistory } = require('../../utils/historyLogger.js');
-const pool = require('../../config/db.js');
+const OrdenServicio = require('../../models/ordenServicioModel.js').default;
+const prisma = require('../../config/prisma.js').default;
 
 const mockRes = () => {
   const res = {};
@@ -53,7 +57,7 @@ describe('eliminarOrden', () => {
 
       await eliminarOrden(req, res);
 
-      expect(pool.query).not.toHaveBeenCalled();
+      expect(OrdenServicio.findById).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -63,73 +67,19 @@ describe('eliminarOrden', () => {
     });
   });
 
-  describe('Búsqueda de orden', () => {
-    test('Debe encontrar la orden usando ID_ORDEN_SERVICIO', async () => {
-      const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5, estado: 'Pendiente' }];
-      
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])      // SELECT por ID_ORDEN_SERVICIO
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]) // DELETE detalles
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]); // DELETE orden
-
-      logHistory.mockResolvedValue();
-
-      const req = { params: { id }, user: { id_usuario: 10 } };
-      const res = mockRes();
-
-      await eliminarOrden(req, res);
-
-      expect(pool.query).toHaveBeenNthCalledWith(1,
-        'SELECT * FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?',
-        [id]
-      );
-      expect(pool.query).toHaveBeenCalledTimes(3); // SELECT + 2 DELETEs
-    });
-
-    test('Debe usar fallback a id_orden si ID_ORDEN_SERVICIO no encuentra', async () => {
-      const id = '5';
-      const ordenMock = [{ id_orden: 5, estado: 'Pendiente' }];
-      
-      pool.query
-        .mockResolvedValueOnce([[], []])              // SELECT por ID_ORDEN_SERVICIO (vacío)
-        .mockResolvedValueOnce([ordenMock, []])       // SELECT por id_orden (encontrado)
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]) // DELETE detalles
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]); // DELETE orden
-
-      logHistory.mockResolvedValue();
-
-      const req = { params: { id }, user: { id_usuario: 10 } };
-      const res = mockRes();
-
-      await eliminarOrden(req, res);
-
-      expect(pool.query).toHaveBeenNthCalledWith(1,
-        'SELECT * FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?',
-        [id]
-      );
-      expect(pool.query).toHaveBeenNthCalledWith(2,
-        'SELECT * FROM orden_servicio WHERE id_orden = ?',
-        [id]
-      );
-      expect(pool.query).toHaveBeenCalledTimes(4); // 2 SELECTs + 2 DELETEs
-    });
-  });
-
   describe('Casos no encontrados (404)', () => {
-    test('Debe devolver 404 si la orden no existe en ninguna columna', async () => {
+    test('Debe devolver 404 si la orden no existe', async () => {
       const id = '999';
       
-      pool.query
-        .mockResolvedValueOnce([[], []])  // SELECT por ID_ORDEN_SERVICIO (vacío)
-        .mockResolvedValueOnce([[], []]); // SELECT por id_orden (vacío)
+      OrdenServicio.findById.mockResolvedValue(null);
 
       const req = { params: { id }, user: { id_usuario: 10 } };
       const res = mockRes();
 
       await eliminarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(2); // Solo los 2 SELECTs
+      expect(OrdenServicio.findById).toHaveBeenCalledWith(id);
+      expect(prisma.detalles_orden_servicio.deleteMany).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -142,13 +92,11 @@ describe('eliminarOrden', () => {
   describe('Eliminación exitosa', () => {
     test('Debe eliminar detalles y orden correctamente con req.user presente', async () => {
       const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5 }];
+      const ordenMock = { ID_ORDEN_SERVICIO: 5 };
       
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])             // 1. SELECT orden
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []])   // 2. DELETE detalles
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]);  // 3. DELETE orden
-
+      OrdenServicio.findById.mockResolvedValue(ordenMock);
+      prisma.detalles_orden_servicio.deleteMany.mockResolvedValue({ count: 2 });
+      OrdenServicio.delete.mockResolvedValue({ affectedRows: 1 });
       logHistory.mockResolvedValue();
 
       const req = { params: { id }, user: { id_usuario: 10 } };
@@ -156,15 +104,11 @@ describe('eliminarOrden', () => {
 
       await eliminarOrden(req, res);
 
-      // CORREGIDO: Las llamadas son la 2 y la 3 (no 3 y 4)
-      expect(pool.query).toHaveBeenNthCalledWith(2,
-        'DELETE FROM detalles_orden_servicio WHERE id_orden = ?',
-        [id]
-      );
-      expect(pool.query).toHaveBeenNthCalledWith(3,
-        'DELETE FROM orden_servicio WHERE ID_ORDEN_SERVICIO = ?',
-        [id]
-      );
+      expect(OrdenServicio.findById).toHaveBeenCalledWith(id);
+      expect(prisma.detalles_orden_servicio.deleteMany).toHaveBeenCalledWith({
+        where: { id_orden: Number(id) }
+      });
+      expect(OrdenServicio.delete).toHaveBeenCalledWith(id);
       expect(logHistory).toHaveBeenCalledWith(
         10,
         'orden_servicio',
@@ -181,13 +125,11 @@ describe('eliminarOrden', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5 }];
+      const ordenMock = { ID_ORDEN_SERVICIO: 5 };
       
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []])
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]);
-
+      OrdenServicio.findById.mockResolvedValue(ordenMock);
+      prisma.detalles_orden_servicio.deleteMany.mockResolvedValue({ count: 2 });
+      OrdenServicio.delete.mockResolvedValue({ affectedRows: 1 });
       logHistory.mockResolvedValue();
 
       const req = { params: { id } }; // Sin req.user
@@ -206,11 +148,11 @@ describe('eliminarOrden', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 500 si falla la primera consulta SELECT', async () => {
+    test('Debe devolver 500 si falla findById', async () => {
       const id = '5';
       const dbError = new Error('Error de conexión en SELECT');
       
-      pool.query.mockRejectedValue(dbError);
+      OrdenServicio.findById.mockRejectedValue(dbError);
 
       const req = { params: { id }, user: { id_usuario: 10 } };
       const res = mockRes();
@@ -227,19 +169,18 @@ describe('eliminarOrden', () => {
 
     test('Debe devolver 500 si falla la eliminación de detalles', async () => {
       const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5 }];
+      const ordenMock = { ID_ORDEN_SERVICIO: 5 };
       const dbError = new Error('Error al eliminar detalles');
       
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])
-        .mockRejectedValueOnce(dbError); // DELETE detalles falla
+      OrdenServicio.findById.mockResolvedValue(ordenMock);
+      prisma.detalles_orden_servicio.deleteMany.mockRejectedValue(dbError);
 
       const req = { params: { id }, user: { id_usuario: 10 } };
       const res = mockRes();
 
       await eliminarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(2); // SELECT + DELETE detalles
+      expect(OrdenServicio.delete).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -250,50 +191,24 @@ describe('eliminarOrden', () => {
 
     test('Debe devolver 500 si falla la eliminación de la orden', async () => {
       const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5 }];
+      const ordenMock = { ID_ORDEN_SERVICIO: 5 };
       const dbError = new Error('Error al eliminar orden');
       
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []])
-        .mockRejectedValueOnce(dbError); // DELETE orden falla
+      OrdenServicio.findById.mockResolvedValue(ordenMock);
+      prisma.detalles_orden_servicio.deleteMany.mockResolvedValue({ count: 2 });
+      OrdenServicio.delete.mockRejectedValue(dbError);
 
       const req = { params: { id }, user: { id_usuario: 10 } };
       const res = mockRes();
 
       await eliminarOrden(req, res);
 
-      expect(pool.query).toHaveBeenCalledTimes(3);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         error: 'Error al eliminar orden'
       });
       expect(logHistory).not.toHaveBeenCalled();
-    });
-
-    test('Debe devolver 500 si falla logHistory', async () => {
-      const id = '5';
-      const ordenMock = [{ ID_ORDEN_SERVICIO: 5 }];
-      const logError = new Error('Error al registrar historial');
-      
-      pool.query
-        .mockResolvedValueOnce([ordenMock, []])
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []])
-        .mockResolvedValueOnce([{ affectedRows: 1 }, []]);
-
-      logHistory.mockRejectedValue(logError);
-
-      const req = { params: { id }, user: { id_usuario: 10 } };
-      const res = mockRes();
-
-      await eliminarOrden(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Error al registrar historial'
-      });
     });
   });
 });

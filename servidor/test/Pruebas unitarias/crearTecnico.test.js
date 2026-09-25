@@ -3,10 +3,16 @@
 const { crearTec } = require('@controllers/tecnicoController.js');
 
 // 1. Mocks (se elevan automáticamente al inicio en CJS)
+// Mock de mailer
+jest.mock('../../utils/mailer.js', () => ({
+  enviarCorreoBienvenidaTecnico: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock('@models/usuarioModel.js', () => ({
   __esModule: true,
   default: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOneWithPassword: jest.fn(),
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -45,10 +51,11 @@ describe('crearTec', () => {
     test('Debe devolver el técnico creado correctamente', async () => {
       const bodyMock = { nombre: 'Carlos Ruiz', numero_documento: '98765432', correo: 'carlos@tec.com' };
       // mapToUsuario es interna, retornará automáticamente: { ...bodyMock, id_rol: 2 }
-      const payloadEsperado = { ...bodyMock, id_rol: 2 };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('98765432'), id_rol: 2 };
       const nuevoTecMock = { id_usuario: 10, nombre: 'Carlos Ruiz', numero_documento: '98765432', id_rol: 2 };
 
       Usuario.create.mockResolvedValue();
+      Usuario.findOne.mockResolvedValue(null);
       Usuario.findByPk.mockResolvedValue(nuevoTecMock);
       logHistory.mockResolvedValue();
 
@@ -58,18 +65,19 @@ describe('crearTec', () => {
       await crearTec(req, res);
 
       expect(Usuario.create).toHaveBeenCalledWith(payloadEsperado);
-      expect(Usuario.findByPk).toHaveBeenCalledWith('98765432');
+      expect(Usuario.findByPk).toHaveBeenCalledWith(BigInt('98765432'));
       expect(logHistory).toHaveBeenCalledWith(5, 'usuarios', 10, 'INSERT', 'Se creó el técnico Carlos Ruiz');
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoTecMock });
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoTecMock, message: 'Técnico creado exitosamente. Se ha enviado un correo de notificación.' });
       expect(res.status).not.toHaveBeenCalled();
     });
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'Luis Méndez', numero_documento: '11223344' };
-      const payloadEsperado = { ...bodyMock, id_rol: 2 };
+      const payloadEsperado = { ...bodyMock, numero_documento: BigInt('11223344'), id_rol: 2 };
       const nuevoTecMock = { id_usuario: 11, nombre: 'Luis Méndez', numero_documento: '11223344', id_rol: 2 };
 
       Usuario.create.mockResolvedValue();
+      Usuario.findOne.mockResolvedValue(null);
       Usuario.findByPk.mockResolvedValue(nuevoTecMock);
       logHistory.mockResolvedValue();
 
@@ -79,15 +87,15 @@ describe('crearTec', () => {
       await crearTec(req, res);
 
       expect(logHistory).toHaveBeenCalledWith(1, 'usuarios', 11, 'INSERT', 'Se creó el técnico Luis Méndez');
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoTecMock });
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: nuevoTecMock, message: 'Técnico creado exitosamente. Se ha enviado un correo de notificación.' });
     });
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el documento o correo ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el documento o correo ya existe (P2002)', async () => {
       const bodyMock = { nombre: 'Carlos Ruiz', numero_documento: '98765432' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Usuario.create.mockRejectedValue(duplicateError);
 

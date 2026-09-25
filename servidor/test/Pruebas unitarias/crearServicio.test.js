@@ -54,7 +54,7 @@ describe('crearServicio', () => {
   describe('Creación exitosa', () => {
     test('Debe devolver 200 y registrar el servicio creado', async () => {
       const bodyMock = { nombre: 'Mantenimiento Preventivo', precio: 50, id_categoria: 1 };
-      const nuevoServicioMock = { insertId: 5, affectedRows: 1 };
+      const nuevoServicioMock = { ID_SERVICIOS: 5, ID_SERVICIO: 5, insertId: 5, affectedRows: 1 };
 
       Servicio.create.mockResolvedValue(nuevoServicioMock);
       logHistory.mockResolvedValue();
@@ -68,7 +68,7 @@ describe('crearServicio', () => {
       expect(logHistory).toHaveBeenCalledWith(
         3,                    // req.user.id_usuario
         'servicios',          // tabla
-        5,                    // insertId
+        5,                    // ID_SERVICIOS
         'INSERT',             // acción
         'Se creó el servicio Mantenimiento Preventivo'
       );
@@ -78,7 +78,7 @@ describe('crearServicio', () => {
 
     test('Debe usar id_usuario = 1 por defecto si req.user no está presente', async () => {
       const bodyMock = { nombre: 'Instalación de Red', precio: 120 };
-      const nuevoServicioMock = { insertId: 6, affectedRows: 1 };
+      const nuevoServicioMock = { ID_SERVICIOS: 6, ID_SERVICIO: 6, insertId: 6, affectedRows: 1 };
 
       Servicio.create.mockResolvedValue(nuevoServicioMock);
       logHistory.mockResolvedValue();
@@ -100,7 +100,7 @@ describe('crearServicio', () => {
 
     test('Debe usar "N/A" si el nombre no viene en el body', async () => {
       const bodyMock = { precio: 100 };
-      const nuevoServicioMock = { insertId: 7, affectedRows: 1 };
+      const nuevoServicioMock = { ID_SERVICIOS: 7, ID_SERVICIO: 7, insertId: 7, affectedRows: 1 };
 
       Servicio.create.mockResolvedValue(nuevoServicioMock);
       logHistory.mockResolvedValue();
@@ -119,9 +119,9 @@ describe('crearServicio', () => {
       );
     });
 
-    test('Debe usar 0 como insertId si no está disponible', async () => {
+    test('Debe usar 0 como ID_SERVICIOS si no está disponible', async () => {
       const bodyMock = { nombre: 'Reparación' };
-      const nuevoServicioMock = { affectedRows: 1 }; // Sin insertId
+      const nuevoServicioMock = { affectedRows: 1 }; // Sin ID_SERVICIOS
 
       Servicio.create.mockResolvedValue(nuevoServicioMock);
       logHistory.mockResolvedValue();
@@ -142,10 +142,10 @@ describe('crearServicio', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Debe devolver 400 si el nombre ya existe (ER_DUP_ENTRY)', async () => {
+    test('Debe devolver 400 si el nombre ya existe (P2002)', async () => {
       const bodyMock = { nombre: 'Existente' };
       const duplicateError = new Error('Duplicate entry');
-      duplicateError.code = 'ER_DUP_ENTRY';
+      duplicateError.code = 'P2002';
 
       Servicio.create.mockRejectedValue(duplicateError);
 

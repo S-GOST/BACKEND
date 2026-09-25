@@ -107,11 +107,12 @@ describe('habilitarProducto', () => {
   });
 
   describe('Casos no encontrados (404)', () => {
-    test('Debe devolver 404 si el producto no existe (affectedRows === 0)', async () => {
+    test('Debe devolver 404 si el producto no existe (P2025)', async () => {
       const id = '999';
-      const resultadoRestoreMock = { affectedRows: 0 };
+      const notFoundError = new Error('Not found');
+      notFoundError.code = 'P2025';
 
-      Producto.restore.mockResolvedValue(resultadoRestoreMock);
+      Producto.restore.mockRejectedValue(notFoundError);
 
       const req = { params: { id } };
       const res = mockRes();
