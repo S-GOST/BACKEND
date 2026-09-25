@@ -1,6 +1,6 @@
 // test/Pruebas unitarias/actualizarOrden.test.js
 
-// 1. Mocks de modelos (con virtual: true).
+// 1. Mocks de modelos (con virtual: true)
 jest.mock('../../models/ordenServicioModel.js', () => ({
   __esModule: true,
   default: {
