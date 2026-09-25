@@ -13,7 +13,7 @@ const mapToUsuario = (a) => {
     if (a.correo !== undefined) obj.correo = a.correo;
     if (a.telefono !== undefined) obj.telefono = a.telefono;
 
-    obj.id_rol = 1; // Rol de Administrador
+    obj.id_rol = 1; // Rol de Administrador.
     if (a.estado !== undefined) obj.estado = a.estado;
     else if (!a.id_usuario) obj.estado = 'Activo';
     return obj;
