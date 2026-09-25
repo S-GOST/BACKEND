@@ -1,4 +1,3 @@
-
 services:
   # Como tu BD está en Aiven (la nube), solo necesitamos levantar tu Backend
   backend:
@@ -10,3 +9,16 @@ services:
     # Le decimos a Docker que inyecte todas las variables de tu archivo .env
     env_file:
       - .env
+
+  frontend:
+    build:
+      context: ../../FRONTEND/React # Ruta relativa al docker-compose.yml que apunta al Frontend
+      dockerfile: Dockerfile
+    container_name: react_frontend
+    ports:
+      - "5173:5173" # Puerto por defecto de Vite
+    volumes:
+      - ../../FRONTEND/React:/app # Permite ver los cambios en tiempo real sin reiniciar el contenedor
+      - /app/node_modules # Evita sobrescribir los modulos instalados en el contenedor
+    environment:
+      - NODE_ENV=development

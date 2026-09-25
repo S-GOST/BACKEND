@@ -3,20 +3,15 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ---------------------------------------------------------
-// CORRECCIÓN 1: Cargar .env desde la RAÍZ del proyecto
-// ---------------------------------------------------------
-// Obtenemos la ruta absoluta de la carpeta raíz (subimos un nivel desde 'config')
+// Configuración de rutas
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..'); 
+const projectRoot = path.resolve(__dirname, '..');
 
-// Cargamos dotenv apuntando a la raíz. 
+// Cargar variables de entorno
 dotenv.config({ path: path.join(projectRoot, '.env') });
 
-// ---------------------------------------------------------
-// CORRECCIÓN 2: Configuración del Pool
-// ---------------------------------------------------------
+// Configuración del Pool de conexiones
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
@@ -24,11 +19,20 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
-    // Si estás en producción, se recomienda rejectUnauthorized: true.
-    // Para entornos locales o desarrollo, false.
-    rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : false
+    rejectUnauthorized: false
   }
 });
-
+// Verificar conexión
+export async function testConnection() {
+  try {
+    const connection = await pool.getConnection();
+    console.log('✅ Database connected successfully');
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    return false;
+  }
+}
 
 export default pool;
