@@ -1,6 +1,6 @@
 // test/Pruebas unitarias/actualizarOrden.test.js
 
-// 1. Mocks de modelos (con virtual: true)
+// 1. Mocks de modelos (con virtual: true).
 jest.mock('../../models/ordenServicioModel.js', () => ({
   __esModule: true,
   default: {
@@ -46,7 +46,7 @@ describe('actualizarOrden', () => {
     if (!prisma.detalles_orden_servicio) prisma.detalles_orden_servicio = {};
     updateManySpy = jest.spyOn(prisma.detalles_orden_servicio, 'updateMany').mockResolvedValue({ count: 1 });
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -74,8 +74,8 @@ describe('actualizarOrden', () => {
       const id = '999';
       OrdenServicio.findById.mockResolvedValue(null);
 
-      const req = { 
-        params: { id }, 
+      const req = {
+        params: { id },
         body: {},
         admin: { id_usuario: 1, rol: 1 }
       };
@@ -129,7 +129,7 @@ describe('actualizarOrden', () => {
     test('Debe permitir al admin cambiar el estado aunque no sea el técnico asignado', async () => {
       const id = '5';
       const ordenActualizada = { ...ordenBase, Estado: 'En Proceso' };
-      
+
       OrdenServicio.findById
         .mockResolvedValueOnce(ordenBase)
         .mockResolvedValueOnce(ordenActualizada);
@@ -156,7 +156,7 @@ describe('actualizarOrden', () => {
     test('Debe permitir al técnico asignado cambiar el estado', async () => {
       const id = '5';
       const ordenActualizada = { ...ordenBase, Estado: 'En Proceso' };
-      
+
       OrdenServicio.findById
         .mockResolvedValueOnce(ordenBase)
         .mockResolvedValueOnce(ordenActualizada);
@@ -229,7 +229,7 @@ describe('actualizarOrden', () => {
         admin: { id_usuario: 1, rol: 1 }
       };
       const res = mockRes();
-      
+
       OrdenServicio.findById.mockResolvedValueOnce(ordenEnProceso).mockResolvedValueOnce(ordenEnProceso);
       OrdenServicio.update.mockResolvedValue({ affectedRows: 1 });
 
@@ -295,7 +295,7 @@ describe('actualizarOrden', () => {
       const id = '5';
       const ordenEnProceso = { ...ordenBase, Estado: 'En Proceso' };
       const ordenCancelada = { ...ordenEnProceso, Estado: 'Cancelada', observaciones: 'Cliente no respondió' };
-      
+
       OrdenServicio.findById
         .mockResolvedValueOnce(ordenEnProceso)
         .mockResolvedValueOnce(ordenCancelada);
